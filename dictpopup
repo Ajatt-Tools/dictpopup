@@ -1,5 +1,4 @@
 #!/bin/sh
 
 
-SDCV_PAGER='less --quit-if-one-screen -RX'
-xclip -o | xargs sdcv -n --utf8-output -e | tail -n +5 | sed 's| ||g' | xargs popup
+xclip -o | xargs sdcv -n --utf8-output -e | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | xargs -d "\n" popup
