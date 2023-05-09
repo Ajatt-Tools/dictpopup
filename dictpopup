@@ -1,0 +1,5 @@
+#!/bin/sh
+
+
+SDCV_PAGER='less --quit-if-one-screen -RX'
+xargs sdcv -n --utf8-output -e | tail -n +5 | sed 's| ||g' | xargs popup
