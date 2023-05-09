@@ -12,9 +12,9 @@ First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github 
 Then compile with `make` and place `dictpopup` as well as `popup` in your PATH.
 
 ## Usage
-call `dictpopup` to translate and display the popup of the selected text. The
+Call `dictpopup` to translate and display the popup of the selected text. The
 popup can be dismissed by clicking on it.
-The styling can be changed in `config.h`, but it has the be recompiled then.
+The styling can be changed in `config.h`, but it has the be recompiled.
 There is also a xresources patch from [herbe](https://github.com/dudik/herbe)
 that you could try to apply.
 
