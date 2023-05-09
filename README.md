@@ -11,5 +11,9 @@ xclip, sdcv
 Compile with `make` and place `dictpopup` as well as `popup` in your PATH.
 
 ## Usage
-call `dictpopup` to translate and display the popup of the selected text. 
-You can also use `popup` like `popup "Hello"` for other things.
+call `dictpopup` to translate and display the popup of the selected text. The
+popup can be dismissed by clicking on it.\
+You can also use `popup` like `popup "Hello"` for other things if you want.\
+The styling can be changed in `config.h`, but it has the be recompiled then.
+There is also a xresources patch from [herbe](https://github.com/dudik/herbe)
+that you could try to apply.
