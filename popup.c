@@ -167,12 +167,6 @@ int main(int argc, char *argv[])
 	unsigned int text_height = font->ascent - font->descent;
 	unsigned int height = (num_of_lines - 1) * line_spacing + num_of_lines * text_height + 2 * padding;
 
-	/* if (corner == TOP_RIGHT || corner == BOTTOM_RIGHT) */
-	/* x = screen_width - width - border_size * 2 - pos_x; */
-
-	/* if (corner == BOTTOM_LEFT || corner == BOTTOM_RIGHT) */
-	/* y = screen_height - height - border_size * 2 - pos_y; */
-
 	window = XCreateWindow(display, RootWindow(display, screen), x, y, width, height, border_size, DefaultDepth(display, screen),
 						   CopyFromParent, visual, CWOverrideRedirect | CWBackPixel | CWBorderPixel, &attributes);
 
