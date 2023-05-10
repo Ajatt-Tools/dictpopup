@@ -17,14 +17,14 @@ options:
 popup: popup.o
 	$(CC) -o $@ popup.o $(LDFLAGS)
 
-install: herbe
+install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp -f herbe ${DESTDIR}${PREFIX}/bin
+	cp -f popup ${DESTDIR}${PREFIX}/bin
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/herbe
+	rm -f ${DESTDIR}${PREFIX}/bin/popup
 
 clean:
-	rm -f herbe
+	rm -f popup $(OBJ)
 
 .PHONY: all install uninstall clean
