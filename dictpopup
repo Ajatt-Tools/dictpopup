@@ -1,4 +1,10 @@
 #!/bin/sh
 
 
-xclip -o | xargs sdcv -n --utf8-output -e | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | xargs -d "\n" popup
+selection=$(sselp)
+dict_lookup=$(sdcv -n --utf8-output -e "$selection")
+if echo "$dict_lookup" | grep -F "Nothing similar to"; then
+  notify-send "Nothing found for: $selection"
+else
+  echo "$dict_lookup" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | xargs -d '\n' popup
+fi
