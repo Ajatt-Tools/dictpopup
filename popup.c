@@ -1,5 +1,3 @@
-#include <X11/Xlib.h>
-#include <X11/Xft/Xft.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -8,16 +6,29 @@
 #include <stdarg.h>
 #include <fcntl.h>
 
-#include <stdbool.h>
+#include <X11/Xlib.h>
+#include <X11/Xft/Xft.h>
+#ifdef XINERAMA
+#include <X11/extensions/Xinerama.h>
+#endif
 
 #include "config.h"
+
+/* macros */
+#define MAX(A, B)               ((A) > (B) ? (A) : (B))
+#define MIN(A, B)               ((A) < (B) ? (A) : (B))
+#define INTERSECT(x,y,w,h,r)  (MAX(0, MIN((x)+(w),(r).x_org+(r).width)  - MAX((x),(r).x_org)) \
+                             * MAX(0, MIN((y)+(h),(r).y_org+(r).height) - MAX((y),(r).y_org)))
 
 #define EXIT_ACTION 0
 #define EXIT_FAIL 1
 #define EXIT_DISMISS 2
 
-Display *display;
-Window window;
+static Display *dpy;
+static Window window;
+static int mon = -1, screen;
+static int mw, mh;
+
 int exit_code = EXIT_DISMISS;
 
 static void die(const char *format, ...)
@@ -34,7 +45,7 @@ int get_max_len(char *string, XftFont *font, int max_text_width)
 {
 	int eol = strlen(string);
 	XGlyphInfo info;
-	XftTextExtentsUtf8(display, font, (FcChar8 *)string, eol, &info);
+	XftTextExtentsUtf8(dpy, font, (FcChar8 *)string, eol, &info);
 
 	if (info.width > max_text_width)
 	{
@@ -44,7 +55,7 @@ int get_max_len(char *string, XftFont *font, int max_text_width)
 		while (info.width < max_text_width)
 		{
 			eol++;
-			XftTextExtentsUtf8(display, font, (FcChar8 *)string, eol, &info);
+			XftTextExtentsUtf8(dpy, font, (FcChar8 *)string, eol, &info);
 		}
 
 		eol--;
@@ -80,8 +91,8 @@ void expire(int sig)
 	XEvent event;
 	event.type = ButtonPress;
 	event.xbutton.button = (sig == SIGUSR2) ? (ACTION_BUTTON) : (DISMISS_BUTTON);
-	XSendEvent(display, window, 0, 0, &event);
-	XFlush(display);
+	XSendEvent(dpy, window, 0, 0, &event);
+	XFlush(dpy);
 }
 
 int main(int argc, char *argv[])
@@ -106,22 +117,20 @@ int main(int argc, char *argv[])
 	sigaction(SIGUSR1, &act_ignore, 0);
 	sigaction(SIGUSR2, &act_ignore, 0);
 
-	if (!(display = XOpenDisplay(0)))
+	if (!(dpy = XOpenDisplay(0)))
 		die("Cannot open display");
 
-	int screen = DefaultScreen(display);
-	Visual *visual = DefaultVisual(display, screen);
-	Colormap colormap = DefaultColormap(display, screen);
-
-	int screen_width = DisplayWidth(display, screen);
-	int screen_height = DisplayHeight(display, screen);
+	screen = DefaultScreen(dpy);
+	window = RootWindow(dpy, screen);
+	Visual *visual = DefaultVisual(dpy, screen);
+	Colormap colormap = DefaultColormap(dpy, screen);
 
 	XSetWindowAttributes attributes;
 	attributes.override_redirect = True;
 	XftColor color;
-	XftColorAllocName(display, visual, colormap, background_color, &color);
+	XftColorAllocName(dpy, visual, colormap, background_color, &color);
 	attributes.background_pixel = color.pixel;
-	XftColorAllocName(display, visual, colormap, border_color, &color);
+	XftColorAllocName(dpy, visual, colormap, border_color, &color);
 	attributes.border_pixel = color.pixel;
 
 	int num_of_lines = 0;
@@ -131,7 +140,7 @@ int main(int argc, char *argv[])
 	if (!lines)
 		die("malloc failed");
 
-	XftFont *font = XftFontOpenName(display, screen, font_pattern);
+	XftFont *font = XftFontOpenName(dpy, screen, font_pattern);
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -153,28 +162,47 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	Window focused;
-	int revert_to;
-	Window window_returned;
-	int pos_x, pos_y;
-	int win_x, win_y;
-	unsigned int mask_return;
-	XGetInputFocus(display, &focused, &revert_to);
-	XQueryPointer(display, focused, &window_returned, &window_returned, &pos_x, &pos_y, &win_x, &win_y, &mask_return);
-
-	unsigned int x = pos_x;
-	unsigned int y = pos_y;
 	unsigned int text_height = font->ascent - font->descent;
 	unsigned int height = (num_of_lines - 1) * line_spacing + num_of_lines * text_height + 2 * padding;
 
-	window = XCreateWindow(display, RootWindow(display, screen), x, y, width, height, border_size, DefaultDepth(display, screen),
+	int x, y, di;
+	unsigned int du;
+	Window dw;
+	if (!XQueryPointer(dpy, window, &dw, &dw, &x, &y, &di, &di, &du))
+	  die("Could not query pointer position");
+#ifdef XINERAMA
+	XineramaScreenInfo *info;
+	int n, i=0;
+
+	// TODO: Better error handling like dmenu
+	if ((info = XineramaQueryScreens(dpy, &n))){
+	  if (mon < 0)
+		  for (i = 0; i < n; i++)
+			  if (INTERSECT(x, y, 1, 1, info[i]) != 0)
+				  break;
+
+	  int x_offset = info[i].x_org;
+	  int y_offset = info[i].y_org;
+	  mh = info[i].height;
+	  mw = info[i].width;
+	  XFree(info);
+
+	  // Correct on monitor boundary
+	  if (y - y_offset + height > mh)
+	    y -= height;
+	  if (x - x_offset + width > mw)
+	    x -= width;
+	}
+#endif
+
+	window = XCreateWindow(dpy, RootWindow(dpy, screen), x, y, width, height, border_size, DefaultDepth(dpy, screen),
 						   CopyFromParent, visual, CWOverrideRedirect | CWBackPixel | CWBorderPixel, &attributes);
 
-	XftDraw *draw = XftDrawCreate(display, window, visual, colormap);
-	XftColorAllocName(display, visual, colormap, font_color, &color);
+	XftDraw *draw = XftDrawCreate(dpy, window, visual, colormap);
+	XftColorAllocName(dpy, visual, colormap, font_color, &color);
 
-	XSelectInput(display, window, ExposureMask | ButtonPress);
-	XMapWindow(display, window);
+	XSelectInput(dpy, window, ExposureMask | ButtonPress);
+	XMapWindow(dpy, window);
 
 	sigaction(SIGUSR1, &act_expire, 0);
 	sigaction(SIGUSR2, &act_expire, 0);
@@ -182,11 +210,11 @@ int main(int argc, char *argv[])
 	for (;;)
 	{
 		XEvent event;
-		XNextEvent(display, &event);
+		XNextEvent(dpy, &event);
 
 		if (event.type == Expose)
 		{
-			XClearWindow(display, window);
+			XClearWindow(dpy, window);
 			for (int i = 0; i < num_of_lines; i++)
 				XftDrawStringUtf8(draw, &color, font, padding, line_spacing * i + text_height * (i + 1) + padding,
 								  (FcChar8 *)lines[i], strlen(lines[i]));
@@ -209,9 +237,9 @@ int main(int argc, char *argv[])
 
 	free(lines);
 	XftDrawDestroy(draw);
-	XftColorFree(display, visual, colormap, &color);
-	XftFontClose(display, font);
-	XCloseDisplay(display);
+	XftColorFree(dpy, visual, colormap, &color);
+	XftFontClose(dpy, font);
+	XCloseDisplay(dpy);
 
 	return exit_code;
 }
