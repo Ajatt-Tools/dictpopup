@@ -1,15 +1,21 @@
-CFLAGS = -Wall -Wextra -pedantic -lX11 -lXft -I/usr/include/freetype2
+include config.mk
 
-PREFIX ?= /usr/local
-CC ?= cc
+SRC = popup.c
+OBJ = $(SRC:.c=.o)
 
-all: herbe
+all: options popup
 
-config.h: config.def.h
-	cp config.def.h config.h
+options:
+	@echo popup build options:
+	@echo "CFLAGS   = $(CFLAGS)"
+	@echo "LDFLAGS  = $(LDFLAGS)"
+	@echo "CC       = $(CC)"
 
-herbe: popup.c config.h
-	$(CC) popup.c $(CFLAGS) -o popup
+.c.o:
+	$(CC) -c $(CFLAGS) $<
+
+popup: popup.o
+	$(CC) -o $@ popup.o $(LDFLAGS)
 
 install: herbe
 	mkdir -p ${DESTDIR}${PREFIX}/bin
