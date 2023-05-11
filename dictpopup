@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-selection=$(sselp)
+selection=$(xclip -o)
 dict_lookup=$(sdcv -n --utf8-output -e "$selection")
 if echo "$dict_lookup" | grep -F "Nothing similar to"; then
   notify-send "Nothing found for: $selection"
