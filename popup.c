@@ -26,7 +26,7 @@
 
 static Display *dpy;
 static Window window;
-static int mon = -1, screen;
+static int screen;
 static int mw, mh;
 
 int exit_code = EXIT_DISMISS;
@@ -176,10 +176,9 @@ int main(int argc, char *argv[])
 
 	// TODO: Better error handling like dmenu
 	if ((info = XineramaQueryScreens(dpy, &n))){
-	  if (mon < 0)
-		  for (i = 0; i < n; i++)
-			  if (INTERSECT(x, y, 1, 1, info[i]) != 0)
-				  break;
+	      for (i = 0; i < n; i++)
+		      if (INTERSECT(x, y, 1, 1, info[i]) != 0)
+			      break;
 
 	  int x_offset = info[i].x_org;
 	  int y_offset = info[i].y_org;
@@ -189,12 +188,11 @@ int main(int argc, char *argv[])
 
 	  // Correct on monitor boundary
 	  if (y - y_offset + height > mh)
-	    y -= height;
+	    y -= MAX((y-y_offset+height)-mh,0);
 	  if (x - x_offset + width > mw)
-	    x -= width;
+	    x -= MAX((x-x_offset+width)-mw, 0);
 	}
 #endif
-
 	window = XCreateWindow(dpy, RootWindow(dpy, screen), x, y, width, height, border_size, DefaultDepth(dpy, screen),
 						   CopyFromParent, visual, CWOverrideRedirect | CWBackPixel | CWBorderPixel, &attributes);
 
