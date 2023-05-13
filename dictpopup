@@ -1,10 +1,14 @@
 #!/bin/sh
 
+# Looks up argument instead, if provided
+word=${1:-$(xclip -o)}
+[ -z $word ] && exit 1
 
-selection=$(xclip -o)
-dict_lookup=$(sdcv -n --utf8-output -e "$selection")
-if echo "$dict_lookup" | grep -F "Nothing similar to"; then
-  notify-send "Nothing found for: $selection"
+dict_lookup=$(sdcv -n --utf8-output -e "$word")
+if echo "$dict_lookup" | grep -F -q "Nothing similar to"; then
+  popup "$dict_lookup"
 else
   echo "$dict_lookup" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | xargs -d '\n' popup
 fi
+# Instead of sed also possible:
+# `lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8`
