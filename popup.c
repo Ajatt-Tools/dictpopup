@@ -20,6 +20,9 @@
 #define INTERSECT(x,y,w,h,r)  (MAX(0, MIN((x)+(w),(r).x_org+(r).width)  - MAX((x),(r).x_org)) \
                              * MAX(0, MIN((y)+(h),(r).y_org+(r).height) - MAX((y),(r).y_org)))
 
+//TODO: Make selection possible
+//TODO: Switch between dictionaries
+
 #define EXIT_ACTION 0
 #define EXIT_FAIL 1
 #define EXIT_DISMISS 2
@@ -95,11 +98,8 @@ void expire(int sig)
 	XFlush(dpy);
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-	if (argc == 1)
-		die("Usage: %s body", argv[0]);
-
 	struct sigaction act_expire, act_ignore;
 
 	act_expire.sa_handler = expire;
@@ -142,9 +142,18 @@ int main(int argc, char *argv[])
 
 	XftFont *font = XftFontOpenName(dpy, screen, font_pattern);
 
-	for (int i = 1; i < argc; i++)
+	static char *buf = NULL;
+	static size_t size = 0;
+	ssize_t len = 0;
+	char *str;
+	for (;(len = getline(&buf, &size, stdin)) > 0;)
 	{
-		for (unsigned int eol = get_max_len(argv[i], font, max_text_width); eol; argv[i] += eol, num_of_lines++, eol = get_max_len(argv[i], font, max_text_width))
+		/* Remove the trailing newline if one is present. */
+		if (len && buf[len - 1] == '\n')
+			buf[len - 1] = '\0';
+
+                str=buf;
+		for (unsigned int eol = get_max_len(str, font, max_text_width); eol; str += eol, num_of_lines++, eol = get_max_len(str, font, max_text_width))
 		{
 			if (lines_size <= num_of_lines)
 			{
@@ -157,7 +166,7 @@ int main(int argc, char *argv[])
 			if (!lines[num_of_lines])
 				die("malloc failed");
 
-			strncpy(lines[num_of_lines], argv[i], eol);
+			strncpy(lines[num_of_lines], str, eol);
 			lines[num_of_lines][eol] = '\0';
 		}
 	}
@@ -165,7 +174,7 @@ int main(int argc, char *argv[])
 	unsigned int text_height = font->ascent - font->descent;
 	unsigned int height = (num_of_lines - 1) * line_spacing + num_of_lines * text_height + 2 * padding;
 
-	int x, y, di;
+	int x, y, di, x_offset, y_offset;
 	unsigned int du;
 	Window dw;
 	if (!XQueryPointer(dpy, window, &dw, &dw, &x, &y, &di, &di, &du))
@@ -174,25 +183,34 @@ int main(int argc, char *argv[])
 	XineramaScreenInfo *info;
 	int n, i=0;
 
-	// TODO: Better error handling like dmenu
 	if ((info = XineramaQueryScreens(dpy, &n))){
 	      for (i = 0; i < n; i++)
 		      if (INTERSECT(x, y, 1, 1, info[i]) != 0)
 			      break;
 
-	  int x_offset = info[i].x_org;
-	  int y_offset = info[i].y_org;
+	  x_offset = info[i].x_org;
+	  y_offset = info[i].y_org;
 	  mh = info[i].height;
 	  mw = info[i].width;
 	  XFree(info);
 
-	  // Correct on monitor boundary
-	  if (y - y_offset + height > mh)
-	    y -= MAX((y-y_offset+height)-mh,0);
-	  if (x - x_offset + width > mw)
-	    x -= MAX((x-x_offset+width)-mw, 0);
-	}
+	} else
 #endif
+	{
+	  x_offset = 0;
+	  y_offset = 0;
+	  mw = DisplayWidth(dpy, screen);
+	  mh = DisplayHeight(dpy, screen);
+	}
+
+	// Correct on monitor boundary
+	int by = y - y_offset + height + border_size;
+	int rx = x - x_offset + width + border_size;
+	if (by > mh)
+	  y = MAX(y-(by-mh), 0);
+	if (rx > mw)
+	  x = MAX(x-(rx-mw), 0);
+
 	window = XCreateWindow(dpy, RootWindow(dpy, screen), x, y, width, height, border_size, DefaultDepth(dpy, screen),
 						   CopyFromParent, visual, CWOverrideRedirect | CWBackPixel | CWBorderPixel, &attributes);
 

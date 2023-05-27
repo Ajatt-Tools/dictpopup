@@ -1,10 +1,10 @@
 #!/bin/sh
 
 # Looks up argument instead, if provided
-word=${1:-$(xclip -o)}
+word=${1:-$(sselp)}
 [ -z $word ] && exit 1
 
-sdcv -n --utf8-output -e "$word" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | xargs -d '\n' popup 2>/dev/null
+sdcv -n --utf8-output -e "$word" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | popup
 
 # Instead of sed also possible:
 # `lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8`
