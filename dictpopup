@@ -4,11 +4,7 @@
 word=${1:-$(xclip -o)}
 [ -z $word ] && exit 1
 
-dict_lookup=$(sdcv -n --utf8-output -e "$word")
-if echo "$dict_lookup" | grep -F -q "Nothing similar to"; then
-  popup "$dict_lookup"
-else
-  echo "$dict_lookup" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | xargs -d '\n' popup
-fi
+sdcv -n --utf8-output -e "$word" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g' | xargs -d '\n' popup 2>/dev/null
+
 # Instead of sed also possible:
 # `lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8`
