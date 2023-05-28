@@ -62,7 +62,7 @@ int get_max_len(char *string, XftFont *font, int max_text_width)
 		eol--;
 	}
 
-	for (int i = 0; i < eol; i++)
+	for (int i = 0; i < MIN(eol+1, strlen(string)); i++) 
 		if (string[i] == '\n')
 		{
 			string[i] = ' ';
@@ -73,11 +73,9 @@ int get_max_len(char *string, XftFont *font, int max_text_width)
 	while (eol && (string[eol] & 0xC0) == 0x80)
 		--eol;
 
-	if (info.width <= max_text_width)
-		return eol;
-
-
-	/* prefer splitting at spaces */
+	/* uncomment to always split at spaces */
+	/* if (info.width <= max_text_width) */
+	/* 	return eol; */
 	/* int temp = eol; */
 	/* while (string[eol] != ' ' && eol) */
 	/* 	--eol; */
@@ -141,7 +139,7 @@ int main()
 	}
 	free(buf);
 	if (num_of_lines == 0)
-	  die("stdin is empty");
+	      die("stdin is empty");
 
 	unsigned int text_height = font->ascent - font->descent;
 	unsigned int height = (num_of_lines - 1) * line_spacing + num_of_lines * text_height + 2 * padding;
