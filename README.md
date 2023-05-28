@@ -4,8 +4,11 @@ This is a very lightweight program to show a popup with the translation of the s
 
 ![image](https://github.com/GenjiFujimoto/dictpopup/assets/50422430/c4a3663b-fd91-4a66-95ad-f1528071c932)
 
+![screenshot-2023-05-28-08-34-19](https://github.com/GenjiFujimoto/dictpopup/assets/50422430/179ad9f9-b4fa-4731-92c6-105ced37c353)
+
 ## Dependencies
-sselp (can be replaced with xclip -o), sdcv. Optional: lynx for html support
+sselp (can be replaced with xclip -o), sdcv. \
+Optional: lynx (for html support)
 
 ## Setup
 First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github page.
