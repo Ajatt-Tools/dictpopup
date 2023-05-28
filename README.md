@@ -15,6 +15,8 @@ First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github 
 Then install with `sudo make install`. \
 Uninstall with `sudo make uninstall`
 
+If you would like to automatically lookup a word on every selection, then take a look at the following script: https://github.com/GenjiFujimoto/shell-scripts/blob/main/selautolookup
+
 ## Usage
 Call `dictpopup [html] [<WORD>]`.\
 If no word as an argument is supplied, the selection is used.\
