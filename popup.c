@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdarg.h>
@@ -14,18 +13,17 @@
 
 #include "config.h"
 
-/* macros */
 #define MAX(A, B)               ((A) > (B) ? (A) : (B))
 #define MIN(A, B)               ((A) < (B) ? (A) : (B))
 #define INTERSECT(x,y,w,h,r)  (MAX(0, MIN((x)+(w),(r).x_org+(r).width)  - MAX((x),(r).x_org)) \
                              * MAX(0, MIN((y)+(h),(r).y_org+(r).height) - MAX((y),(r).y_org)))
 
 //TODO: Make selection possible
-//TODO: Switch between dictionaries
 
-#define EXIT_ACTION 0
+#define EXIT_DISMISS 0
 #define EXIT_FAIL 1
-#define EXIT_DISMISS 2
+#define EXIT_ACTION1 2
+#define EXIT_ACTION2 3
 
 static Display *dpy;
 static Window window;
@@ -78,45 +76,21 @@ int get_max_len(char *string, XftFont *font, int max_text_width)
 	if (info.width <= max_text_width)
 		return eol;
 
-	int temp = eol;
 
-	while (string[eol] != ' ' && eol)
-		--eol;
+	/* prefer splitting at spaces */
+	/* int temp = eol; */
+	/* while (string[eol] != ' ' && eol) */
+	/* 	--eol; */
 
-	if (eol == 0)
-		return temp;
-	else
-		return ++eol;
-}
-
-void expire(int sig)
-{
-	XEvent event;
-	event.type = ButtonPress;
-	event.xbutton.button = (sig == SIGUSR2) ? (ACTION_BUTTON) : (DISMISS_BUTTON);
-	XSendEvent(dpy, window, 0, 0, &event);
-	XFlush(dpy);
+	/* if (eol == 0) */
+	/* 	return temp; */
+	/* else */
+	/* 	return ++eol; */
+	return eol;
 }
 
 int main()
 {
-	struct sigaction act_expire, act_ignore;
-
-	act_expire.sa_handler = expire;
-	act_expire.sa_flags = SA_RESTART;
-	sigemptyset(&act_expire.sa_mask);
-
-	act_ignore.sa_handler = SIG_IGN;
-	act_ignore.sa_flags = 0;
-	sigemptyset(&act_ignore.sa_mask);
-
-	sigaction(SIGALRM, &act_expire, 0);
-	sigaction(SIGTERM, &act_expire, 0);
-	sigaction(SIGINT, &act_expire, 0);
-
-	sigaction(SIGUSR1, &act_ignore, 0);
-	sigaction(SIGUSR2, &act_ignore, 0);
-
 	if (!(dpy = XOpenDisplay(0)))
 		die("Cannot open display");
 
@@ -144,16 +118,11 @@ int main()
 
 	static char *buf = NULL;
 	static size_t size = 0;
-	ssize_t len = 0;
-	char *str;
-	for (;(len = getline(&buf, &size, stdin)) > 0;)
+	char *line = NULL;
+	while (getline(&buf, &size, stdin) > 0)
 	{
-		/* Remove the trailing newline if one is present. */
-		if (len && buf[len - 1] == '\n')
-			buf[len - 1] = '\0';
-
-                str=buf;
-		for (unsigned int eol = get_max_len(str, font, max_text_width); eol; str += eol, num_of_lines++, eol = get_max_len(str, font, max_text_width))
+                line=buf;
+		for (unsigned int eol = get_max_len(line, font, max_text_width); eol; line += eol, num_of_lines++, eol = get_max_len(line, font, max_text_width))
 		{
 			if (lines_size <= num_of_lines)
 			{
@@ -166,10 +135,13 @@ int main()
 			if (!lines[num_of_lines])
 				die("malloc failed");
 
-			strncpy(lines[num_of_lines], str, eol);
+			strncpy(lines[num_of_lines], line, eol);
 			lines[num_of_lines][eol] = '\0';
 		}
 	}
+	free(buf);
+	if (num_of_lines == 0)
+	  die("stdin is empty");
 
 	unsigned int text_height = font->ascent - font->descent;
 	unsigned int height = (num_of_lines - 1) * line_spacing + num_of_lines * text_height + 2 * padding;
@@ -178,7 +150,7 @@ int main()
 	unsigned int du;
 	Window dw;
 	if (!XQueryPointer(dpy, window, &dw, &dw, &x, &y, &di, &di, &du))
-	  die("Could not query pointer position");
+	      die("Could not query pointer position");
 #ifdef XINERAMA
 	XineramaScreenInfo *info;
 	int n, i=0;
@@ -193,7 +165,6 @@ int main()
 	  mh = info[i].height;
 	  mw = info[i].width;
 	  XFree(info);
-
 	} else
 #endif
 	{
@@ -204,8 +175,8 @@ int main()
 	}
 
 	// Correct on monitor boundary
-	int by = y - y_offset + height + border_size;
-	int rx = x - x_offset + width + border_size;
+	int by = y - y_offset + height + border_size + MIN_BORDER_DISTANCE;
+	int rx = x - x_offset + width + border_size + MIN_BORDER_DISTANCE;
 	if (by > mh)
 	  y = MAX(y-(by-mh), 0);
 	if (rx > mw)
@@ -220,9 +191,6 @@ int main()
 	XSelectInput(dpy, window, ExposureMask | ButtonPress);
 	XMapWindow(dpy, window);
 
-	sigaction(SIGUSR1, &act_expire, 0);
-	sigaction(SIGUSR2, &act_expire, 0);
-
 	for (;;)
 	{
 		XEvent event;
@@ -235,14 +203,18 @@ int main()
 				XftDrawStringUtf8(draw, &color, font, padding, line_spacing * i + text_height * (i + 1) + padding,
 								  (FcChar8 *)lines[i], strlen(lines[i]));
 		}
-		/* else if (event.type == ButtonPress) */
 		else if (event.type == ButtonPress)
 		{
 			if (event.xbutton.button == DISMISS_BUTTON)
 				break;
-			else if (event.xbutton.button == ACTION_BUTTON)
+			else if (event.xbutton.button == ACTION1_BUTTON)
 			{
-				exit_code = EXIT_ACTION;
+				exit_code = EXIT_ACTION1;
+				break;
+			}
+			else if (event.xbutton.button == ACTION2_BUTTON)
+			{
+				exit_code = EXIT_ACTION2;
 				break;
 			}
 		}
