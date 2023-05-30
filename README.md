@@ -9,7 +9,7 @@ This is a very lightweight program to show a popup with the translation of the s
 ## Dependencies
 most of them might be already installed.
 
-xclip , sdcv, perl
+sselp , sdcv, perl
 
 
 
