@@ -1,10 +1,6 @@
 #!/bin/sh
 
-if [ "$1" == "html" ] || [ "$1" == "HTML" ]; then
-        word=${2:-$(sselp)}
-        sdcv -n --utf8-output -e "$word"   | tail -n +5 | perl -pe 's/<[^>]*>//g' | popup
-else
-        word=${1:-$(sselp)}
-        sdcv -n --utf8-output -e "$word"   | tail -n +5 | perl -pe 's/<[^>]*>//g' | popup
-fi
+word=${1:-$(sselp)}
+sdcv -n --utf8-output -e "$word"   | tail -n +5 | perl -pe 's/<[^>]*>//g' | popup
+
 
