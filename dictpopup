@@ -1,14 +1,10 @@
 #!/bin/sh
 
-# Looks up argument instead, if provided
-word=${1:-$(xclip -o)}
-[ -z "$word" ] && exit 1
-
-dict_lookup=$(sdcv -n --utf8-output -e "$word")
-if echo "$dict_lookup" | grep -F -q "Nothing similar to"; then
-  popup "$dict_lookup"
+if [ "$1" == "html" ] || [ "$1" == "HTML" ]; then
+        word=${2:-$(sselp)}
+        sdcv -n --utf8-output -e "$word"   |  perl -pe 's/<[^>]*>//g' | popup
 else
-  output=$(echo "$dict_lookup" | tail -n +5 | sed 's|<br>|\n|g')
-  output=$(echo "$output" | perl -pe 's/<[^>]*>//g')
-  printf '%s\0' "$output" | xargs -0 -I {} sh -c 'popup "$@"' _ {}
+        word=${1:-$(sselp)}
+        sdcv -n --utf8-output -e "$word"   |  perl -pe 's/<[^>]*>//g' | popup
 fi
+
