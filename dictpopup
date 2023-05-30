@@ -10,5 +10,6 @@ if echo "$dict_lookup" | grep -F -q "Nothing similar to"; then
 else
   output=$(echo "$dict_lookup" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g')
   output=$(echo "$output" | sed -E 's/&(amp|lt|gt|quot);/\1/g')
+  output=$(echo "$output" | perl -pe 's/<[^>]*>//g')
   printf '%s\0' "$output" | xargs -0 -I {} sh -c 'popup "$@"' _ {}
 fi
