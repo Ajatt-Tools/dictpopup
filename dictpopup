@@ -1,24 +1,14 @@
 #!/bin/sh
 
-# Depends on: 
-#	- sdcv
-#	- sselp (for selection support)
-# 	- lynx (for html support)
-# invocation: dictpopup [html] [word]
-# - If no argument provided, the selection is used
-# - If supplied with the html option, the dictionary output will be piped through lynx
-#   in order to format html as plain text
+# Looks up argument instead, if provided
+word=${1:-$(xclip -o)}
+[ -z "$word" ] && exit 1
 
-# TODO: Switch between dictionaries / dictionary results.
-# Implementation idea (in C): Store each dictionary entry in an array. Invoke popup with a dictionary entry.
-# Increment, decrement array and reinvoke or quit according to exit code of popup
-
-if [ "$1" = "html"  ]; then
-      word=${2:-$(sselp)}
-      sdcv -n --utf8-output -e "$word" | format_output | 
-	lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8 | 
-	popup
+dict_lookup=$(sdcv -n --utf8-output -e "$word")
+if echo "$dict_lookup" | grep -F -q "Nothing similar to"; then
+  popup "$dict_lookup"
 else
-      word=${1:-$(sselp)}
-      sdcv -n --utf8-output -e "$word" | format_output | popup
+  output=$(echo "$dict_lookup" | tail -n +5 | sed 's|<br>|\n|g' | sed 's|<[^>]*>||g')
+  output=$(echo "$output" | sed -E 's/&(amp|lt|gt|quot);/\1/g')
+  printf '%s\0' "$output" | xargs -0 -I {} sh -c 'popup "$@"' _ {}
 fi
