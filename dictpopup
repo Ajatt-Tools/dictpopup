@@ -14,11 +14,11 @@
 # Increment, decrement array and reinvoke or quit according to exit code of popup
 
 if [ "$1" = "html"  ]; then
-      word=${2:-$(xclip -o &>/dev/null)}
+      word=${2:-$(xclip -o 2>/dev/null)}
       sdcv -n --utf8-output -e "$word" | format_output | 
 	lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8 | 
 	popup
 else
-      word=${1:-$(xclip -o &>/dev/null)}
+      word=${1:-$(xclip -o 2>/dev/null)}
       sdcv -n --utf8-output -e "$word" | format_output | popup
 fi
