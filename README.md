@@ -7,7 +7,7 @@ This is a very lightweight program to show a popup with the translation of the s
 ![screenshot-2023-05-28-08-34-19](https://github.com/GenjiFujimoto/dictpopup/assets/50422430/179ad9f9-b4fa-4731-92c6-105ced37c353)
 
 ## Dependencies
-sselp (can be replaced with xclip -o), sdcv. \
+sdcv, xclip (for selection support). \
 Optional: lynx (for html support)
 
 ## Setup

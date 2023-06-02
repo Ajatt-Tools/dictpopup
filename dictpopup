@@ -2,7 +2,7 @@
 
 # Depends on: 
 #	- sdcv
-#	- sselp (for selection support)
+#	- xclip (for selection support)
 # 	- lynx (for html support)
 # invocation: dictpopup [html] [word]
 # - If no argument provided, the selection is used
@@ -14,11 +14,11 @@
 # Increment, decrement array and reinvoke or quit according to exit code of popup
 
 if [ "$1" = "html"  ]; then
-      word=${2:-$(sselp)}
+      word=${2:-$(xclip -o &>/dev/null)}
       sdcv -n --utf8-output -e "$word" | format_output | 
 	lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8 | 
 	popup
 else
-      word=${1:-$(sselp)}
+      word=${1:-$(xclip -o &>/dev/null)}
       sdcv -n --utf8-output -e "$word" | format_output | popup
 fi
