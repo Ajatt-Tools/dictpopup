@@ -186,6 +186,9 @@ int main()
 	XftDraw *draw = XftDrawCreate(dpy, window, visual, colormap);
 	XftColorAllocName(dpy, visual, colormap, font_color, &color);
 
+	XClassHint classhint = { "popup", "Popup" };
+	XSetClassHint(dpy, window, &classhint);
+
 	XSelectInput(dpy, window, ExposureMask | ButtonPress);
 	XMapWindow(dpy, window);
 
