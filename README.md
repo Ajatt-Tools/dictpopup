@@ -15,7 +15,10 @@ First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github 
 Then install with `sudo make install`. \
 Uninstall with `sudo make uninstall`
 
-If you would like to automatically lookup a word on every selection, then take a look at the following script: https://github.com/GenjiFujimoto/shell-scripts/blob/main/selautolookup
+f you would like to automatically lookup a word on every selection, then take a look at the following script: https://github.com/GenjiFujimoto/shell-scripts/blob/main/selautolookup
+
+### Anki support
+To enable anki support, open `dictpopup`, set `ANKK_SUPPORT` to `1` and edit the field names according to your anki setup.
 
 ## Usage
 Call `dictpopup [html] [<WORD>]`.\
