@@ -112,7 +112,7 @@ main() {
 		dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output)
 	fi
 
-	echo "$dict_entry" | popup
+	printf "$dict_entry" | popup
 
 	[ $? -eq 2 ] && [ $ANKI_SUPPORT -eq 1 ] && create_anki_card "$word" "$dict_entry"
 }
