@@ -20,11 +20,6 @@
 
 //TODO: Make selection possible
 
-#define EXIT_DISMISS 0
-#define EXIT_FAIL 1
-#define EXIT_ACTION1 2
-#define EXIT_ACTION2 3
-
 static Display *dpy;
 static Window window;
 static int screen;

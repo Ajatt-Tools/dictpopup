@@ -8,10 +8,14 @@ static const unsigned int padding = 15;
 static const unsigned int width = 480;
 static const unsigned int border_size = 1;
 
-static const unsigned int duration = 5; /* in seconds */
-
 #define MIN_BORDER_DISTANCE 3 /* The minimum distance to the monitor boundary */
 
 #define DISMISS_BUTTON Button1 /* left click */
-#define ACTION1_BUTTON Button4 /* scroll up */
+#define ACTION1_BUTTON Button2 /* middle click */
 #define ACTION2_BUTTON Button5 /* scroll down */
+
+/* exit codes */
+#define EXIT_DISMISS 0
+#define EXIT_FAIL 1
+#define EXIT_ACTION1 2
+#define EXIT_ACTION2 3
