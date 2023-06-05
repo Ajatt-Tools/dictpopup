@@ -1,24 +1,121 @@
-#!/bin/sh
+#!/bin/bash
 
-# Depends on: 
-#	- sdcv
-#	- xclip (for selection support)
-# 	- lynx (for html support)
 # invocation: dictpopup [html] [word]
 # - If no argument provided, the selection is used
 # - If supplied with the html option, the dictionary output will be piped through lynx
 #   in order to format html as plain text
 
-# TODO: Switch between dictionaries / dictionary results.
-# Implementation idea (in C): Store each dictionary entry in an array. Invoke popup with a dictionary entry.
-# Increment, decrement array and reinvoke or quit according to exit code of popup
+#### Settings
+readonly ANKI_DECK=${ANKI_DECK:-Japanese::sentences}
+readonly ANKI_MODEL=${ANKI_MODEL:-Japanese sentences}
+readonly ANKI_SENTENCE_FIELD=${ANKI_SENTENCE_FIELD:-SentKanji}
+readonly ANKI_WORD_FIELD=${ANKI_WORD_FIELD:-VocabKanji}
+readonly ANKI_DEFINITION_FIELD=${ANKI_DEFINITION_FIELD:-VocabDef}
 
-if [ "$1" = "html"  ]; then
-      word=${2:-$(xclip -o 2>/dev/null)}
-      sdcv -n --utf8-output -e "$word" | format_output | 
-	lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8 | 
-	popup
-else
-      word=${1:-$(xclip -o 2>/dev/null)}
-      sdcv -n --utf8-output -e "$word" | format_output | popup
-fi
+HTML_SUPPORT=1
+ANKI_SUPPORT=1
+ANKI_SEARCH_AFTER_ADD=1
+####
+
+die() {
+	notify-send "$1"
+	exit 1
+}
+
+checkDependencies() {
+	command -v sdcv &>/dev/null || die "sdcv not installed."
+	command -v popup &>/dev/null || die "The popup binary is not accessible."
+	command -v xclip &>/dev/null || die "xclip is not installed."
+	if ! command -v clipnotify &>/dev/null; then
+		echo "clipnotify not installed. Anki support disabled"
+		ANKI_SUPPORT=0
+	fi
+	if ! command -v lynx &>/dev/null; then
+		echo "Lynx not installed. HTML support disabled"
+		HTML_SUPPORT=0
+	fi
+}
+
+__escape_json() {
+	local text=$1
+	text=${text//'"'/'&quot;'}
+	text=${text//$'\n'/'<br>'}
+	echo "$text"
+}
+
+__ankiconnect_request() {
+	curl -fsS localhost:8765 -X POST -d "$1"
+}
+
+anki_search() {
+	local -r request='{
+		"action": "guiBrowse",
+		"version": 6,
+		"params": {
+		    "query": "nid:<note_id>"
+		}
+	}'
+	__ankiconnect_request "${request/<note_id>/$1}"
+}
+
+create_anki_card() {
+	local word=$(__escape_json "$1")
+	local definition="$2"
+	# Remove first line if it contains 【
+	if echo "$definition" | head -n 1 | grep -q "【"; then
+		definition=$(echo "$definition" | tail -n +2)
+	fi
+	definition=$(__escape_json "$definition")
+
+	notify-send "Please select the sentence"
+	clipnotify && sentence=$(xclip -o 2>/dev/null)
+	sentence=$(__escape_json "${sentence/$word/<b>$word</b>}")
+
+	local request=$(
+		cat <<-EOF
+			{
+			    "action": "addNote",
+			    "version": 6,
+			    "params": {
+				"note": {
+				    "deckName": "$ANKI_DECK",
+				    "modelName": "$ANKI_MODEL",
+				    "fields": {
+					"$ANKI_SENTENCE_FIELD": "$sentence",
+					"$ANKI_WORD_FIELD": "$word",
+					"$ANKI_DEFINITION_FIELD": "$definition"
+				    },
+				    "options": {
+					"allowDuplicate": true
+				    },
+				    "tags": []
+				}
+			    }
+			}
+		EOF
+	)
+
+	if output=$(__ankiconnect_request "$request" 2>&1); then
+		note_id=$(echo "$output" | grep -o '"result": [0-9]*' | cut -d ' ' -f 2 | sed 's/[^0-9]//g')
+		[ $ANKI_SEARCH_AFTER_ADD -eq 1 ] && anki_search "$note_id"
+	else
+		die "$output"
+	fi
+}
+
+main() {
+	if [ "$1" = "html" ] && [ $HTML_SUPPORT -eq 1 ]; then
+		word=${2:-$(xclip -o 2>/dev/null)}
+		dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output | lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8)
+	else
+		word=${1:-$(xclip -o 2>/dev/null)}
+		dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output)
+	fi
+
+	echo "$dict_entry" | popup
+
+	[ $? -eq 2 ] && [ $ANKI_SUPPORT -eq 1 ] && create_anki_card "$word" "$dict_entry"
+}
+
+checkDependencies
+main "$@"
