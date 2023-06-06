@@ -11,7 +11,7 @@ readonly ANKI_WORD_FIELD=${ANKI_WORD_FIELD:-VocabKanji}
 readonly ANKI_DEFINITION_FIELD=${ANKI_DEFINITION_FIELD:-VocabDef}
 
 HTML_SUPPORT=0 # Set to 1 for HTML formatting through lynx
-ANKI_SUPPORT=0 # Set to 1 for anki cards with middle click
+ANKI_SUPPORT=1 # Set to 1 for anki cards with middle click
 ANKI_SEARCH_AFTER_ADD=1
 NUKE_NEWLINES=1
 NUKE_SPACES=1
@@ -26,11 +26,11 @@ checkDependencies() {
 	command -v sdcv &>/dev/null || die "sdcv not installed."
 	command -v popup &>/dev/null || die "The popup binary is not accessible."
 	command -v xclip &>/dev/null || die "xclip is not installed."
-	if ! command -v clipnotify &>/dev/null; then
+	if [ $ANKI_SUPPORT -eq 1 ] && ! command -v clipnotify &>/dev/null; then
 		echo "clipnotify not installed. Anki support disabled"
 		ANKI_SUPPORT=0
 	fi
-	if ! command -v lynx &>/dev/null; then
+	if [ $HTML_SUPPORT -eq 1 ] && ! command -v lynx &>/dev/null; then
 		echo "Lynx not installed. HTML support disabled"
 		HTML_SUPPORT=0
 	fi
@@ -70,7 +70,7 @@ create_anki_card() {
 	notify-send "Please select the sentence"
 	clipnotify && sentence=$(xclip -o 2>/dev/null)
 	[ $NUKE_NEWLINES -eq 1 ] && sentence=${sentence//$'\n'/}
-	[ $NUKE_SPACES -eq 1 ] && sentence=${sentence// /}
+	[ $NUKE_SPACES -eq 1 ] && sentence=${sentence//[ 　]/}
 	echo "$sentence"
 	sentence=${sentence/$word/<b>$word</b>}
 	sentence=$(__escape_json "$sentence")
@@ -115,15 +115,12 @@ create_anki_card() {
 
 main() {
 	word=${1:-$(xclip -o 2>/dev/null)}
-	if [ $HTML_SUPPORT -eq 1 ]; then
-		dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output | lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8)
-	else
-		dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output)
-	fi
+	dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output)
+	[ $HTML_SUPPORT -eq 1 ] && dict_entry=$(lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8 <<<"$dict_entry")
 
 	printf "%s" "$dict_entry" | popup
 
-	[ $ANKI_SUPPORT -eq 1 ] && [ $? -eq 2 ] && create_anki_card "$word" "$dict_entry"
+	[ $? -eq 2 ] && [ $ANKI_SUPPORT -eq 1 ] && create_anki_card "$word" "$dict_entry"
 }
 
 checkDependencies
