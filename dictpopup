@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# invocation: dictpopup [html] [word]
+# invocation: dictpopup [word]
 # - If no argument provided, the selection is used
-# - If supplied with the html option, the dictionary output will be piped through lynx
-#   in order to format html as plain text
 
 #### Settings
 readonly ANKI_DECK=${ANKI_DECK:-Japanese::sentences}
@@ -12,8 +10,8 @@ readonly ANKI_SENTENCE_FIELD=${ANKI_SENTENCE_FIELD:-SentKanji}
 readonly ANKI_WORD_FIELD=${ANKI_WORD_FIELD:-VocabKanji}
 readonly ANKI_DEFINITION_FIELD=${ANKI_DEFINITION_FIELD:-VocabDef}
 
-HTML_SUPPORT=1
-ANKI_SUPPORT=0
+HTML_SUPPORT=0 # Set to 1 for HTML formatting through lynx
+ANKI_SUPPORT=0 # Set to 1 for anki cards with middle click
 ANKI_SEARCH_AFTER_ADD=1
 NUKE_NEWLINES=1
 NUKE_SPACES=1
@@ -103,7 +101,7 @@ create_anki_card() {
 
 	if output=$(__ankiconnect_request "$request" 2>&1); then
 		if [ $ANKI_SEARCH_AFTER_ADD -eq 1 ]; then
-			note_id=$(echo "$output" | grep -o '"result": [0-9]*' | cut -d ' ' -f 2 | sed 's/[^0-9]//g')
+			note_id=$(echo "$output" | grep -o '"result": [0-9]*' | cut -d ' ' -f 2)
 			if [ -n "$note_id" ]; then
 				anki_search "$note_id"
 			else
@@ -116,17 +114,16 @@ create_anki_card() {
 }
 
 main() {
-	if [ "$1" = "html" ] && [ $HTML_SUPPORT -eq 1 ]; then
-		word=${2:-$(xclip -o 2>/dev/null)}
+	word=${1:-$(xclip -o 2>/dev/null)}
+	if [ $HTML_SUPPORT -eq 1 ]; then
 		dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output | lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8)
 	else
-		word=${1:-$(xclip -o 2>/dev/null)}
 		dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output)
 	fi
 
 	printf "%s" "$dict_entry" | popup
 
-	[ $? -eq 2 ] && [ $ANKI_SUPPORT -eq 1 ] && create_anki_card "$word" "$dict_entry"
+	[ $ANKI_SUPPORT -eq 1 ] && [ $? -eq 2 ] && create_anki_card "$word" "$dict_entry"
 }
 
 checkDependencies
