@@ -8,7 +8,7 @@ This is a very lightweight program to show a popup with the translation of the s
 
 ## Dependencies
 sdcv, xclip (for selection support). \
-Optional: lynx (for html support)
+Optional: lynx (for html support), clipnotify (for anki support). For Arch users: You will need `clipnotify-git` from the AUR instead `clipnotify` from the official repos.
 
 ## Setup
 First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github page. Optionally copy `config.def.h` to `config.h` and change the configuration.
