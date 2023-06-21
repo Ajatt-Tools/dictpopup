@@ -59,7 +59,8 @@ anki_search() {
 }
 
 create_anki_card() {
-	local word=$(__escape_json "$1")
+	local word
+	word=$(__escape_json "$1")
 	local definition=$2
 	# Remove first line if it contains 【
 	if echo "$definition" | head -n 1 | grep -q "【"; then
@@ -68,14 +69,15 @@ create_anki_card() {
 	definition=$(__escape_json "$definition")
 
 	notify-send "Please select the sentence"
-	clipnotify && sentence=$(xclip -o 2>/dev/null)
+	clipnotify -s clipboard && sentence=$(xclip -o -sel clip 2>/dev/null)
 	[ $NUKE_NEWLINES -eq 1 ] && sentence=${sentence//$'\n'/}
 	[ $NUKE_SPACES -eq 1 ] && sentence=${sentence//[ 　]/}
 	echo "$sentence"
 	sentence=${sentence/$word/<b>$word</b>}
 	sentence=$(__escape_json "$sentence")
 
-	local request=$(
+	local request
+	request=$(
 		cat <<-EOF
 			{
 			    "action": "addNote",
