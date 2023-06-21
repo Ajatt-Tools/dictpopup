@@ -17,7 +17,7 @@ Then install with `sudo make install`.  You can uninstall with `sudo make uninst
 f you would like to automatically lookup a word on every selection, then take a look at the following script: https://github.com/GenjiFujimoto/shell-scripts/blob/main/selautolookup
 
 ### Anki support
-To enable anki support, open `dictpopup`, set `ANKK_SUPPORT` to `1` and edit the field names according to your anki setup. You can add a word by middle clicking the popup and then selecting the sentence you want to add.
+To enable anki support, open `dictpopup`, set `ANKI_SUPPORT` to `1` and edit the field names according to your anki setup. You can add a word by middle clicking the popup and then selecting the sentence you want to add.
 
 ## Usage
 Call `dictpopup [html] [<WORD>]`.\
