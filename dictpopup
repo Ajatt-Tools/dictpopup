@@ -17,6 +17,10 @@ NUKE_NEWLINES=1
 NUKE_SPACES=1
 ####
 
+sdcv_() {
+	sdcv -n --utf8-output -e "$1"
+}
+
 die() {
 	notify-send "$1"
 	exit 1
@@ -115,9 +119,28 @@ create_anki_card() {
 	fi
 }
 
+lookup() {
+	word=$1
+	export dict_entry
+	dict_entry=$(sdcv_ "$word" | format_output)
+
+	if [ -z "$dict_entry" ]; then
+		while read -r line; do
+			dict_entry=$(sdcv_ "$line" | format_output)
+			[ -n "$dict_entry" ] && break
+		done <<INPUT
+		$(deinflector "$word")
+INPUT
+	fi
+
+	echo "$dict_entry"
+}
+
 main() {
-	word=${1:-$(xclip -o 2>/dev/null)}
-	dict_entry=$(sdcv -n --utf8-output -e "$word" | format_output)
+	word=${1:-$(xclip -o)}
+	dict_entry=$(lookup "$word")
+	[ -z "$dict_entry" ] && die "No results"
+
 	[ $HTML_SUPPORT -eq 1 ] && dict_entry=$(lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8 <<<"$dict_entry")
 
 	printf "%s" "$dict_entry" | popup
