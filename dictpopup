@@ -15,7 +15,12 @@ ANKI_SUPPORT=1 # Set to 1 for anki cards with middle click
 ANKI_SEARCH_AFTER_ADD=1
 NUKE_NEWLINES=1
 NUKE_SPACES=1
+FILTER_DICT_ENTRIES=1
 ####
+
+lookup_word=${1:-$(xclip -o)}
+dict_word=$lookup_word
+dict_entry=""
 
 sdcv_() {
 	sdcv -n --utf8-output -e "$1"
@@ -62,22 +67,28 @@ anki_search() {
 	__ankiconnect_request "${request/<note_id>/$1}"
 }
 
-create_anki_card() {
-	local word
-	word=$(__escape_json "$1")
-	local definition=$2
-	# Remove first line if it contains 【
-	if echo "$definition" | head -n 1 | grep -q "【"; then
-		definition=$(echo "$definition" | tail -n +2)
+choose_dict_entry() {
+	numbers='①|②|③|④|⑤|⑥|⑦|⑧|⑨|⑩|⑪|⑫|⑬|⑭|⑮'
+	if echo "$dict_entry" | grep -q "①"; then
+	  dict_entry=$(echo "$dict_entry"| grep -E "$numbers" | dmenu -l 5 -p "Choose a dictionary entry")
 	fi
-	definition=$(__escape_json "$definition")
+}
+
+create_anki_card() {
+	dict_word=$(__escape_json "$dict_word")
+	[ $FILTER_DICT_ENTRIES -eq 1 ] && choose_dict_entry
+	# Remove first line if it contains 【
+	if echo "$dict_entry" | head -n 1 | grep -q "【"; then
+		dict_entry=$(echo "$dict_entry" | tail -n +2)
+	fi
+	dict_entry=$(__escape_json "$dict_entry")
 
 	notify-send "Please select the sentence"
 	clipnotify -s clipboard && sentence=$(xclip -o -sel clip 2>/dev/null)
 	[ $NUKE_NEWLINES -eq 1 ] && sentence=${sentence//$'\n'/}
 	[ $NUKE_SPACES -eq 1 ] && sentence=${sentence//[ 　]/}
 	echo "$sentence"
-	sentence=${sentence/$word/<b>$word</b>}
+	sentence=${sentence/$lookup_word/<b>$lookup_word</b>}
 	sentence=$(__escape_json "$sentence")
 
 	local request
@@ -92,8 +103,8 @@ create_anki_card() {
 				    "modelName": "$ANKI_MODEL",
 				    "fields": {
 					"$ANKI_SENTENCE_FIELD": "$sentence",
-					"$ANKI_WORD_FIELD": "$word",
-					"$ANKI_DEFINITION_FIELD": "$definition"
+					"$ANKI_WORD_FIELD": "$dict_word",
+					"$ANKI_DEFINITION_FIELD": "$dict_entry"
 				    },
 				    "options": {
 					"allowDuplicate": true
@@ -120,32 +131,27 @@ create_anki_card() {
 }
 
 lookup() {
-	word=$1
-	export dict_entry
-	dict_entry=$(sdcv_ "$word" | format_output)
+	dict_entry=$(sdcv_ "$lookup_word" | format_output)
 
 	if [ -z "$dict_entry" ]; then
-		while read -r line; do
-			dict_entry=$(sdcv_ "$line" | format_output)
+		while read -r dict_word; do
+			dict_entry=$(sdcv_ "$dict_word" | format_output)
 			[ -n "$dict_entry" ] && break
 		done <<INPUT
-		$(deinflector "$word")
+		$(deinflector "$lookup_word")
 INPUT
 	fi
-
-	echo "$dict_entry"
 }
 
 main() {
-	word=${1:-$(xclip -o)}
-	dict_entry=$(lookup "$word")
+	lookup "$lookup_word"
 	[ -z "$dict_entry" ] && die "No results"
 
 	[ $HTML_SUPPORT -eq 1 ] && dict_entry=$(lynx -dump -stdin -assume_charset=UTF-8 -display_charset=UTF-8 <<<"$dict_entry")
 
 	printf "%s" "$dict_entry" | popup
 
-	[ $? -eq 2 ] && [ $ANKI_SUPPORT -eq 1 ] && create_anki_card "$word" "$dict_entry"
+	[ $? -eq 2 ] && [ $ANKI_SUPPORT -eq 1 ] && create_anki_card # "$lookup_word" "$dict_word" "$dict_entry"
 }
 
 checkDependencies
