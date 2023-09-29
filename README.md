@@ -20,4 +20,4 @@ close the popup with `q` or `Esc`.
 
 Anki cards can be created by pressing `Ctrl+s` and then selecting the sentence where
 you encountered the word in.
-Currently there is only support for (targeted sentence cards)[https://ankiweb.net/shared/info/1557722832].
+Currently there is only support for [targeted sentence cards](https://ankiweb.net/shared/info/1557722832).
