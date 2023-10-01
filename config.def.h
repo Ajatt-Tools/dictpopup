@@ -1,21 +1,16 @@
-static const char *background_color = "#2E3440";
-static const char *border_color = "#ececec";
-static const char *font_color = "#ececec";
-static const char *font_pattern = "Noto Sans Mono CJK JP:size=12";
-static const unsigned line_spacing = 5;
-static const unsigned int padding = 15;
+#define MAX_NUM_OF_DICT_ENTRIES 10
+#define MAX_WORD_LEN 50
 
-static const unsigned int width = 480;
-static const unsigned int border_size = 1;
+#define ANKI_SUPPORT /* Comment to exclude */
 
-#define MIN_BORDER_DISTANCE 3 /* The minimum distance to the monitor boundary */
+#define ANKI_DECK "Japanese::sentences"
+#define ANKI_MODEL "Japanese sentences"
+#define ANKI_SENTENCE_FIELD "SentKanji"
+#define ANKI_KANJI_FIELD "VocabKanji"
+#define ANKI_FURIGANA_FIELD "VocabFurigana"
+#define ANKI_DEFINITION_FIELD "VocabDef"
+#define ANKI_API_URL "http://localhost:8765"
 
-#define DISMISS_BUTTON Button1 /* left click */
-#define ACTION1_BUTTON Button2 /* middle click */
-#define ACTION2_BUTTON Button5 /* scroll down */
+#define NUKE_SPACES 1
+#define NUKE_NEWLINES 1
 
-/* exit codes */
-#define EXIT_DISMISS 0
-#define EXIT_FAIL 1
-#define EXIT_ACTION1 2
-#define EXIT_ACTION2 3
