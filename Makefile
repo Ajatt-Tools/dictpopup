@@ -27,9 +27,12 @@ clean:
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp -f popup ${DESTDIR}${PREFIX}/bin
+	cp -f dictpopup ${DESTDIR}${PREFIX}/bin
+	mkdir -p /usr/share/dictpopup
+	cp -f textview.css /usr/share/dictpopup
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/popup
+	rm -f ${DESTDIR}${PREFIX}/bin/dictpopup
+	rm -f /usr/share/dictpopup/textview.css
 
 .PHONY: all options clean install uninstall

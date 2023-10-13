@@ -1,9 +1,13 @@
 
 
+High priority
+- Improve second deinflection code (add third?)
 - Some way to only add specific dictionary entries
   - choose selection as entry
   - "Add this entry"-button before every entry
   - (choose with dmenu)
-- Improve second deinflection code (add third?)
+
+Mid priority
+- Get rid of textview.css file?
 - Do yomichan-like lookup (decrease word length from right to left until found)
 - Maybe also display the full lookup string with clickable characters (yomichan search)
