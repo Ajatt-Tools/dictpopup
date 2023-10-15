@@ -8,6 +8,7 @@ High priority
   - (choose with dmenu)
 
 Mid priority
+- Show notification on success / failure of adding card
 - Get rid of textview.css file?
 - Do yomichan-like lookup (decrease word length from right to left until found)
 - Maybe also display the full lookup string with clickable characters (yomichan search)

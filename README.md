@@ -13,7 +13,7 @@ Then install with `sudo make install`.  You can uninstall with `sudo make uninst
 If you would like to automatically lookup a word on every selection, then take a look at the following script: https://github.com/GenjiFujimoto/shell-scripts/blob/main/selautolookup
 
 ## Usage
-Call `dictpopup [<WORD>]`.\
+Call `dictpopup word`.\
 If no word is supplied, the selection will be used.\
 You can switch between dictionary entries by pressing `n` (next) or `p` (previous) and
 close the popup with `q` or `Esc`.
