@@ -3,13 +3,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "util.h"
 
+#include <libnotify/notify.h>
+#include <unistd.h>
 
 void
-notify(char *notification)
+notify(const char *message)
 {
+        NotifyNotification *n;
+
+        notify_init ("Basics");
+
+        n = notify_notification_new (message, NULL, NULL);
+	notify_notification_set_app_name (n, "dictpopup"); /* Maybe set to argv[0] */
+        /* notify_notification_set_timeout (n, 3000); */
+
+        if (!notify_notification_show (n, NULL))
+                fprintf (stderr, "failed to send notification\n");
+
+	g_object_unref (G_OBJECT (n));
 }
 
 void *
@@ -24,6 +37,7 @@ ecalloc(size_t nmemb, size_t size)
 
 void
 die(const char *fmt, ...) {
+	// TODO: Send notification
 	va_list ap;
 
 	va_start(ap, fmt);
@@ -40,9 +54,7 @@ die(const char *fmt, ...) {
 	exit(1);
 }
 
-#include <string.h>
 #include <stddef.h>
-
 #if (__STDC_VERSION__ >= 199901L)
 #include <stdint.h>
 #endif

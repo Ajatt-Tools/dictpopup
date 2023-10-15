@@ -78,9 +78,11 @@ prepare_request(char **bdsent, char **vocabKanji, char **vocabFurigana,
 }
 
 void addNote(char *lu_word, char *dict_word, char *de) {
+    // TODO: Create a "Request" struct
     char *bdsent, *vocabKanji, *vocabFurigana;
     prepare_request(&bdsent, &vocabKanji, &vocabFurigana, &de, lu_word, dict_word);
 
+    // TODO: Create a send request function
     CURL *curl;
     CURLcode res;
     curl_global_init(CURL_GLOBAL_ALL);
