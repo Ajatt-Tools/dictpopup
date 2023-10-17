@@ -8,7 +8,11 @@ High priority
   - (choose with dmenu)
 
 Mid priority
+- Try to search for hiragana conversion
 - Show notification on success / failure of adding card
-- Get rid of textview.css file?
 - Do yomichan-like lookup (decrease word length from right to left until found)
-- Maybe also display the full lookup string with clickable characters (yomichan search)
+
+Ideas:
+- Indicator showing if word has been previously added
+  - Start searching after showing popup or after button press
+- Display the full lookup string with clickable characters (yomichan search)
