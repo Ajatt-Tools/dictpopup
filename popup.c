@@ -94,12 +94,12 @@ int popup(char **dictionary_entries, int num_dictionary_entries, int x, int y)
 
     /* CSS */
     GtkCssProvider *cssProvider = gtk_css_provider_new();
-    if( gtk_css_provider_load_from_path(cssProvider, "/usr/share/dictpopup/textview.css", NULL) ) 
-    {
-     gtk_style_context_add_provider(gtk_widget_get_style_context(textview),
-                                        GTK_STYLE_PROVIDER(cssProvider),
-                                        GTK_STYLE_PROVIDER_PRIORITY_USER);
-    }
+    gchar* css = "textview { font-size: 15pt; }";
+    gtk_css_provider_load_from_data(cssProvider, css, -1, NULL);
+    gtk_style_context_add_provider(gtk_widget_get_style_context(textview),
+				   GTK_STYLE_PROVIDER(cssProvider),
+				   GTK_STYLE_PROVIDER_PRIORITY_USER);
+    /* --- */
 
     g_signal_connect(G_OBJECT(window), "key-press-event", G_CALLBACK(key_press_on_win), textview);
     /* gdk_window_get_pointer(gdk_get_default_root_window(), &x, &y, 0); */
