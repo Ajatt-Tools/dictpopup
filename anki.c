@@ -11,7 +11,8 @@
 #include "util.h"
 #include "config.h"
 
-void nuke(char *str){
+void nuke(char *str)
+{
     if (!NUKE_SPACES && !NUKE_NEWLINES)
       return;
 
@@ -42,7 +43,7 @@ boldWord(char *sent, char *word)
 }
 
 void
-prepare_request(char **bdsent, char **vocabKanji, char **vocabFurigana,
+prepare_fields(char **bdsent, char **vocabKanji, char **vocabFurigana,
     char **de, char *lu_word, char *dict_word)
 {
     /* Prepare sentence */
@@ -77,20 +78,41 @@ prepare_request(char **bdsent, char **vocabKanji, char **vocabFurigana,
     }
 }
 
-void addNote(char *lu_word, char *dict_word, char *de) {
-    // TODO: Create a "Request" struct
-    char *bdsent, *vocabKanji, *vocabFurigana;
-    prepare_request(&bdsent, &vocabKanji, &vocabFurigana, &de, lu_word, dict_word);
-
-    // TODO: Create a send request function
+// TODO: Show if request was successfull or not
+void
+sendRequest(char *request)
+{
     CURL *curl;
     CURLcode res;
     curl_global_init(CURL_GLOBAL_ALL);
     if (!(curl = curl_easy_init()))
       die("Error initializing cURL.");
 
-    char *requestBody;
-    asprintf(&requestBody,
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Accept: application/json");
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, ANKI_API_URL);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request);
+    res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK)
+        die("Error with curl request: %s.", curl_easy_strerror(res));
+
+    curl_easy_cleanup(curl);
+}
+
+void
+addNote(char *lu_word, char *dict_word, char *de)
+{
+    // TODO: Create a "fields" struct?
+    char *bdsent, *vocabKanji, *vocabFurigana;
+    prepare_fields(&bdsent, &vocabKanji, &vocabFurigana, &de, lu_word, dict_word);
+
+    char *request;
+    asprintf(&request,
         "{"
         "\"action\": \"addNote\","
         "\"version\": 6,"
@@ -123,21 +145,9 @@ void addNote(char *lu_word, char *dict_word, char *de) {
         de
     );
 
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Accept: application/json");
-    headers = curl_slist_append(headers, "Content-Type: application/json");
+    sendRequest(request);
 
-    curl_easy_setopt(curl, CURLOPT_URL, ANKI_API_URL);
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, requestBody);
-    res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK)
-        die("Error with curl request: %s.", curl_easy_strerror(res));
-
-    curl_easy_cleanup(curl);
     free(bdsent);
     free(vocabFurigana);
-    free(requestBody);
+    free(request);
 }

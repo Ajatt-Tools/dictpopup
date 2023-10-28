@@ -1,6 +1,6 @@
 include config.mk
 
-SRC = main.c popup.c util.c anki.c xlib.c deinflector.c
+SRC = main.c popup.c util.c anki.c xlib.c
 OBJ = $(SRC:.c=.o)
 
 all: options dictpopup
@@ -28,7 +28,6 @@ clean:
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	cp -f dictpopup ${DESTDIR}${PREFIX}/bin
-	mkdir -p /usr/share/dictpopup
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/dictpopup

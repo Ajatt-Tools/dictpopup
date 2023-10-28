@@ -8,11 +8,15 @@ High priority
   - (choose with dmenu)
 
 Mid priority
+- enable variable font size
 - Try to search for hiragana conversion
 - Show notification on success / failure of adding card
 - Do yomichan-like lookup (decrease word length from right to left until found)
 
+Low priority
+- Decrease startup time, though 90% of the startup time is probably due to gtk
+
 Ideas:
 - Indicator showing if word has been previously added
-  - Start searching after showing popup or after button press
+  - Start searching after showing popup or after button press to avoid slowdown
 - Display the full lookup string with clickable characters (yomichan search)
