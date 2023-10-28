@@ -2,10 +2,11 @@
 
 High priority
 - Improve second deinflection code (add third?)
+  - Best would be some recursive implementation probably and having a variable limiting the depth
 - Some way to only add specific dictionary entries
-  - choose selection as entry
+  ! choose selection as entry
   - "Add this entry"-button before every entry
-  - (choose with dmenu)
+  x choose with dmenu
 
 Mid priority
 - enable variable font size
@@ -14,6 +15,9 @@ Mid priority
 - Do yomichan-like lookup (decrease word length from right to left until found)
 
 Low priority
+- increase user friendliness
+  - error messages if sdcv is missing or if there are no dictionaries available to sdcv
+  - Config file instead of compile time config? Impact on startup time has to be tested tho
 - Decrease startup time, though 90% of the startup time is probably due to gtk
 
 Ideas:

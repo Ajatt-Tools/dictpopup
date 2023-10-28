@@ -95,15 +95,16 @@ set_margins()
 }
 
 void
-set_fontsize(size_t fs)
+set_font_size(size_t fs)
 {
-    if (fs >= 100)
-    {
-	fs = 15;
-	fprintf(stderr, "Received fontsize >= 100pt. Defaulting to 15pt.");
-    }
-    char css[30];
-    snprintf(css, sizeof(css), "textview { font-size: %lipt; }", fs);
+    /* if (fs >= 100) */
+    /* { */
+	/* fs = 15; */
+	/* fprintf(stderr, "Received fontsize >= 100pt. Defaulting to 15pt."); */
+    /* } */
+    /* char css[30]; */
+    /* snprintf(css, sizeof(css), "", fs); */
+    char *css = "textview { font-size: " FONT_SIZE "pt; }";
 
     GtkCssProvider *cssProvider = gtk_css_provider_new();
     gtk_css_provider_load_from_data(cssProvider, css, -1, NULL);
@@ -152,7 +153,7 @@ popup(char **dictionary_entries, size_t num_dictionary_entries)
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tw), FALSE);
 
     set_margins();
-    set_fontsize(15);
+    set_font_size(15);
 
     g_signal_connect(G_OBJECT(window), "key-press-event", G_CALLBACK(key_press_on_win), dict_tw);
 

@@ -9,6 +9,7 @@
 #define ANKI_DEFINITION_FIELD "VocabDef"
 #define ANKI_API_URL "http://localhost:8765"
 
+#define FONT_SIZE "15" // In pt
 #define WIN_MARGIN 5
 #define WIN_WIDTH 480
 #define WIN_HEIGHT 300
