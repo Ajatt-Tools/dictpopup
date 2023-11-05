@@ -12,7 +12,7 @@ options:
 	@echo "CC       = $(CC)"
 
 .c.o:
-	$(CC) -c $(CFLAGS) $<
+	$(CC) -O3 -c $(CFLAGS) $<
 
 $(OBJ): config.h config.mk
 

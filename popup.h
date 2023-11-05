@@ -1,4 +1,4 @@
 
 
 
-int popup(char **dictionary_entries, int num_dictionary_entries);
+int popup(struct dictentry*, size_t, size_t*);

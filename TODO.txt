@@ -13,6 +13,9 @@ Mid priority
 - Try to search for hiragana conversion
 - Show notification on success / failure of adding card
 - Do yomichan-like lookup (decrease word length from right to left until found)
+- Always add deinflections, even if exact match found
+- Option to show button bar above or below text
+- Enable a switch for displaying markdown text in the textview
 
 Low priority
 - increase user friendliness
@@ -24,3 +27,4 @@ Ideas:
 - Indicator showing if word has been previously added
   - Start searching after showing popup or after button press to avoid slowdown
 - Display the full lookup string with clickable characters (yomichan search)
+  - Though I don't think a popup is suitable for this. This should be left to applications such as goldendict

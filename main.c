@@ -6,37 +6,69 @@
 #include <stdarg.h> // For va_start
 
 #include "xlib.h"
-#include "popup.h"
 #include "anki.h"
 #include "util.h"
-#include "jsmn.h"
 #include "config.h"
 #include "deinflector.h"
+#include "structs.h"
+#include "popup.h"
 
-static int
-jsoneq(const char *json, jsmntok_t *tok, const char *s) {
-  if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
-      strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
-    return 0;
+void
+parse_json(char *json, struct dictentry *des, size_t *numde)
+{
+  char keywords[3][13] = {"\"dict\"", "\"word\"", "\"definition\""};
+
+  size_t curde = 0;
+  for (int i = 1; json[i] != '\0' && curde < MAX_NUM_OF_DICT_ENTRIES; i++)
+  {
+	for (int k=0; k < 3; k++)
+	{
+	    if (strncmp(json+i, keywords[k], strlen(keywords[k])) == 0)
+	    {
+		i += strlen(keywords[k]);
+		while (json[i] != '"' || json[i-1] == '\\') i++; /* could leave string */
+		i++;
+
+		if (k == 0)
+		  des[curde].dictname = json + i;
+		else if (k == 1)
+		  des[curde].word = json + i;
+		else if (k == 2)
+		{
+		  if (json[i] == '\n') i += 1;
+		  des[curde].definition = json + i;
+		}
+
+		while (json[i] != '"' || json[i-1] == '\\') i++;
+
+		json[i++] = '\0';
+
+		if (k == 2) curde++;
+	    }
+	}
   }
-  return -1;
+  *numde = curde;
+
+  /* for (int i=0; i < *numde; i++) */
+  /*   printf("dict: %s\nword: %s\ndefinition: %s\n", des[i].dictname, des[i].word, des[i].definition); */
 }
 
 void
-conv_newline(char *str)
+str_repl(char *str, char *target, char repl)
 {
-  /* Converts symbols "\n" to an actual newline in the string str */
+  /* repl == '\0' means remove */
   int len = strlen(str);
+  int len_t = strlen(target);
   int s = 0, e = 0;
   while (e + 1 < len)
   {
-      if (str[e] == '\\' && str[e+1] == 'n')
+      if (strncmp(str + e, target, len_t) == 0)
       {
-	  if (s != 0) 
-	    str[s] = '\n';
+	  if (repl != '\0')
+	    str[s] = repl;
 	  else
-	    s--; // Remove \n at beginning completely
-	  e++;
+	    s--;
+	  e += len_t - 1;
       }
       else
 	  str[s] = str[e];
@@ -49,7 +81,9 @@ conv_newline(char *str)
   str[s] = '\0';
 }
 
-/* buf needs to be freed */
+/* 
+   Return string needs to be freed afterwards 
+*/
 char *
 execscript(char *cmd)
 {
@@ -66,13 +100,64 @@ execscript(char *cmd)
 	return buf;
 }
 
-/* Return string needs to be freed afterwards */
+/* 
+   Return string needs to be freed afterwards 
+*/
 char *
 lookup(char *word)
 {
-    char sdcv_cmd[28 + MAX_WORD_LEN + 1]; // 28 is length of "sdcv -n --utf8-output -e -j "
-    sprintf(sdcv_cmd, "sdcv -nej --utf8-output %s", word);
+    const char sdcv_str[] = "sdcv -nej --utf8-output ";
+    char sdcv_cmd[strlen(sdcv_str) + MAX_WORD_LEN + 1];
+    sprintf(sdcv_cmd, "%s%s", sdcv_str, word);
     return execscript(sdcv_cmd);
+}
+
+void
+nuke_whitespace(char *str) /* Could be optimized */
+{
+    str_repl(str, "\n", '\0');
+    str_repl(str, " ", '\0');
+    str_repl(str, "　", '\0');
+}
+
+int
+is_empty_json(char *json)
+{
+    if (json == NULL || strlen(json) < 2)
+      return 1;
+
+    return (strncmp(json, "[]", 2) == 0);
+}
+
+char *
+find_deinflection(char *word, int curdepth) /* TODO: Check for memory leak */
+{
+      if (curdepth > MAX_DEINFLECTION_DEPTH)
+	  return NULL;
+
+      char deinfw[MAX_WORD_LEN]; // FIXME: dynamic allocation, strdup(word) could be an option
+      wchar_t **deinflections = deinflect(word);
+      char *sdcv_json = NULL;
+
+      for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i] && is_empty_json(sdcv_json); i++)
+      {
+	  wcstombs(deinfw, deinflections[i], MAX_WORD_LEN);
+	  printf("Testing deinflection: %s\n", deinfw);
+	  sdcv_json = lookup(deinfw);
+      }
+
+      if (is_empty_json(sdcv_json))
+      {
+	    for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i] && is_empty_json(sdcv_json); i++)
+	    {
+		wcstombs(deinfw, deinflections[i], MAX_WORD_LEN);
+		sdcv_json = find_deinflection(deinfw, curdepth+1);
+	    }
+      }
+
+	    
+      free_deinfs(deinflections);
+      return sdcv_json;
 }
 
 int
@@ -81,100 +166,32 @@ main(int argc, char**argv)
     char *luw = (argc > 1) ? argv[1] : sselp(); // XFree sselp?
 
     if (strlen(luw) == 0)
-	die("No selection."); 
+	die("No selection and no argument."); 
     else if (strlen(luw) > MAX_WORD_LEN)
 	die("Lookup string is too long. Try increasing MAX_WORD_LEN.");
 
+    nuke_whitespace(luw);
+
     char *sdcv_json = lookup(luw);
 
-    if (strncmp(sdcv_json, "[]", 2) == 0)
-    { 
-	/* Try to deinflect */
-	char deinfw[MAX_WORD_LEN]; // FIXME: dynamic allocation
-	wchar_t **deinflections = deinflect(luw);
-	for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i] && !strncmp(sdcv_json, "[]", 2); i++)
-	{
-	    //free(sdcv_json);
-	    wcstombs(deinfw, deinflections[i], MAX_WORD_LEN); /* FIXME: ugly */
-	    sdcv_json = lookup(deinfw);
-	}
+    if (is_empty_json(sdcv_json))
+	sdcv_json = find_deinflection(luw, 1);
 
-	// FIXME: Duplication
-	if (strncmp(sdcv_json, "[]", 2) == 0)
-	{
-	    /* second round */
-	    wchar_t **deinflections2;
-	    for (int j = 0; j < MAX_DEINFLECTIONS && deinflections[j]; j++)
-	    {
-		deinflections2 = deinflect_wc(deinflections[j]);
-		for (int i = 0; i < MAX_DEINFLECTIONS && deinflections2[i] && !strncmp(sdcv_json, "[]", 2); i++)
-		{
-		    wcstombs(deinfw, deinflections2[i], MAX_WORD_LEN);
-		    sdcv_json = lookup(deinfw);
-		}
-	    }
-	}
-	/* -------- */
-	
-	wprintf(L"Testing the following deinflections:\n");
-	for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i]; i++)
-	    wprintf(L"%d: %ls\n", i + 1, deinflections[i]);
-
-	// Free deinflections
-	free_deinfs(deinflections);
-	free(deinflections);
-    }
-
-    if (strncmp(sdcv_json, "[]", 2) == 0)
+    if (is_empty_json(sdcv_json))
       die("No dictionary entry found.");
 
-    /* -- START JSON -- */
-    char *de[MAX_NUM_OF_DICT_ENTRIES];
-    char *word_de[MAX_NUM_OF_DICT_ENTRIES];
-    size_t num_de = 0;
+    str_repl(sdcv_json, "\\n", '\n');
+    struct dictentry des[MAX_NUM_OF_DICT_ENTRIES];
+    size_t numde;
 
-    int i, r;
-    jsmn_parser p;
-    jsmntok_t t[7 * MAX_NUM_OF_DICT_ENTRIES + 5]; // 1 entry ~ 7 json tokens
+    parse_json(sdcv_json, des, &numde); /* des reuses sdcv_json string. 危ない */
 
-    jsmn_init(&p);
-    r = jsmn_parse(&p, sdcv_json, strlen(sdcv_json), t,
-                 sizeof(t) / sizeof(t[0]));
-
-    if (r == JSMN_ERROR_NOMEM)
-      die("Too few tokens allocated. This is a bug.");
-    else if (r == JSMN_ERROR_INVAL)
-      die("Bad output from sdcv.");
-    else if (r == JSMN_ERROR_PART)
-      die("JSON string too short. Probably a bug in retrieving the command output.");
-
-    // WARNING: Will break, if sdcv output changes
-    for (i = 4; i < r; i++)
-    {
-	if (jsoneq(sdcv_json, &t[i], "word") == 0) {
-	  word_de[num_de] = strndup(sdcv_json + t[i + 1].start, 
-				    t[i + 1].end - t[i + 1].start);
-	  i++;
-	}
-	else if (jsoneq(sdcv_json, &t[i], "definition") == 0) {
-	  /* token_num[num_de] = i + 1; */
-	  de[num_de++] = strndup(sdcv_json + t[i + 1].start, 
-				 t[i + 1].end - t[i + 1].start);
-	  i += 4;
-	}
-    }
-    /* -- END JSON -- */
-    free(sdcv_json);
-
-    for (int i = 0; i < num_de; i++)
-      conv_newline(de[i]);
-    
-    int ev = popup(de, num_de);
+    size_t curde = 0;
+    int ev = popup(des, numde, &curde);
 #ifdef ANKI_SUPPORT
     if (ev == 1)
-	addNote(luw, word_de[0], de[0]); // TODO: Add chosen de from popup
+	addNote(luw, des[curde].word, des[curde].definition);
 #endif
 
-    // TODO: free dictionary entries?
     return 0;
 }

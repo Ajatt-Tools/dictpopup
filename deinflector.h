@@ -20,8 +20,9 @@ wchar_t **deinflect_wc(wchar_t *word);
 void
 free_deinfs(wchar_t **deinflections)
 {
-    for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i]; i++)
+    for (int i = 0; i < MAX_DEINFLECTIONS; i++)
 	free(deinflections[i]);
+    free (deinflections);
 }
 
 int
@@ -36,12 +37,11 @@ getFreeEntry(wchar_t **deinflections)
 }
 
 void
-add_replacelast(wchar_t **deinflections, wchar_t *word, wchar_t lastchr)
+add_replace(wchar_t **deinflections, wchar_t *word, wchar_t repl, size_t pos)
 {
       int i = getFreeEntry(deinflections);
-      int len = wcslen(word);
       deinflections[i] = wcsdup(word);
-      deinflections[i][len-1] = lastchr;
+      deinflections[i][pos] = repl;
 }
 
 void
@@ -74,7 +74,7 @@ itou_atou_form(wchar_t **deinflections, wchar_t word[], int len, bool aform)
       i++;
 
     if (i < num)
-	add_replacelast(deinflections, word, uforms[i]);
+	add_replace(deinflections, word, uforms[i], len - 1);
     if (!aform || i >= num) // For iform orig can be る-form or not, e.g. 生きます
 	addatpos(deinflections, word, L'る', len);
 
@@ -91,26 +91,26 @@ te_form(wchar_t **deinflections, wchar_t *word, int len)
     switch (lastchr)
     {
 	case L'し':
-	    add_replacelast(deinflections, word, L'す');
+	    add_replace(deinflections, word, L'す', len - 1);
 	    break;
 	case L'い':
-	    add_replacelast(deinflections, word, L'く');
+	    add_replace(deinflections, word, L'く', len - 1);
 	    break;
 	case L'ん':
-	    add_replacelast(deinflections, word, L'す');
-	    add_replacelast(deinflections, word, L'ぶ');
-	    add_replacelast(deinflections, word, L'ぬ');
+	    add_replace(deinflections, word, L'す', len - 1);
+	    add_replace(deinflections, word, L'ぶ', len - 1);
+	    add_replace(deinflections, word, L'ぬ', len - 1);
 	    break;
 	case L'く': /* e.g. 行かなくて, not neseccary actually */
-	    add_replacelast(deinflections, word, L'い');
+	    add_replace(deinflections, word, L'い', len - 1);
 	case L'っ':
 	      if (len >= 2 && word[len-2] == L'行')
-		  add_replacelast(deinflections, word, L'く');
+		  add_replace(deinflections, word, L'く', len - 1);
 	      else
 	      {
-		  add_replacelast(deinflections, word, L'る');
-		  add_replacelast(deinflections, word, L'う');
-		  add_replacelast(deinflections, word, L'つ');
+		  add_replace(deinflections, word, L'る', len - 1);
+		  add_replace(deinflections, word, L'う', len - 1);
+		  add_replace(deinflections, word, L'つ', len - 1);
 	      }
 	    break;
 	default:
@@ -130,12 +130,12 @@ de_form(wchar_t **deinflections, wchar_t *word, int len)
     switch (lastchr)
     {
 	case L'い':
-	    add_replacelast(deinflections, word, L'ぐ');
+	    add_replace(deinflections, word, L'ぐ', len - 1);
 	    break;
 	case L'ん':
-	    add_replacelast(deinflections, word, L'む');
-	    add_replacelast(deinflections, word, L'ぶ');
-	    add_replacelast(deinflections, word, L'ぬ');
+	    add_replace(deinflections, word, L'む', len - 1);
+	    add_replace(deinflections, word, L'ぶ', len - 1);
+	    add_replace(deinflections, word, L'ぬ', len - 1);
 	    break;
 	default:
 	    notify("〜で suggests て-form, but could not find a match");
@@ -171,6 +171,8 @@ deinflect_wc(wchar_t *word)
   wchar_t *last2 = word + len - 2;
   wchar_t lastchr = word[len-1];
 
+  if (word[0] == L'ご' || word[0] == L'お')
+    add_replace(deinflections, word, L'御', 0);
   /* 動詞 - polite form */
   if(!wcscmp(last2, L"ます"))
       return itou_atou_form(deinflections, word, len - 2, 0);
@@ -190,7 +192,7 @@ deinflect_wc(wchar_t *word)
   if (last3 && !wcscmp(last3, L"られる"))
   {
       word[len - 2] = L'\0';
-      add_replacelast(deinflections, word, L'る');
+      add_replace(deinflections, word, L'る', len - 3);
       return deinflections;
   }
   else if (!wcscmp(last2, L"れる"))
@@ -228,7 +230,7 @@ deinflect_wc(wchar_t *word)
       case L'く':
 
       case L'さ':
-	add_replacelast(deinflections, word, L'い');
+	add_replace(deinflections, word, L'い', len - 1);
 	return deinflections;
   }
 
