@@ -1,9 +1,4 @@
-#define MAX_DEINFLECTIONS 4
-
-/* void free_deinfs(wchar_t **deinflections); */
-/* wchar_t ** deinflect(char *wordSTR); */
-/* wchar_t **deinflect_wc(wchar_t *word); */
-
+#define MAX_DEINFLECTIONS 5
 
 #include <stdio.h>
 #include <string.h>
@@ -15,14 +10,12 @@
 #include "config.h"
 #include "util.h"
 
-wchar_t **deinflect_wc(wchar_t *word);
-
 void
 free_deinfs(wchar_t **deinflections)
 {
     for (int i = 0; i < MAX_DEINFLECTIONS; i++)
 	free(deinflections[i]);
-    free (deinflections);
+    /* free (deinflections); */
 }
 
 int
@@ -144,40 +137,46 @@ de_form(wchar_t **deinflections, wchar_t *word, int len)
     return deinflections;
 }
 
-/* Returns MAX_DEINFLECTIONS pointers with possible deinflections. */
-/* NULL means no deinflection. */
-wchar_t **
-deinflect(char *wordSTR)
+void
+deinflect_wc(wchar_t **deinflections, wchar_t *word)
 {
-  setlocale(LC_ALL, "");
-
-  wchar_t word[MAX_WORD_LEN];
-  mbstowcs(word, wordSTR, MAX_WORD_LEN);
-  return deinflect_wc(word);
-}
-
-wchar_t **
-deinflect_wc(wchar_t *word)
-{
-  wchar_t **deinflections;
-  if(!(deinflections = (wchar_t **)calloc(MAX_DEINFLECTIONS, sizeof(wchar_t *))))
-      die("Could not allocate array for deinflections.");
+  /* wchar_t **deinflections; */
+  /* if(!(deinflections = (wchar_t **)calloc(MAX_DEINFLECTIONS, sizeof(wchar_t *)))) */
+  /*     die("Could not allocate array for deinflections."); */
 
   int len = wcslen(word);
   if (len < 2)
-    return deinflections;
+    return;
 
   wchar_t *last3 = len >= 3 ? word + len - 3 : NULL;
   wchar_t *last2 = word + len - 2;
   wchar_t lastchr = word[len-1];
 
+  if (last3 && !wcscmp(last3, L"しまう"))
+  {
+    add_replace(deinflections, word, L'\0', len - 3);
+    return;
+  }
+
+  /* Different writings */
   if (word[0] == L'ご' || word[0] == L'お')
     add_replace(deinflections, word, L'御', 0);
+  if (last3 && (!wcscmp(last3, L"かかり") || !wcscmp(last3, L"がかり")
+	|| !wcscmp(last3, L"かかる") || !wcscmp(last3, L"かかる")))
+    add_replace(deinflections, word, L'掛', len-3);
+  /* --- */
+
   /* 動詞 - polite form */
   if(!wcscmp(last2, L"ます"))
-      return itou_atou_form(deinflections, word, len - 2, 0);
+  {
+      itou_atou_form(deinflections, word, len - 2, 0);
+      return;
+  }
   else if(last3 && (!wcscmp(last3, L"ません") || !wcscmp(last3, L"ました")))
-      return itou_atou_form(deinflections, word, len - 3, 0);
+  {
+      itou_atou_form(deinflections, word, len - 3, 0);
+      return;
+  }
 
   /* 形容詞 - 過去形 */
   if (last3 && !wcscmp(last3, L"かった"))
@@ -186,42 +185,58 @@ deinflect_wc(wchar_t *word)
 
   /* 動詞 - volitional? */
   if (!wcscmp(word + len - 2, L"たい"))
-      return itou_atou_form(deinflections, word, len - 2, 0);
+  {
+      itou_atou_form(deinflections, word, len - 2, 0);
+      return;
+  }
 
   /* 動詞 - passive */
   if (last3 && !wcscmp(last3, L"られる"))
   {
       word[len - 2] = L'\0';
       add_replace(deinflections, word, L'る', len - 3);
-      return deinflections;
+      return;
   }
   else if (!wcscmp(last2, L"れる"))
-      return itou_atou_form(deinflections, word, len - 2, 1);
+  {
+      itou_atou_form(deinflections, word, len - 2, 1);
+      return;
+  }
 
   /* causative? */
   if (!wcscmp(last2, L"せる"))
-      return itou_atou_form(deinflections, word, len - 2, 1);
+  {
+      itou_atou_form(deinflections, word, len - 2, 1);
+      return;
+  }
 
   /* 否定形 */
   if (!wcscmp(last2, L"ない"))
-      return itou_atou_form(deinflections, word, len - 2, 1);
+  {
+      itou_atou_form(deinflections, word, len - 2, 1);
+      return;
+  }
 
   /* te form */
   switch (lastchr)
   {
       case L'て':
-	return te_form(deinflections, word, len);
+	te_form(deinflections, word, len);
+	return;
       case L'で':
-	return de_form(deinflections, word, len);
+	de_form(deinflections, word, len);
+	return;
   }
 
   /* 過去形 */
   switch (lastchr)
   {
       case L'た':
-	return te_form(deinflections, word, len);
+	te_form(deinflections, word, len);
+	return;
       case L'だ':
-	return de_form(deinflections, word, len);
+	de_form(deinflections, word, len);
+	return;
   }
 
   /* 形容詞 - ?? */
@@ -231,8 +246,16 @@ deinflect_wc(wchar_t *word)
 
       case L'さ':
 	add_replace(deinflections, word, L'い', len - 1);
-	return deinflections;
+	return;
   }
+}
 
-  return deinflections;
+void
+deinflect(wchar_t **deinflections, char *wordSTR)
+{
+  setlocale(LC_ALL, "");
+
+  wchar_t word[MAX_WORD_LEN];
+  mbstowcs(word, wordSTR, MAX_WORD_LEN);
+  deinflect_wc(deinflections, word);
 }

@@ -12,46 +12,7 @@
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-
-void
-parse_json(char *json, struct dictentry *des, size_t *numde)
-{
-  char keywords[3][13] = {"\"dict\"", "\"word\"", "\"definition\""};
-
-  size_t curde = 0;
-  for (int i = 1; json[i] != '\0' && curde < MAX_NUM_OF_DICT_ENTRIES; i++)
-  {
-	for (int k=0; k < 3; k++)
-	{
-	    if (strncmp(json+i, keywords[k], strlen(keywords[k])) == 0)
-	    {
-		i += strlen(keywords[k]);
-		while (json[i] != '"' || json[i-1] == '\\') i++; /* could leave string */
-		i++;
-
-		if (k == 0)
-		  des[curde].dictname = json + i;
-		else if (k == 1)
-		  des[curde].word = json + i;
-		else if (k == 2)
-		{
-		  if (json[i] == '\n') i += 1;
-		  des[curde].definition = json + i;
-		}
-
-		while (json[i] != '"' || json[i-1] == '\\') i++;
-
-		json[i++] = '\0';
-
-		if (k == 2) curde++;
-	    }
-	}
-  }
-  *numde = curde;
-
-  /* for (int i=0; i < *numde; i++) */
-  /*   printf("dict: %s\nword: %s\ndefinition: %s\n", des[i].dictname, des[i].word, des[i].definition); */
-}
+#include "kataconv.h"
 
 void
 str_repl(char *str, char *target, char repl)
@@ -81,12 +42,10 @@ str_repl(char *str, char *target, char repl)
   str[s] = '\0';
 }
 
-/* 
-   Return string needs to be freed afterwards 
-*/
 char *
 execscript(char *cmd)
 {
+	/* buf should be freed, but not if reused again like sdcv_output */
 	FILE *fp;
 	fp = popen(cmd, "r");
 	if (fp == NULL)
@@ -100,9 +59,6 @@ execscript(char *cmd)
 	return buf;
 }
 
-/* 
-   Return string needs to be freed afterwards 
-*/
 char *
 lookup(char *word)
 {
@@ -113,7 +69,7 @@ lookup(char *word)
 }
 
 void
-nuke_whitespace(char *str) /* Could be optimized */
+nuke_whitespace(char *str) /* FIXME: Could be optimized, though marginal difference */
 {
     str_repl(str, "\n", '\0');
     str_repl(str, " ", '\0');
@@ -129,35 +85,108 @@ is_empty_json(char *json)
     return (strncmp(json, "[]", 2) == 0);
 }
 
-char *
-find_deinflection(char *word, int curdepth) /* TODO: Check for memory leak */
+void
+add_dictionary_entry(struct dictentry **des, size_t *size_des, size_t *numde, struct dictentry de)
+{
+      if (*numde + 1 >= *size_des)
+      {
+	  *size_des += 5;
+	  *des = reallocarray(*des, *size_des, sizeof(struct dictentry)); // FIXME: missing error handling
+      }
+
+      *numde += 1;
+      (*des)[*numde - 1] = de;
+}
+
+void reset_dict(struct dictentry *dict)
+{
+    dict->dictname = NULL;
+    dict->word = NULL;
+    dict->definition = NULL;
+}
+
+void
+add_from_json(struct dictentry **des, size_t *size_des, size_t *numde, char *json)
+{
+    /* Adds all dictionary entries from json to the dictentry array */
+
+    str_repl(json, "\\n", '\n');
+    char keywords[3][13] = {"\"dict\"", "\"word\"", "\"definition\""};
+
+    struct dictentry curde = { NULL, NULL, NULL };
+    int start, end;
+
+    for (int i = 1; json[i] != '\0'; i++)
+    {
+	  for (int k=0; k < 3; k++)
+	  {
+		if (strncmp(json+i, keywords[k], strlen(keywords[k])) == 0)
+		{
+		    i += strlen(keywords[k]);
+		    while (json[i] != '"' || json[i-1] == '\\') i++; /* could leave string */
+		    i++;
+
+		    while (json[i] == '\n') i++; // Skip leading newlines
+
+		    start = i;
+
+		    while (json[i] != '"' || json[i-1] == '\\') i++;
+
+		    end = i;
+
+		    if (k == 0)
+			curde.dictname = strndup(json + start, end - start);
+		    else if (k == 1)
+			curde.word = strndup(json + start, end - start);
+		    else if (k == 2)
+			curde.definition = strndup(json + start, end - start);
+		}
+		if (curde.dictname && curde.word && curde.definition)
+		{
+		    add_dictionary_entry(des, size_des, numde, curde);
+		    reset_dict(&curde);
+		}
+	  }
+    }
+}
+
+
+void
+add_deinflections(struct dictentry **des, size_t *size_des, size_t *numde, char *word, int curdepth)
 {
       if (curdepth > MAX_DEINFLECTION_DEPTH)
-	  return NULL;
+	  return;
 
-      char deinfw[MAX_WORD_LEN]; // FIXME: dynamic allocation, strdup(word) could be an option
-      wchar_t **deinflections = deinflect(word);
-      char *sdcv_json = NULL;
+      char deinfw[MAX_WORD_LEN];
+      wchar_t *deinflections[MAX_DEINFLECTIONS] = { NULL };
+      deinflect(deinflections, word);
+      char *sdcv_output = NULL;
 
-      for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i] && is_empty_json(sdcv_json); i++)
+      for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i]; i++)
       {
 	  wcstombs(deinfw, deinflections[i], MAX_WORD_LEN);
-	  printf("Testing deinflection: %s\n", deinfw);
-	  sdcv_json = lookup(deinfw);
-      }
+	  printf("INFO: Looking up deinflection: %s\n", deinfw);
+	  sdcv_output = lookup(deinfw);
+	  if (!is_empty_json(sdcv_output))
+	      add_from_json(des, size_des, numde, sdcv_output);
 
-      if (is_empty_json(sdcv_json))
-      {
-	    for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i] && is_empty_json(sdcv_json); i++)
-	    {
-		wcstombs(deinfw, deinflections[i], MAX_WORD_LEN);
-		sdcv_json = find_deinflection(deinfw, curdepth+1);
-	    }
+	  // Try to deinflect again, regardless of existing dict entry
+	  add_deinflections(des, size_des, numde, deinfw, curdepth+1); 
       }
-
-	    
       free_deinfs(deinflections);
-      return sdcv_json;
+}
+
+void
+add_dictionaries(struct dictentry **des, size_t *numde, char *luw)
+{
+    size_t size_des = 5;
+    if (!(*des = calloc(size_des, sizeof(struct dictentry))))
+	die("Could not allocate memory for dictionary array.");
+
+    char *sdcv_output = lookup(luw);
+    add_from_json(des, &size_des, numde, sdcv_output);
+
+    add_deinflections(des, &size_des, numde, luw, 1);
 }
 
 int
@@ -172,24 +201,17 @@ main(int argc, char**argv)
 
     nuke_whitespace(luw);
 
-    char *sdcv_json = lookup(luw);
+    struct dictentry *des;
+    size_t numde = 0;
+    add_dictionaries(&des, &numde, luw);
 
-    if (is_empty_json(sdcv_json))
-	sdcv_json = find_deinflection(luw, 1);
-
-    if (is_empty_json(sdcv_json))
-      die("No dictionary entry found.");
-
-    str_repl(sdcv_json, "\\n", '\n');
-    struct dictentry des[MAX_NUM_OF_DICT_ENTRIES];
-    size_t numde;
-
-    parse_json(sdcv_json, des, &numde); /* des reuses sdcv_json string. 危ない */
+    if (numde == 0)
+	die("No dictionary entry found.");
 
     size_t curde = 0;
-    int ev = popup(des, numde, &curde);
+    int rv = popup(des, numde, &curde);
 #ifdef ANKI_SUPPORT
-    if (ev == 1)
+    if (rv == 1)
 	addNote(luw, des[curde].word, des[curde].definition);
 #endif
 
