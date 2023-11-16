@@ -1,3 +1,6 @@
+#ifndef DEINFLECTOR_H
+#define DEINFLECTOR_H
+
 #define MAX_DEINFLECTIONS 5
 
 #include <stdio.h>
@@ -259,3 +262,5 @@ deinflect(wchar_t **deinflections, char *wordSTR)
   mbstowcs(word, wordSTR, MAX_WORD_LEN);
   deinflect_wc(deinflections, word);
 }
+
+#endif // DEINFLECTOR_H

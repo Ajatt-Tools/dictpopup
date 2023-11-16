@@ -1,4 +1,5 @@
 
+#include "structs.h"
 
 
-void addNote(const char *lookup_word, const char *dict_word, const char *def);
+void addNote(char *lu_word, dictentry de, char *def);

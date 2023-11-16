@@ -7,6 +7,7 @@ High priority
   x choose with dmenu
 
 Mid priority
+- Change window property to popup
 - Try to search for different possible writings, eg.: 取りかかる -> 取り掛かる, 齧る -> 噛じる, 囓る
 - Try to search for hiragana conversion
 - Show notification on success / failure of adding card

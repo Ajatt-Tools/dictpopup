@@ -10,8 +10,16 @@
 #include "xlib.h"
 #include "util.h"
 #include "config.h"
+#include "structs.h"
 
-void nuke(char *str)
+static void nuke(char *str);
+static char * boldWord(char *sent, char *word);
+static void prepare_fields(char **bdsent, char **vocabKanji, char **vocabFurigana, char **de, char *lu_word, char *dict_word);
+static void sendRequest(char *request);
+
+
+void
+nuke(char *str)
 {
     if (!NUKE_SPACES && !NUKE_NEWLINES)
       return;
@@ -105,11 +113,11 @@ sendRequest(char *request)
 }
 
 void
-addNote(char *lu_word, char *dict_word, char *de)
+addNote(char *lu_word, dictentry de, char *def)
 {
-    // TODO: Create a "fields" struct?
+    // TODO: Create a "anki card" struct?
     char *bdsent, *vocabKanji, *vocabFurigana;
-    prepare_fields(&bdsent, &vocabKanji, &vocabFurigana, &de, lu_word, dict_word);
+    prepare_fields(&bdsent, &vocabKanji, &vocabFurigana, &def, lu_word, de.word);
 
     char *request;
     asprintf(&request,
@@ -142,7 +150,7 @@ addNote(char *lu_word, char *dict_word, char *de)
 	ANKI_FURIGANA_FIELD,
 	vocabFurigana,
         ANKI_DEFINITION_FIELD,
-        de
+        def
     );
 
     sendRequest(request);

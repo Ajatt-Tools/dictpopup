@@ -1,48 +1,62 @@
 #include <gtk/gtk.h>
+
 #include "xlib.h"
 #include "config.h"
 #include "structs.h"
 
-#include <wchar.h>
+/* function declarations */
+static void update_buffer();
+static gboolean close_with_code(int exit_code);
+static gboolean add_anki();
+static void update_dictnum_info();
+static gboolean change_de(char c);
+static void change_de_up();
+static void change_de_down();
+static gboolean key_press_on_win(GtkWidget *widget, GdkEventKey *event);
+static void set_margins();
+static void set_font_size();
 
-// FIXME: Non global?
-struct dictentry *des;
-size_t *curde;
-size_t numde;
+/* variables */
+static dictentry *des;
+static size_t *curde = 0;
+static size_t numde;
+static char **definition;
 
-GtkWidget *window;
-GtkWidget *dict_tw;
-GtkTextBuffer *dict_tw_buffer;
-GtkWidget *dictnum_lbl;
-
-int EXIT_CODE = 0;
-/*
-   EXIT CODE:
-   0 = close
-   1 = Anki Card
-*/
+static GtkWidget *window;
+static GtkWidget *dict_tw;
+static GtkTextBuffer *dict_tw_buffer;
+static GtkWidget *dictnum_lbl;
+static int EXIT_CODE = 0; /* 0 = close, 1 = anki */
 
 void
 update_buffer()
 {
-    gtk_text_buffer_set_text(dict_tw_buffer, des[*curde].definition, -1); //necessary?
+    gtk_text_buffer_set_text(dict_tw_buffer, des[*curde].definition, -1);
 }
 
 gboolean
-close_with_code(int exit_code, GtkWidget *widget)
+close_with_code(int exit_code)
 {
 	EXIT_CODE = exit_code;
-	gtk_window_close(GTK_WINDOW (widget));
+	gtk_window_close(GTK_WINDOW (window));
 	return TRUE;
 }
 
-void
-add_anki(GtkWidget *widget)
+gboolean
+add_anki()
 {
-  close_with_code(1, widget);
+  GtkTextIter start, end;
+  if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end))
+      *definition = gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE);
+  else
+      *definition = des[*curde].definition; // ご注意: reuses string from des array
+
+  return close_with_code(1);
 }
 
-static void destroy()
+/* necessary? */
+void
+destroy()
 {
     gtk_main_quit();
 }
@@ -50,7 +64,7 @@ static void destroy()
 void
 update_dictnum_info()
 {
-    char info_txt[10];
+    char info_txt[8]; // max 999 dictionaries
     snprintf(info_txt, sizeof(info_txt), "%li/%li", *curde+1, numde);
     gtk_label_set_text(GTK_LABEL (dictnum_lbl), info_txt);
 }
@@ -61,14 +75,11 @@ change_de(char c)
     /* incr == '+' -> increment
        incr == '-' -> decrement */
     if (c == '+')
-	  *curde = (*curde != numde - 1) ? *curde+1 : 0;
+	*curde = (*curde != numde - 1) ? *curde+1 : 0;
     else if (c == '-')
-	  *curde = (*curde != 0) ? *curde-1 : numde-1;
+	*curde = (*curde != 0) ? *curde-1 : numde-1;
     else
-    {
-      fprintf(stderr, "Wrong usage of change_de function. Doing nothing.");
-      return TRUE;
-    }
+	fprintf(stderr, "INFO: Wrong usage of change_de function. Doing nothing.");
 
     update_buffer();
     update_dictnum_info();
@@ -83,9 +94,9 @@ key_press_on_win(GtkWidget *widget, GdkEventKey *event)
 {
     /* Keyboard shortcuts */
     if (event->keyval == GDK_KEY_Escape || event->keyval == GDK_KEY_q)
-	return close_with_code(0, widget);
+	return close_with_code(0);
     else if ((event->state & GDK_CONTROL_MASK) && (event->keyval == GDK_KEY_s))
-	return close_with_code(1, widget);
+	return add_anki();
     else if (event->keyval == GDK_KEY_p)
 	return change_de('-');
     else if (event->keyval == GDK_KEY_n)
@@ -115,11 +126,12 @@ set_font_size()
 }
 
 int
-popup(struct dictentry *dictionary_entries, size_t num_dictionary_entries, size_t *de_toadd)
+popup(dictentry *dictionary_entries, size_t num_dictionary_entries, char **anki_definition, size_t *dict_num)
 {
     des = dictionary_entries;
     numde = num_dictionary_entries;
-    curde = de_toadd;
+    definition = anki_definition;
+    curde = dict_num;
 
     gtk_init(NULL, NULL);
 

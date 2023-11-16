@@ -12,7 +12,7 @@
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-#include "kataconv.h"
+/* #include "kataconv.h" */
 
 void
 str_repl(char *str, char *target, char repl)
@@ -52,7 +52,7 @@ execscript(char *cmd)
 		die("Failed calling command %s.", cmd);
 	static char *buf = NULL;
 	static size_t size = 0;
-	if(!getline(&buf, &size, fp)) // Only read first line !
+	if(!getline(&buf, &size, fp)) // Only reads first line !
 		die("Failed reading output of the command: %s", cmd);
 	pclose(fp);
 
@@ -69,8 +69,9 @@ lookup(char *word)
 }
 
 void
-nuke_whitespace(char *str) /* FIXME: Could be optimized, though marginal difference */
+nuke_whitespace(char *str)
 {
+    /* FIXME: Could be optimized, though marginal difference */
     str_repl(str, "\n", '\0');
     str_repl(str, " ", '\0');
     str_repl(str, "　", '\0');
@@ -86,19 +87,19 @@ is_empty_json(char *json)
 }
 
 void
-add_dictionary_entry(struct dictentry **des, size_t *size_des, size_t *numde, struct dictentry de)
+add_dictionary_entry(dictentry **des, size_t *size_des, size_t *numde, dictentry de)
 {
       if (*numde + 1 >= *size_des)
       {
 	  *size_des += 5;
-	  *des = reallocarray(*des, *size_des, sizeof(struct dictentry)); // FIXME: missing error handling
+	  *des = reallocarray(*des, *size_des, sizeof(dictentry)); // FIXME: missing error handling
       }
 
       *numde += 1;
       (*des)[*numde - 1] = de;
 }
 
-void reset_dict(struct dictentry *dict)
+void reset_dict(dictentry *dict)
 {
     dict->dictname = NULL;
     dict->word = NULL;
@@ -106,15 +107,16 @@ void reset_dict(struct dictentry *dict)
 }
 
 void
-add_from_json(struct dictentry **des, size_t *size_des, size_t *numde, char *json)
+add_from_json(dictentry **des, size_t *size_des, size_t *numde, char *json)
 {
-    /* Adds all dictionary entries from json to the dictentry array */
+    /* Adds all dictionary entries from json to the des array */
 
     str_repl(json, "\\n", '\n');
     char keywords[3][13] = {"\"dict\"", "\"word\"", "\"definition\""};
 
-    struct dictentry curde = { NULL, NULL, NULL };
+    dictentry curde = { NULL, NULL, NULL };
     int start, end;
+    char **entry;
 
     for (int i = 1; json[i] != '\0'; i++)
     {
@@ -125,23 +127,21 @@ add_from_json(struct dictentry **des, size_t *size_des, size_t *numde, char *jso
 		    i += strlen(keywords[k]);
 		    while (json[i] != '"' || json[i-1] == '\\') i++; /* could leave string */
 		    i++;
-
 		    while (json[i] == '\n') i++; // Skip leading newlines
-
 		    start = i;
-
 		    while (json[i] != '"' || json[i-1] == '\\') i++;
-
 		    end = i;
 
 		    if (k == 0)
-			curde.dictname = strndup(json + start, end - start);
+			entry = &curde.dictname;
 		    else if (k == 1)
-			curde.word = strndup(json + start, end - start);
-		    else if (k == 2)
-			curde.definition = strndup(json + start, end - start);
+			entry = &curde.word;
+		    else
+			entry = &curde.definition;
+
+		    *entry = strndup(json + start, end - start);
 		}
-		if (curde.dictname && curde.word && curde.definition)
+		if (curde.dictname && curde.word && curde.definition) // WARNING: Expects to see all fields before next dict entry
 		{
 		    add_dictionary_entry(des, size_des, numde, curde);
 		    reset_dict(&curde);
@@ -152,7 +152,7 @@ add_from_json(struct dictentry **des, size_t *size_des, size_t *numde, char *jso
 
 
 void
-add_deinflections(struct dictentry **des, size_t *size_des, size_t *numde, char *word, int curdepth)
+add_deinflections(dictentry **des, size_t *size_des, size_t *numde, char *word, int curdepth)
 {
       if (curdepth > MAX_DEINFLECTION_DEPTH)
 	  return;
@@ -177,10 +177,10 @@ add_deinflections(struct dictentry **des, size_t *size_des, size_t *numde, char 
 }
 
 void
-add_dictionaries(struct dictentry **des, size_t *numde, char *luw)
+add_dictionaries(dictentry **des, size_t *numde, char *luw)
 {
     size_t size_des = 5;
-    if (!(*des = calloc(size_des, sizeof(struct dictentry))))
+    if (!(*des = calloc(size_des, sizeof(dictentry))))
 	die("Could not allocate memory for dictionary array.");
 
     char *sdcv_output = lookup(luw);
@@ -201,18 +201,19 @@ main(int argc, char**argv)
 
     nuke_whitespace(luw);
 
-    struct dictentry *des;
+    dictentry *des;
     size_t numde = 0;
     add_dictionaries(&des, &numde, luw);
 
     if (numde == 0)
 	die("No dictionary entry found.");
 
-    size_t curde = 0;
-    int rv = popup(des, numde, &curde);
+    char *def;
+    size_t de_num;
+    int rv = popup(des, numde, &def, &de_num);
 #ifdef ANKI_SUPPORT
     if (rv == 1)
-	addNote(luw, des[curde].word, des[curde].definition);
+	addNote(luw, des[de_num], def);
 #endif
 
     return 0;

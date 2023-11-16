@@ -1,4 +1,4 @@
 
 
 
-int popup(struct dictentry*, size_t, size_t*);
+int popup(dictentry*, size_t, char**, size_t *);
