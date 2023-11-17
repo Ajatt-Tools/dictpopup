@@ -12,6 +12,7 @@ eg. 食べてしまった -1-> 食べてしまう -2-> 食べて -3-> 食べる
 #define ANKI_KANJI_FIELD "VocabKanji"
 #define ANKI_FURIGANA_FIELD "VocabFurigana"
 #define ANKI_DEFINITION_FIELD "VocabDef"
+#define ANKI_NOTES_FIELD "Notes"
 #define ANKI_API_URL "http://localhost:8765"
 
 /* Popup settings */
@@ -24,3 +25,8 @@ eg. 食べてしまった -1-> 食べてしまう -2-> 食べて -3-> 食べる
 /* Input settings */
 #define NUKE_SPACES 1
 #define NUKE_NEWLINES 1
+
+
+/* features */
+#define ANKi_SUPPORT
+#define SDCV_DICTIONARY_CHECK

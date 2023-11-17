@@ -1,14 +1,11 @@
 
 
 High priority
-- Some way to only add specific dictionary entries
-  ! choose selection as entry
-  - "Add this entry"-button before every entry
-  x choose with dmenu
 
 Mid priority
+- display name of dictionary on top
 - Change window property to popup
-- Try to search for different possible writings, eg.: 取りかかる -> 取り掛かる, 齧る -> 噛じる, 囓る
+- Expand list of different possible writings in deinflector, e.g.: 齧る -> 噛じる, 囓る
 - Try to search for hiragana conversion
 - Show notification on success / failure of adding card
 - Do yomichan-like lookup (decrease word length from right to left until found)
@@ -26,6 +23,7 @@ Low priority
 - Decrease startup time, though 90% of the startup time is probably due to gtk
 
 Ideas:
+- "Add this entry"-button before every entry
 - Indicator showing if word has been previously added
   - Start searching after showing popup or after button press to avoid slowdown
 - Display the full lookup string with clickable characters (yomichan search)

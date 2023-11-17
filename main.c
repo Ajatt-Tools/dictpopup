@@ -12,14 +12,16 @@
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-/* #include "kataconv.h" */
 
 void
 str_repl(char *str, char *target, char repl)
 {
   /* repl == '\0' means remove */
-  int len = strlen(str);
-  int len_t = strlen(target);
+  if (!str || !target)
+    die("str_repl function received NULL strings.");
+
+  size_t len = strlen(str);
+  size_t len_t = strlen(target);
   int s = 0, e = 0;
   while (e + 1 < len)
   {
@@ -189,10 +191,21 @@ add_dictionaries(dictentry **des, size_t *numde, char *luw)
     add_deinflections(des, &size_des, numde, luw, 1);
 }
 
+void
+edit_wname()
+{
+    /* Strips unnecessary stuff from the windowname */
+    // TODO
+    if (!wname)
+	wname = "";
+}
+
 int
 main(int argc, char**argv)
 {
     char *luw = (argc > 1) ? argv[1] : sselp(); // XFree sselp?
+    char *wname = getwindowname();
+    edit_wname(wmname);
 
     if (strlen(luw) == 0)
 	die("No selection and no argument."); 
@@ -210,11 +223,15 @@ main(int argc, char**argv)
 
     char *def;
     size_t de_num;
+
     int rv = popup(des, numde, &def, &de_num);
+
 #ifdef ANKI_SUPPORT
     if (rv == 1)
-	addNote(luw, des[de_num], def);
+	addNote(luw, des[de_num], def, wname);
 #endif
 
+    if (wname[0] != '\0')
+	free(wname);
     return 0;
 }

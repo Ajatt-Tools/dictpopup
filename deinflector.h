@@ -164,6 +164,8 @@ deinflect_wc(wchar_t **deinflections, wchar_t *word)
   /* Different writings */
   if (word[0] == L'ご' || word[0] == L'お')
     add_replace(deinflections, word, L'御', 0);
+  if (!wcscmp(last2, L"なし") || !wcscmp(last2, L"ない"))
+    add_replace(deinflections, word, L'無', len-2);
   if (last3 && (!wcscmp(last3, L"かかり") || !wcscmp(last3, L"がかり")
 	|| !wcscmp(last3, L"かかる") || !wcscmp(last3, L"かかる")))
     add_replace(deinflections, word, L'掛', len-3);

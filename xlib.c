@@ -6,6 +6,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/Xutil.h>
 #include <X11/extensions/Xfixes.h>
 
 #include "util.h"
@@ -53,6 +54,7 @@ int clipnotify() {
     return 0;
 }
 
+/* return string needs to be freed with XFree */
 char*
 sselp() {
 	Atom clip, utf8, type;
@@ -79,5 +81,36 @@ sselp() {
 				   False, utf8, &type, &fmt, &len, &more, &data);
 	}
 	XCloseDisplay(dpy);
+
 	return (char*) data;
+}
+
+/* return string needs to be freed with XFree */
+char*
+getwindowname() {
+    /* Returns the window title of the currently active window */
+    Display *dpy;
+    Window focused;
+    XTextProperty text_prop;
+    int revert_to;
+
+
+    if(!(dpy = XOpenDisplay(NULL)))
+    {
+      fprintf(stderr, "Error opening display for the window name.\n");
+      return NULL;
+    }
+        
+    XGetInputFocus(dpy, &focused, &revert_to);
+
+    if (!XGetWMName(dpy, focused, &text_prop)) 
+    {
+      fprintf(stderr, "Error obtaining window name.\n");
+      return NULL;
+    }
+
+    char *wname = strdup((char *)text_prop.value);
+    XFree(text_prop.value);
+    XCloseDisplay(dpy);
+    return wname;
 }

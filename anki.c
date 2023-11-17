@@ -52,7 +52,7 @@ boldWord(char *sent, char *word)
 
 void
 prepare_fields(char **bdsent, char **vocabKanji, char **vocabFurigana,
-    char **de, char *lu_word, char *dict_word)
+    char **def, char *lu_word, char *dict_word)
 {
     /* Prepare sentence */
     notify("Please select the sentence.");
@@ -65,8 +65,7 @@ prepare_fields(char **bdsent, char **vocabKanji, char **vocabFurigana,
 
     // Prepare dictionary entry
     //TODO: Replace " with &quot
-    *de = strstr(*de, "\n") + 1; // Skip first line
-    *de = repl_str(*de, "\n", "<br>"); // Freeing old de?
+    *def = repl_str(*def, "\n", "<br>"); // Freeing old de?
     
     //Prepare Kanji + Reading
     char *end_read = strstr(dict_word, "【");
@@ -113,11 +112,12 @@ sendRequest(char *request)
 }
 
 void
-addNote(char *lu_word, dictentry de, char *def)
+addNote(char *lu_word, dictentry de, char *def, char *wname)
 {
     // TODO: Create a "anki card" struct?
     char *bdsent, *vocabKanji, *vocabFurigana;
     prepare_fields(&bdsent, &vocabKanji, &vocabFurigana, &def, lu_word, de.word);
+
 
     char *request;
     asprintf(&request,
@@ -129,6 +129,7 @@ addNote(char *lu_word, dictentry de, char *def)
                 "\"deckName\": \"%s\","
                 "\"modelName\": \"%s\","
                 "\"fields\": {"
+                    "\"%s\": \"%s\","
                     "\"%s\": \"%s\","
                     "\"%s\": \"%s\","
                     "\"%s\": \"%s\","
@@ -150,7 +151,9 @@ addNote(char *lu_word, dictentry de, char *def)
 	ANKI_FURIGANA_FIELD,
 	vocabFurigana,
         ANKI_DEFINITION_FIELD,
-        def
+        def,
+	ANKI_NOTES_FIELD,
+	wname
     );
 
     sendRequest(request);

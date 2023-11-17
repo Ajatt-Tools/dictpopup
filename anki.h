@@ -2,4 +2,4 @@
 #include "structs.h"
 
 
-void addNote(char *lu_word, dictentry de, char *def);
+void addNote(char *lu_word, dictentry de, char *def, char *wname);

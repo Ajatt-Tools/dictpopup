@@ -34,6 +34,15 @@ update_buffer()
     gtk_text_buffer_set_text(dict_tw_buffer, des[*curde].definition, -1);
 }
 
+void
+update_title()
+{
+    // FIXME
+    static char title[100];
+    snprintf(title, sizeof(title), "dictpopup - %s", des[*curde].word);
+    gtk_window_set_title(GTK_WINDOW(window), title);
+}
+
 gboolean
 close_with_code(int exit_code)
 {
@@ -83,6 +92,7 @@ change_de(char c)
 
     update_buffer();
     update_dictnum_info();
+    update_title();
     return TRUE;
 }
 
@@ -132,13 +142,16 @@ popup(dictentry *dictionary_entries, size_t num_dictionary_entries, char **anki_
     numde = num_dictionary_entries;
     definition = anki_definition;
     curde = dict_num;
+    *curde = 0;
 
     gtk_init(NULL, NULL);
 
     /* window = gtk_window_new(GTK_WINDOW_POPUP); */
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_default_size (GTK_WINDOW (window), WIN_WIDTH, WIN_HEIGHT);
-    gtk_window_set_title(GTK_WINDOW(window), "floating");
+
+    update_title();
+
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
     gtk_window_set_keep_above(GTK_WINDOW(window), 1);
 
