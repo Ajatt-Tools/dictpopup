@@ -54,7 +54,7 @@ int clipnotify() {
     return 0;
 }
 
-/* return string needs to be freed with XFree */
+/* return string needs to be freed */
 char*
 sselp() {
 	Atom clip, utf8, type;
@@ -82,10 +82,12 @@ sselp() {
 	}
 	XCloseDisplay(dpy);
 
-	return (char*) data;
+	char *wname = strdup((char *)data);
+	XFree(data);
+	return wname;
 }
 
-/* return string needs to be freed with XFree */
+/* return string needs to be freed */
 char*
 getwindowname() {
     /* Returns the window title of the currently active window */

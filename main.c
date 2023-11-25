@@ -3,15 +3,15 @@
 #include <stdio.h>
 
 #include <wchar.h>
-#include <stdarg.h> // For va_start
 
 #include "xlib.h"
-#include "anki.h"
+/* #include "ankiconnect.h" */
 #include "util.h"
 #include "config.h"
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
+#include "ankiconnect.h"
 
 void
 str_repl(char *str, char *target, char repl)
@@ -192,20 +192,156 @@ add_dictionaries(dictentry **des, size_t *numde, char *luw)
 }
 
 void
-edit_wname()
+edit_wname(char *wname)
 {
     /* Strips unnecessary stuff from the windowname */
     // TODO
-    if (!wname)
-	wname = "";
 }
+
+char *
+boldWord(char *sent, char *word)
+{
+    char *bdword, *bdsent;
+    if(asprintf(&bdword, "<b>%s</b>", word) == -1)
+      die("Could not allocate memory for bold word."); // Not dying would be better
+    bdsent = repl_str(sent, word, bdword);
+    free(bdword);
+
+    return bdsent;
+}
+
+char *
+nuke(char *str)
+{
+    if (!NUKE_SPACES && !NUKE_NEWLINES)
+      return str;
+
+    int len = strlen(str);
+    int skip = 0;
+    for (int i = 0; i < len; i++)
+    {
+	if(NUKE_SPACES && (str[i] == ' ' || strcmp(str, "　") == 0))
+	  skip++;
+	else if (NUKE_NEWLINES && str[i] == '\n')
+	  skip++;
+	else
+	  str[i-skip] = str[i];
+    }
+    str[len-skip] = '\0';
+
+    return str;
+}
+
+static char *
+extract_kanji(char *str, char *luw)
+{
+    // TODO: Fix things like 嚙む・嚼む・咬む by looking at luw
+    char *start_kanji = strstr(str, "【");
+    char *end_kanji = strstr(start_kanji, "】");
+    if (!start_kanji || !end_kanji)
+    {
+      notify("Dictionary might contain unknown word formating (kanji).");
+      return str;
+    }
+    else
+      start_kanji += strlen("【");
+
+    return strndup(start_kanji, end_kanji - start_kanji);
+}
+
+static char *
+extract_reading(char *str)
+{
+    char *end_read = strstr(str, "【");
+
+    if (end_read != NULL)
+	return strndup(str, end_read - str);
+    else /* Either different format or no kanji */
+    {
+      notify("Dictionary might contain unknown word formating (reading).");
+      return str;
+    }
+}
+
+void
+populate_possible_entries(char *pe[], char *luw, dictentry de, char *def, char *winname)
+{
+    /* looked up string */
+    pe[LookedUpString] = luw;
+
+    /* sentence */
+    notify("Please select the sentence.");
+    clipnotify();
+    pe[CopiedSentence] = nuke(sselp());
+
+    /* bold sentence */
+    pe[BoldSentence] = boldWord(pe[CopiedSentence], luw);
+
+    /* dictionary word */
+    pe[DictionaryKanji] = extract_kanji(de.word, luw);
+
+    pe[DictionaryReading] = extract_reading(de.word);
+
+    /* dictionary furigana */
+    // TODO: Obviously won't work for 送り仮名 like 取り組む
+    asprintf(&pe[DictionaryFurigana], "%s[%s]", pe[DictionaryKanji], pe[DictionaryReading]);
+
+    /* dictionary entry */
+    pe[DictionaryDefinition] = repl_str(def, "\n", "<br>");
+
+    /* WindowName */
+    if (winname == NULL)
+      winname = "";
+    pe[FocusedWindowName] = winname;
+}
+
+void
+print_possible_entries(char *pe[])
+{
+  /* This is for debug purposes. */
+  for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
+  {
+      switch(i)
+      {
+	case LookedUpString:
+	  printf("LookedUpString");
+	  break;
+	case CopiedSentence:
+	  printf("CopiedSentence");
+	  break;
+	case BoldSentence:
+	  printf("BoldSentence");
+	  break;
+	case DictionaryKanji:
+	  printf("DictionaryKanji");
+	  break;
+	case DictionaryReading:
+	  printf("DictionaryReading");
+	  break;
+	case DictionaryFurigana:
+	  printf("DictionaryFurigana");
+	  break;
+	case DictionaryDefinition:
+	  printf("DictionaryDefinition");
+	  break;
+	case FocusedWindowName:
+	  printf("FocusedWindowName");
+	  break;
+	default:
+	  printf("Unknown Entry");
+      }
+      printf(": %s\n", pe[i]);
+  }
+}
+  
+
 
 int
 main(int argc, char**argv)
 {
     char *luw = (argc > 1) ? argv[1] : sselp(); // XFree sselp?
     char *wname = getwindowname();
-    edit_wname(wmname);
+    edit_wname(wname);
 
     if (strlen(luw) == 0)
 	die("No selection and no argument."); 
@@ -226,10 +362,13 @@ main(int argc, char**argv)
 
     int rv = popup(des, numde, &def, &de_num);
 
-#ifdef ANKI_SUPPORT
     if (rv == 1)
-	addNote(luw, des[de_num], def, wname);
-#endif
+    {
+	char *pe[NUMBER_POSS_ENTRIES];
+	populate_possible_entries(pe, luw, des[de_num], def, wname);
+	/* print_possible_entries(pe); */
+	addNote(pe);
+    }
 
     if (wname[0] != '\0')
 	free(wname);

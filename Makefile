@@ -1,6 +1,6 @@
 include config.mk
 
-SRC = main.c popup.c util.c anki.c xlib.c
+SRC = main.c popup.c util.c xlib.c
 OBJ = $(SRC:.c=.o)
 
 all: options dictpopup

@@ -26,7 +26,54 @@ static GtkWidget *window;
 static GtkWidget *dict_tw;
 static GtkTextBuffer *dict_tw_buffer;
 static GtkWidget *dictnum_lbl;
+static GtkWidget *exists_dot;
+static int word_exists = 0;
 static int EXIT_CODE = 0; /* 0 = close, 1 = anki */
+
+static void draw_dot(GtkWidget *widget, cairo_t *cr) {
+    if (word_exists)
+      cairo_set_source_rgb(cr, 0, 1, 0); // green
+    else
+      cairo_set_source_rgb(cr, 1, 0, 0); // red
+
+    cairo_arc(cr, 5, 5, 5, 0, 2 * G_PI);
+
+    cairo_fill(cr);
+}
+
+static gboolean on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
+    draw_dot(widget, cr);
+    return FALSE;
+}
+
+// FIXME: Copied from main
+static char *
+extract_kanji(char *str)
+{
+    char *start_kanji = strstr(str, "【");
+    char *end_kanji = strstr(start_kanji, "】");
+    if (!start_kanji || !end_kanji)
+    {
+      return str;
+    }
+    else
+      start_kanji += strlen("【");
+
+    return strndup(start_kanji, end_kanji - start_kanji);
+}
+
+#include "ankiconnect.h"
+size_t
+check_search_response(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+  //FIXME
+  if(strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0)
+    word_exists = 1;
+
+  gtk_widget_queue_draw(exists_dot);
+
+  return nmemb;
+}
 
 void
 update_buffer()
@@ -200,10 +247,19 @@ popup(dictentry *dictionary_entries, size_t num_dictionary_entries, char **anki_
     dictnum_lbl = gtk_label_new (NULL);
     update_dictnum_info();
 
+    exists_dot = gtk_drawing_area_new();
+    gtk_widget_set_size_request(exists_dot, 10, 10);
+    gtk_widget_set_valign(exists_dot, GTK_ALIGN_CENTER);
+    search_query(SEARCH_FIELD, extract_kanji(des[*curde].word), check_search_response);
+
     gtk_box_pack_start(GTK_BOX (hbox), btn_l, FALSE, FALSE, 0);
-    gtk_box_set_center_widget(GTK_BOX (hbox), dictnum_lbl);
     gtk_box_pack_start(GTK_BOX (hbox), add_anki_btn, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX (hbox), GTK_WIDGET (exists_dot), FALSE, FALSE, 0);
+    gtk_box_set_center_widget(GTK_BOX (hbox), dictnum_lbl);
     gtk_box_pack_end(GTK_BOX (hbox), btn_r, FALSE, FALSE, 0);
+
+    const gchar *dotColor = "green";
+    g_signal_connect(G_OBJECT(exists_dot), "draw", G_CALLBACK(on_draw_event), NULL);
 
     gtk_widget_show_all(window);
     gtk_main();
