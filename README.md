@@ -1,6 +1,6 @@
 # dictpopup
 
-This is a lightweight program for Linux showing a popup with the translation of the selected (japanese) text with support for creating anki cards. 
+This is a lightweight program for Linux showing a popup with the translation of the selected (japanese) text with support for creating Anki cards. 
 It uses [sdcv](https://github.com/Dushistov/sdcv) for the dictionary lookup and gtk3 for displaying the popup.
 Hence the look will depend on your gtk3 theme settings.
 
@@ -21,8 +21,8 @@ Select a word and call `dictpopup` (using a shortcut). It is also possible to gi
 You can switch between dictionary entries by pressing the arrow keys or the shortcuts `n` (next) and `p` (previous).
 The popup can be closed with `q` or `Esc`.
 
-The "+" sign (or Ctrl+s) adds the currently shown definition to anki after prompting you to select a sentence.
-If there is a selection, it will be used istead as a definition.
+The "+" sign (or Ctrl+s) adds the currently shown definition to Anki after prompting you to select a sentence.
+If there is a selection, it will be used instead as a definition.
 
 The green/red dot indicates wether the word is already present in your Anki collection.
 
