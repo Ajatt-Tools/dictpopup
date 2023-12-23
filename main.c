@@ -2,375 +2,305 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <wchar.h>
+#include <glib.h>
+/* #include <ankiconnectc.h> */
+#include "ankiconnectc.h"
 
 #include "xlib.h"
-/* #include "ankiconnect.h" */
 #include "util.h"
+#define IMPORT_VARIABLES
 #include "config.h"
+#undef IMPORT_VARIABLES
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-#include "ankiconnect.h"
+/* #include "dbug.h" */
 
-void
-str_repl(char *str, char *target, char repl)
-{
-  /* repl == '\0' means remove */
-  if (!str || !target)
-    die("str_repl function received NULL strings.");
+#define Stopif(assertion, error_action, ...)          \
+	if (assertion) {                              \
+		fprintf(stderr, __VA_ARGS__);         \
+		fprintf(stderr, "\n");                \
+		error_action;                         \
+	}
 
-  size_t len = strlen(str);
-  size_t len_t = strlen(target);
-  int s = 0, e = 0;
-  while (e + 1 < len)
-  {
-      if (strncmp(str + e, target, len_t) == 0)
-      {
-	  if (repl != '\0')
-	    str[s] = repl;
-	  else
-	    s--;
-	  e += len_t - 1;
-      }
-      else
-	  str[s] = str[e];
-      
-      s++;
-      e++;
-  }
+/* #define NUMBER_POSS_ENTRIES 9 */
 
-  str[s++] = str[e];
-  str[s] = '\0';
-}
+/* enum PossibleEntries { */
+/* 	Empty, */
+/* 	LookedUpString, */
+/* 	CopiedSentence, */
+/* 	BoldSentence, */
+/* 	DictionaryKanji, */
+/* 	DictionaryReading, */
+/* 	DictionaryFurigana, */
+/* 	DictionaryDefinition, */
+/* 	FocusedWindowName, */
 
-char *
-execscript(char *cmd)
-{
-	/* buf should be freed, but not if reused again like sdcv_output */
-	FILE *fp;
-	fp = popen(cmd, "r");
-	if (fp == NULL)
-		die("Failed calling command %s.", cmd);
-	static char *buf = NULL;
-	static size_t size = 0;
-	if(!getline(&buf, &size, fp)) // Only reads first line !
-		die("Failed reading output of the command: %s", cmd);
-	pclose(fp);
+/* 	NUMBER_POSS_ENTRIES */
+/* }; */
 
-	return buf;
-}
+/* char *fieldnames[] = { "SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes" }; */
+/* int fieldmapping[] = { BoldSentence, DictionaryKanji, DictionaryFurigana, DictionaryDefinition, FocusedWindowName }; */
+size_t num_fields = sizeof(fieldnames) / sizeof(fieldnames[0]);
 
+typedef struct {
+	unsigned int copysentence : 1; /* Whether or not sentence should be copied */
+	unsigned int nuke_whitespace : 1; /* Whether or not whitespace should be removed */
+	unsigned int win_width;
+	unsigned int win_height;
+	unsigned int win_margin;
+} settings;
+
+/**
+   Execute sdcv to look up the word.
+   Returns a json string which needs to be freed.
+ */
 char *
 lookup(char *word)
 {
-    const char sdcv_str[] = "sdcv -nej --utf8-output ";
-    char sdcv_cmd[strlen(sdcv_str) + MAX_WORD_LEN + 1];
-    sprintf(sdcv_cmd, "%s%s", sdcv_str, word);
-    return execscript(sdcv_cmd);
-}
+	char *cmd;
+	//Passing the user input straight in like that might be dangerous.
+	asprintf(&cmd, "sdcv -nej --utf8-output \"%s\"", word);
 
-void
-nuke_whitespace(char *str)
-{
-    /* FIXME: Could be optimized, though marginal difference */
-    str_repl(str, "\n", '\0');
-    str_repl(str, " ", '\0');
-    str_repl(str, "　", '\0');
+	FILE *fp;
+	fp = popen(cmd, "r");
+	Stopif(!fp, free(cmd); exit(1), "Failed calling command %s. Is sdcv installed?", cmd);
+
+	char   *buf = NULL;
+	size_t size = 0;
+	Stopif(!getline(&buf, &size, fp), free(cmd); exit(1), "Failed reading output of the command: %s.", cmd);
+
+	pclose(fp);
+	free(cmd);
+	return buf;
 }
 
 int
 is_empty_json(char *json)
 {
-    if (json == NULL || strlen(json) < 2)
-      return 1;
+	return !json || !json[0] ? 1 : !strncmp(json, "[]", 2);
+}
 
-    return (strncmp(json, "[]", 2) == 0);
+/*
+   Creates a dictionary entry and adds it to dict from given entries.
+   Expects: e[0] = dictionary name, e[1] = dictionary word, e[2] = dictionary definition
+ */
+void
+add_dictionary_entry(GPtrArray *dict, char **e)
+{
+	dictentry *de = malloc(sizeof(dictentry));
+	Stopif(!de, return , "ERROR: Could not allocate memory for dictionary entry.");
+
+	de->dictname = strdup(e[0]);
+	de->word = strdup(e[1]);
+	de->definition = strdup(e[2]);
+	Stopif(!de->dictname || !de->word || !de->definition,
+	       return , "ERROR: Could not allocate memory for dictionary entry.");
+
+	g_ptr_array_add(dict, de);
 }
 
 void
-add_dictionary_entry(dictentry **des, size_t *size_des, size_t *numde, dictentry de)
+add_from_json(GPtrArray *dict, char *json)
 {
-      if (*numde + 1 >= *size_des)
-      {
-	  *size_des += 5;
-	  *des = reallocarray(*des, *size_des, sizeof(dictentry)); // FIXME: missing error handling
-      }
+	/* Adds all dictionary entries from json to the des array */
+	/* Destroys json string in process */
+	if (is_empty_json(json))
+		return;
 
-      *numde += 1;
-      (*des)[*numde - 1] = de;
-}
+	str_repl_by_char(json, "\\n", '\n');
+	char keywords[3][13] = { "\"dict\"", "\"word\"", "\"definition\"" };
+	char *entries[3] = { NULL, NULL, NULL };
 
-void reset_dict(dictentry *dict)
-{
-    dict->dictname = NULL;
-    dict->word = NULL;
-    dict->definition = NULL;
-}
+	int start;
 
-void
-add_from_json(dictentry **des, size_t *size_des, size_t *numde, char *json)
-{
-    /* Adds all dictionary entries from json to the des array */
-
-    str_repl(json, "\\n", '\n');
-    char keywords[3][13] = {"\"dict\"", "\"word\"", "\"definition\""};
-
-    dictentry curde = { NULL, NULL, NULL };
-    int start, end;
-    char **entry;
-
-    for (int i = 1; json[i] != '\0'; i++)
-    {
-	  for (int k=0; k < 3; k++)
-	  {
-		if (strncmp(json+i, keywords[k], strlen(keywords[k])) == 0)
+	for (int i = 1; json[i] != '\0'; i++)
+	{
+		for (int k = 0; k < 3; k++)
 		{
-		    i += strlen(keywords[k]);
-		    while (json[i] != '"' || json[i-1] == '\\') i++; /* could leave string */
-		    i++;
-		    while (json[i] == '\n') i++; // Skip leading newlines
-		    start = i;
-		    while (json[i] != '"' || json[i-1] == '\\') i++;
-		    end = i;
+			if (strncmp(json + i, keywords[k], strlen(keywords[k])) == 0)
+			{
+				i += strlen(keywords[k]);
+				while (json[i] != '"' || json[i - 1] == '\\')
+					i++;                         /* TODO: string bounds checking */
+				i++;
+				while (json[i] == '\n')
+					i++;     // Skip leading newlines
+				start = i;
+				while (json[i] != '"' || json[i - 1] == '\\')
+					i++;
 
-		    if (k == 0)
-			entry = &curde.dictname;
-		    else if (k == 1)
-			entry = &curde.word;
-		    else
-			entry = &curde.definition;
+				json[i++] = '\0';
 
-		    *entry = strndup(json + start, end - start);
+				entries[k] = json + start;
+			}
+			if (entries[0] && entries[1] && entries[2])
+			{
+				add_dictionary_entry(dict, entries);
+				for (int l = 0; l < 3; l++)
+					entries[l] = NULL;
+			}
 		}
-		if (curde.dictname && curde.word && curde.definition) // WARNING: Expects to see all fields before next dict entry
-		{
-		    add_dictionary_entry(des, size_des, numde, curde);
-		    reset_dict(&curde);
-		}
-	  }
-    }
-}
-
-
-void
-add_deinflections(dictentry **des, size_t *size_des, size_t *numde, char *word, int curdepth)
-{
-      if (curdepth > MAX_DEINFLECTION_DEPTH)
-	  return;
-
-      char deinfw[MAX_WORD_LEN];
-      wchar_t *deinflections[MAX_DEINFLECTIONS] = { NULL };
-      deinflect(deinflections, word);
-      char *sdcv_output = NULL;
-
-      for (int i = 0; i < MAX_DEINFLECTIONS && deinflections[i]; i++)
-      {
-	  wcstombs(deinfw, deinflections[i], MAX_WORD_LEN);
-	  printf("INFO: Looking up deinflection: %s\n", deinfw);
-	  sdcv_output = lookup(deinfw);
-	  if (!is_empty_json(sdcv_output))
-	      add_from_json(des, size_des, numde, sdcv_output);
-
-	  // Try to deinflect again, regardless of existing dict entry
-	  add_deinflections(des, size_des, numde, deinfw, curdepth+1); 
-      }
-      free_deinfs(deinflections);
+	}
 }
 
 void
-add_dictionaries(dictentry **des, size_t *numde, char *luw)
+add_word_to_dict(GPtrArray *dict, char *word)
 {
-    size_t size_des = 5;
-    if (!(*des = calloc(size_des, sizeof(dictentry))))
-	die("Could not allocate memory for dictionary array.");
+	char *sdcv_output = lookup(word);
+	add_from_json(dict, sdcv_output);
+	free(sdcv_output);
+}
 
-    char *sdcv_output = lookup(luw);
-    add_from_json(des, &size_des, numde, sdcv_output);
+void
+add_deinflections_to_dict(GPtrArray *dict, char *word)
+{
+	GPtrArray *deinflections = g_ptr_array_new();
+	/* char const *err = */
+	deinflect(deinflections, word);
+	/* Stopif(err, return , "%s", err); */
 
-    add_deinflections(des, &size_des, numde, luw, 1);
+	for (int i = 0; i < deinflections->len; i++)
+		add_word_to_dict(dict, g_ptr_array_index(deinflections, i));
+
+	g_ptr_array_free(deinflections, TRUE);
+}
+
+void
+free_dictentry(void *ptr)
+{
+	dictentry *de = ptr;
+	free(de->dictname);
+	free(de->word);
+	free(de->definition);
+	free(de);
+}
+
+GPtrArray*
+create_dictionary_from(char *word)
+{
+	GPtrArray *dict = g_ptr_array_new_with_free_func(free_dictentry);
+
+	add_word_to_dict(dict, word);
+	add_deinflections_to_dict(dict, word);
+
+	return dict;
 }
 
 void
 edit_wname(char *wname)
 {
-    /* Strips unnecessary stuff from the windowname */
-    // TODO
+	/* Strips unnecessary stuff from the windowname */
+	// TODO: Implement
 }
 
 char *
 boldWord(char *sent, char *word)
 {
-    char *bdword, *bdsent;
-    if(asprintf(&bdword, "<b>%s</b>", word) == -1)
-      die("Could not allocate memory for bold word."); // Not dying would be better
-    bdsent = repl_str(sent, word, bdword);
-    free(bdword);
+	gchar   *bdword = g_strdup_printf("<b>%s</b>", word);
+	GString *bdsent = g_string_new(sent);
 
-    return bdsent;
-}
+	g_string_replace(bdsent, word, bdword, 0);
 
-char *
-nuke(char *str)
-{
-    if (!NUKE_SPACES && !NUKE_NEWLINES)
-      return str;
-
-    int len = strlen(str);
-    int skip = 0;
-    for (int i = 0; i < len; i++)
-    {
-	if(NUKE_SPACES && (str[i] == ' ' || strcmp(str, "　") == 0))
-	  skip++;
-	else if (NUKE_NEWLINES && str[i] == '\n')
-	  skip++;
-	else
-	  str[i-skip] = str[i];
-    }
-    str[len-skip] = '\0';
-
-    return str;
-}
-
-static char *
-extract_kanji(char *str, char *luw)
-{
-    // TODO: Fix things like 嚙む・嚼む・咬む by looking at luw
-    char *start_kanji = strstr(str, "【");
-    char *end_kanji = strstr(start_kanji, "】");
-    if (!start_kanji || !end_kanji)
-    {
-      notify("Dictionary might contain unknown word formating (kanji).");
-      return str;
-    }
-    else
-      start_kanji += strlen("【");
-
-    return strndup(start_kanji, end_kanji - start_kanji);
-}
-
-static char *
-extract_reading(char *str)
-{
-    char *end_read = strstr(str, "【");
-
-    if (end_read != NULL)
-	return strndup(str, end_read - str);
-    else /* Either different format or no kanji */
-    {
-      notify("Dictionary might contain unknown word formating (reading).");
-      return str;
-    }
+	g_free(bdword);
+	return g_string_free_and_steal(bdsent);
 }
 
 void
-populate_possible_entries(char *pe[], char *luw, dictentry de, char *def, char *winname)
+add_entry(char *pe[], char *input, int entry_num)
 {
-    /* looked up string */
-    pe[LookedUpString] = luw;
+	switch (entry_num)
+	{
+	case LookedUpString: // input = looked up word
+		nuke_whitespace(input);
+		pe[LookedUpString] = input;
+		break;
 
-    /* sentence */
-    notify("Please select the sentence.");
-    clipnotify();
-    pe[CopiedSentence] = nuke(sselp());
+	case CopiedSentence: // input = looked up word (ignored)
+		notify("Please select the sentence.");
+		clipnotify();
+		nuke_whitespace(pe[CopiedSentence] = sselp());
+		pe[BoldSentence] = boldWord(pe[CopiedSentence], input);
+		break;
 
-    /* bold sentence */
-    pe[BoldSentence] = boldWord(pe[CopiedSentence], luw);
-
-    /* dictionary word */
-    pe[DictionaryKanji] = extract_kanji(de.word, luw);
-
-    pe[DictionaryReading] = extract_reading(de.word);
-
-    /* dictionary furigana */
-    // TODO: Obviously won't work for 送り仮名 like 取り組む
-    asprintf(&pe[DictionaryFurigana], "%s[%s]", pe[DictionaryKanji], pe[DictionaryReading]);
-
-    /* dictionary entry */
-    pe[DictionaryDefinition] = repl_str(def, "\n", "<br>");
-
-    /* WindowName */
-    if (winname == NULL)
-      winname = "";
-    pe[FocusedWindowName] = winname;
-}
-
-void
-print_possible_entries(char *pe[])
-{
-  /* This is for debug purposes. */
-  for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
-  {
-      switch(i)
-      {
-	case LookedUpString:
-	  printf("LookedUpString");
-	  break;
-	case CopiedSentence:
-	  printf("CopiedSentence");
-	  break;
-	case BoldSentence:
-	  printf("BoldSentence");
-	  break;
 	case DictionaryKanji:
-	  printf("DictionaryKanji");
-	  break;
 	case DictionaryReading:
-	  printf("DictionaryReading");
-	  break;
-	case DictionaryFurigana:
-	  printf("DictionaryFurigana");
-	  break;
-	case DictionaryDefinition:
-	  printf("DictionaryDefinition");
-	  break;
-	case FocusedWindowName:
-	  printf("FocusedWindowName");
-	  break;
+	case DictionaryFurigana: // input: dictionary word
+		pe[DictionaryKanji] = extract_kanji(input);
+		pe[DictionaryReading] = extract_reading(input);
+		asprintf(&pe[DictionaryFurigana], "%s[%s]", pe[DictionaryKanji], pe[DictionaryReading]);
+		break;
+
+	case DictionaryDefinition: // input: dictionary definition / selection to add
+		pe[DictionaryDefinition] = input;
+		break;
+
+	case FocusedWindowName: // input = window name
+		edit_wname(input);
+		pe[FocusedWindowName] = input;
+		break;
+
 	default:
-	  printf("Unknown Entry");
-      }
-      printf(": %s\n", pe[i]);
-  }
+		fprintf(stderr, "ERROR: Tried to add unknown entry.");
+	}
 }
-  
+
+void
+prepare_anki_card(ankicard *ac, char **pe)
+{
+	ac->deck = ANKI_DECK;
+	ac->notetype = ANKI_MODEL;
+
+	ac->num_fields = num_fields;
+	ac->fieldnames = fieldnames;
+	ac->fieldentries = calloc(num_fields, sizeof(char *));
+
+	for (int i = 0; i < num_fields; i++)
+		ac->fieldentries[i] = pe[fieldmapping[i]];
+}
+
+void
+free_pe(char **pe)
+{
+	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
+		free(pe[i]);
+}
 
 
 int
 main(int argc, char**argv)
 {
-    char *luw = (argc > 1) ? argv[1] : sselp(); // XFree sselp?
-    char *wname = getwindowname();
-    edit_wname(wname);
+	char *pe[NUMBER_POSS_ENTRIES] = { NULL };
 
-    if (strlen(luw) == 0)
-	die("No selection and no argument."); 
-    else if (strlen(luw) > MAX_WORD_LEN)
-	die("Lookup string is too long. Try increasing MAX_WORD_LEN.");
+	char *luw = (argc > 1) ? strdup(argv[1]) : sselp(); //strdup, so can be freed afterwards
+	Stopif(!luw || luw[0] == '\0', return 1, "No selection and no argument provided. Exiting.");
+	add_entry(pe, luw, LookedUpString); // Also nukes whitespace
 
-    nuke_whitespace(luw);
+	add_entry(pe, getwindowname(), FocusedWindowName);
 
-    dictentry *des;
-    size_t numde = 0;
-    add_dictionaries(&des, &numde, luw);
+	GPtrArray *dict = create_dictionary_from(luw);
+	Stopif(dict->len == 0, free_pe(pe); g_ptr_array_free(dict, TRUE); return 1, "No dictionary entry found.");
 
-    if (numde == 0)
-	die("No dictionary entry found.");
+	char   *def = NULL;
+	size_t de_num = 0;
+	int rv = popup(dict, &def, &de_num);
+	add_entry(pe, def, DictionaryDefinition); // For freeing afterwards
 
-    char *def;
-    size_t de_num;
+	if (rv == 1)
+	{
+		add_entry(pe, luw, CopiedSentence);
+		dictentry *chosen_dict = g_ptr_array_index(dict, de_num);
+		add_entry(pe, chosen_dict->word, DictionaryKanji);
 
-    int rv = popup(des, numde, &def, &de_num);
+		ankicard ac;
+		prepare_anki_card(&ac, pe);
 
-    if (rv == 1)
-    {
-	char *pe[NUMBER_POSS_ENTRIES];
-	populate_possible_entries(pe, luw, des[de_num], def, wname);
-	/* print_possible_entries(pe); */
-	addNote(pe);
-    }
+		const char *err = addNote(ac);
+		Stopif(err, , "Error creating note: %s", err);
 
-    if (wname[0] != '\0')
-	free(wname);
-    return 0;
+		free(ac.fieldentries);
+	}
+
+	free_pe(pe);
+	g_ptr_array_free(dict, TRUE);
 }

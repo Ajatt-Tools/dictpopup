@@ -1,6 +1,7 @@
 include config.mk
 
-SRC = main.c popup.c util.c xlib.c
+P=dictpopup
+SRC = main.c popup.c util.c xlib.c deinflector.c ankiconnectc.c
 OBJ = $(SRC:.c=.o)
 
 all: options dictpopup
@@ -12,14 +13,14 @@ options:
 	@echo "CC       = $(CC)"
 
 .c.o:
-	$(CC) -O3 -c $(CFLAGS) $<
+	$(CC) -c $(CFLAGS) $<
 
 $(OBJ): config.h config.mk
 
 config.h:
 	cp config.def.h $@
 
-dictpopup: ${OBJ}
+$(P): ${OBJ}
 	$(CC) -o $@ ${OBJ} ${LDFLAGS}
 
 clean:

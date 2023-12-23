@@ -1,4 +1,4 @@
 
 
 
-int popup(dictentry*, size_t, char**, size_t *);
+int popup(GPtrArray *dictionary, char**, size_t *);

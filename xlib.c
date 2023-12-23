@@ -11,52 +11,41 @@
 
 #include "util.h"
 
-void
-getPointerPosition(int *x, int *y)
+int
+clipnotify()
 {
-    static Display *dpy;
-    static Window window;
-    static int screen;
-    if (!(dpy = XOpenDisplay(0)))
-	    die("Cannot open display for pointer position.");
-    screen = DefaultScreen(dpy);
-    window = RootWindow(dpy, screen);
+	/* Waits for the next clipboard event. */
+	Display *disp;
+	Window root;
+	Atom clip;
+	XEvent evt;
 
-    int di;
-    unsigned int du;
-    Window dw;
-    if (!XQueryPointer(dpy, window, &dw, &dw, x, y, &di, &di, &du))
-	  die("Could not query pointer position.");
-    XCloseDisplay(dpy);
+	disp = XOpenDisplay(NULL);
+	if (!disp)
+	{
+		fprintf(stderr, "ERROR: Can't open X display for clipnotify. Are you on X11?");
+		return 1;
+	}
+
+	root = DefaultRootWindow(disp);
+
+	clip = XInternAtom(disp, "CLIPBOARD", False);
+
+	XFixesSelectSelectionInput(disp, root, clip,
+				   XFixesSetSelectionOwnerNotifyMask);
+
+	XNextEvent(disp, &evt);
+
+	XCloseDisplay(disp);
+
+	return 0;
 }
 
-int clipnotify() {
-    Display *disp;
-    Window root;
-    Atom clip;
-    XEvent evt;
-
-    disp = XOpenDisplay(NULL);
-    if (!disp)
-	die("Can't open X display in clipnotify.");
-
-    root = DefaultRootWindow(disp);
-
-    clip = XInternAtom(disp, "CLIPBOARD", False);
-
-    XFixesSelectSelectionInput(disp, root, clip, 
-	XFixesSetSelectionOwnerNotifyMask);
-
-    XNextEvent(disp, &evt);
-
-    XCloseDisplay(disp);
-
-    return 0;
-}
-
-/* return string needs to be freed */
 char*
-sselp() {
+sselp()
+{
+	/* Returns a string with the currently selected text */
+	/* Return string needs to be freed with free */
 	Atom clip, utf8, type;
 	Display *dpy;
 	Window win;
@@ -66,53 +55,71 @@ sselp() {
 	unsigned char *data;
 	unsigned long len, more;
 
-	if(!(dpy = XOpenDisplay(NULL)))
-		return "";
+	if (!(dpy = XOpenDisplay(NULL)))
+	{
+		fprintf(stderr, "ERROR: Could not open display for the selection. Are you on X11?\n");
+		return NULL;
+	}
 
 	utf8 = XInternAtom(dpy, "UTF8_STRING", False);
 	clip = XInternAtom(dpy, "_SSELP_STRING", False);
 	win = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0, 1, 1, 0,
-	                          CopyFromParent, CopyFromParent);
-	XConvertSelection(dpy, XA_PRIMARY, utf8, clip, win, CurrentTime);
+				  CopyFromParent, CopyFromParent);
+	if (!XConvertSelection(dpy, XA_PRIMARY, utf8, clip, win, CurrentTime))
+	{
+		fprintf(stderr, "ERROR: Could not convert selection.\n");
+		XCloseDisplay(dpy);
+		return NULL;
+	}
 
 	XNextEvent(dpy, &ev);
-	if(ev.type == SelectionNotify && ev.xselection.property != None) {
+	if (ev.type == SelectionNotify && ev.xselection.property != None)
+	{
 		XGetWindowProperty(dpy, win, ev.xselection.property, off, BUFSIZ,
 				   False, utf8, &type, &fmt, &len, &more, &data);
 	}
+	else
+	{
+		XCloseDisplay(dpy);
+		return NULL;
+	}
+
 	XCloseDisplay(dpy);
 
-	char *wname = strdup((char *)data);
+	/* char *data2 = (char *)data; */
+	/* printf("data: %s, strlen: %li, len: %li", data2, strlen(data2), len); */
+
+	char *selection = !data ? NULL : strdup((char *)data);
 	XFree(data);
-	return wname;
+	return selection;
 }
 
-/* return string needs to be freed */
 char*
-getwindowname() {
-    /* Returns the window title of the currently active window */
-    Display *dpy;
-    Window focused;
-    XTextProperty text_prop;
-    int revert_to;
+getwindowname()
+{
+	/* Returns the window title of the currently active window */
+	/* return string needs to be freed */
+	Display *dpy;
+	Window focused;
+	XTextProperty text_prop;
+	int revert_to;
 
+	if (!(dpy = XOpenDisplay(NULL)))
+	{
+		fprintf(stderr, "ERROR: Could not open display for the window name. Are you on X11?\n");
+		return NULL;
+	}
 
-    if(!(dpy = XOpenDisplay(NULL)))
-    {
-      fprintf(stderr, "Error opening display for the window name.\n");
-      return NULL;
-    }
-        
-    XGetInputFocus(dpy, &focused, &revert_to);
+	XGetInputFocus(dpy, &focused, &revert_to);
 
-    if (!XGetWMName(dpy, focused, &text_prop)) 
-    {
-      fprintf(stderr, "Error obtaining window name.\n");
-      return NULL;
-    }
+	if (!XGetWMName(dpy, focused, &text_prop))
+	{
+		fprintf(stderr, "ERROR: Could not obtain window name. \n");
+		return NULL;
+	}
 
-    char *wname = strdup((char *)text_prop.value);
-    XFree(text_prop.value);
-    XCloseDisplay(dpy);
-    return wname;
+	char *wname = strdup((char *)text_prop.value);
+	XFree(text_prop.value);
+	XCloseDisplay(dpy);
+	return wname;
 }
