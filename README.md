@@ -1,12 +1,20 @@
 # dictpopup
 
-This is a lightweight program showing a popup with the translation of the selected (japanese) text with support for creating anki cards. It uses [sdcv](https://github.com/Dushistov/sdcv) for the dictionary lookup and gtk3 for displaying the popup.
-There is currently only support for GNU/Linux with x11, but extending support should be possible.
+This is a lightweight program showing a popup with the translation of the selected (japanese) text with support for creating anki cards. 
+It uses [sdcv](https://github.com/Dushistov/sdcv) for the dictionary lookup and gtk3 for displaying the popup.
+Hence the look will depend on your gtk3 theme settings.
+
+The green/red dot indicates wether the word is already included in your Anki collection.
+Playing the pronunciation depends on [jppron](https://github.com/GenjiFujimoto/jppron) with local audio files.
 
 https://github.com/GenjiFujimoto/dictpopup/assets/50422430/4d22d4a2-e138-4bee-bc98-df93ce650e28
 
 ## Dependencies
-sdcv, gtk3
+sdcv, gtk3, glib, x11
+
+There is currently only support for GNU/Linux with x11.
+Extending support should be easy however, since the only platform independent code is for retrieving the selection.
+PRs welcome.
 
 ## Setup
 First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github page. Copy `config.def.h` to `config.h` and change the configuration according to your setup.
