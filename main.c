@@ -150,7 +150,7 @@ add_word_to_dict(GPtrArray *dict, char *word)
 void
 add_deinflections_to_dict(GPtrArray *dict, char *word)
 {
-	GPtrArray *deinflections = g_ptr_array_new();
+	GPtrArray *deinflections = g_ptr_array_new_with_free_func(g_free);
 	char const *err = deinflect(deinflections, word);
 	Stopif(err, return , "%s", err);
 

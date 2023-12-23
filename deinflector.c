@@ -54,7 +54,7 @@ int
 add_truncate(GPtrArray *deinflections, const char *word, glong len, size_t num_chars)
 {
 	const char *end = nth_char(word, len - num_chars);
-	char *truncatedstr = strndup(word, end - word);
+	char *truncatedstr = g_strndup(word, end - word);
 
 	g_ptr_array_add(deinflections, truncatedstr);
 	return 1;
@@ -67,6 +67,9 @@ add_truncate(GPtrArray *deinflections, const char *word, glong len, size_t num_c
 int
 itou_atou_form(GPtrArray *deinflections, const char *word, glong len, size_t pos, int aform)
 {
+	if (pos < 0)
+	    return 0;
+
 	const char *aforms[] = { "さ", "か", "が", "ば", "た", "ま", "わ", "な", "ら" };
 	const char *iforms[] = { "し", "き", "ぎ", "び", "ち", "み", "い", "に", "り" };
 	const char *uforms[] = { "す", "く", "ぐ", "ぶ", "つ", "む", "う", "ぬ", "る" };
@@ -166,9 +169,9 @@ int
 check_masu_form(GPtrArray *deinflections, const char *word, size_t len, const char *last3, const char *last2, const char *last1)
 {
 	if (!strcmp(last2, "ます"))
-		return itou_atou_form(deinflections, word, len, len - 2, 0);
-	else if (last3 && (!strcmp(last3, "ません") || !strcmp(last3, "ました")))
 		return itou_atou_form(deinflections, word, len, len - 3, 0);
+	else if (last3 && (!strcmp(last3, "ません") || !strcmp(last3, "ました")))
+		return itou_atou_form(deinflections, word, len, len - 4, 0);
 	return 0;
 }
 
@@ -201,7 +204,7 @@ check_passive_causative_form(GPtrArray *deinflections, const char *word, size_t 
 	if (last3 && (!strcmp(last3, "られる") || !strcmp(last3, "させる")))
 		return add_replace(deinflections, word, "る", len - 3, 0);
 	else if (!strcmp(last2, "れる") || !strcmp(last2, "せる"))
-		return itou_atou_form(deinflections, word, len, len - 2, 1);
+		return itou_atou_form(deinflections, word, len, len - 3, 1);
 
 	return 0;
 }
@@ -225,7 +228,7 @@ int
 check_volitional(GPtrArray *deinflections, const char *word, size_t len, const char *last3, const char *last2, const char *last1)
 {
 	if (!strcmp(last2, "たい"))
-		return itou_atou_form(deinflections, word, len, len - 2, 0);
+		return itou_atou_form(deinflections, word, len, len - 3, 0);
 	return 0;
 }
 
@@ -233,7 +236,7 @@ int
 check_negation(GPtrArray *deinflections, const char *word, size_t len, const char *last3, const char *last2, const char *last1)
 {
 	if (!strcmp(last2, "ない"))
-		return itou_atou_form(deinflections, word, len, len - 2, 1);
+		return itou_atou_form(deinflections, word, len, len - 3, 1);
 	return 0;
 }
 
@@ -258,8 +261,6 @@ deinflect_one_iter(GPtrArray *deinflections, char *word_utf8)
 	check_past_form(deinflections, word_utf8, len, last3, last2, last1);
 
 	check_masu_form(deinflections, word_utf8, len, last3, last2, last1);
-
-	check_passive_causative_form(deinflections, word_utf8, len, last3, last2, last1);
 
 	check_passive_causative_form(deinflections, word_utf8, len, last3, last2, last1);
 
@@ -288,5 +289,6 @@ deinflect(GPtrArray *deinflections, const char *word)
 		num_deinfs = deinflections->len;
 	}
 
+	g_free(word_utf8);
 	return NULL;
 }
