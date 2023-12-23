@@ -28,5 +28,5 @@ The sound symbol plays a pronunciation from a local database using [jppron](http
 
 ## Problems / Limitations
 * Currently there is only support for [targeted sentence cards](https://ankiweb.net/shared/info/1557722832).
-* There is currently only support for GNU/Linux with x11. Extending support should be easy however, since the only platform independent code is for retrieving the selection. PRs welcome.
+* There is currently only support for GNU/Linux with x11. Extending support should be easy however, since the only platform dependent code is for retrieving the selection. PRs welcome.
 * See TODO.txt file
