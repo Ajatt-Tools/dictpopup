@@ -15,6 +15,7 @@ Mid priority
 - If entry has multiple writings (e.g. 脈搏・脈拍) try to pick the one that was scanned
 
 Low priority
+- Add unit tests for deinflector
 - Display small text about which deinflection occured for specific entry (same as yomichan)
 - Enable a configuration for displaying markdown text in the textview
 - Show notifications on error

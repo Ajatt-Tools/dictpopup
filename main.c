@@ -3,18 +3,15 @@
 #include <stdio.h>
 
 #include <glib.h>
-/* #include <ankiconnectc.h> */
-#include "ankiconnectc.h"
+#include <ankiconnectc.h>
 
 #include "xlib.h"
 #include "util.h"
-#define IMPORT_VARIABLES
 #include "config.h"
-#undef IMPORT_VARIABLES
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-/* #include "dbug.h" */
+/* #include "debug.h" */
 
 #define Stopif(assertion, error_action, ...)          \
 	if (assertion) {                              \
@@ -23,29 +20,27 @@
 		error_action;                         \
 	}
 
-/* #define NUMBER_POSS_ENTRIES 9 */
+#define NUMBER_POSS_ENTRIES 9
 
-/* enum PossibleEntries { */
-/* 	Empty, */
-/* 	LookedUpString, */
-/* 	CopiedSentence, */
-/* 	BoldSentence, */
-/* 	DictionaryKanji, */
-/* 	DictionaryReading, */
-/* 	DictionaryFurigana, */
-/* 	DictionaryDefinition, */
-/* 	FocusedWindowName, */
+enum PossibleEntries {
+	Empty,
+	LookedUpString,
+	CopiedSentence,
+	BoldSentence,
+	DictionaryKanji,
+	DictionaryReading,
+	DictionaryFurigana,
+	DictionaryDefinition,
+	FocusedWindowName
+};
 
-/* 	NUMBER_POSS_ENTRIES */
-/* }; */
-
-/* char *fieldnames[] = { "SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes" }; */
-/* int fieldmapping[] = { BoldSentence, DictionaryKanji, DictionaryFurigana, DictionaryDefinition, FocusedWindowName }; */
+char *fieldnames[] = { "SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes" };
+int fieldmapping[] = { BoldSentence, DictionaryKanji, DictionaryFurigana, DictionaryDefinition, FocusedWindowName };
 size_t num_fields = sizeof(fieldnames) / sizeof(fieldnames[0]);
 
 typedef struct {
-	unsigned int copysentence : 1; /* Whether or not sentence should be copied */
-	unsigned int nuke_whitespace : 1; /* Whether or not whitespace should be removed */
+	unsigned int copysent : 1; /* Prompt for sentence copy */
+	unsigned int nuke_whitespace : 1; /* Remove whitespace */
 	unsigned int win_width;
 	unsigned int win_height;
 	unsigned int win_margin;
@@ -100,20 +95,21 @@ add_dictionary_entry(GPtrArray *dict, char **e)
 	g_ptr_array_add(dict, de);
 }
 
+/* 
+   Adds all dictionary entries from json string to dict.
+   Destroys json string in the process.
+*/
 void
 add_from_json(GPtrArray *dict, char *json)
 {
-	/* Adds all dictionary entries from json to the des array */
-	/* Destroys json string in process */
 	if (is_empty_json(json))
 		return;
 
 	str_repl_by_char(json, "\\n", '\n');
-	char keywords[3][13] = { "\"dict\"", "\"word\"", "\"definition\"" };
+	const char *keywords[3] = { "\"dict\"", "\"word\"", "\"definition\"" };
 	char *entries[3] = { NULL, NULL, NULL };
 
 	int start;
-
 	for (int i = 1; json[i] != '\0'; i++)
 	{
 		for (int k = 0; k < 3; k++)
@@ -123,9 +119,8 @@ add_from_json(GPtrArray *dict, char *json)
 				i += strlen(keywords[k]);
 				while (json[i] != '"' || json[i - 1] == '\\')
 					i++;                         /* TODO: string bounds checking */
-				i++;
-				while (json[i] == '\n')
-					i++;     // Skip leading newlines
+				while (json[++i] == '\n') // Skip leading newlines
+					;     
 				start = i;
 				while (json[i] != '"' || json[i - 1] == '\\')
 					i++;
@@ -156,9 +151,8 @@ void
 add_deinflections_to_dict(GPtrArray *dict, char *word)
 {
 	GPtrArray *deinflections = g_ptr_array_new();
-	/* char const *err = */
-	deinflect(deinflections, word);
-	/* Stopif(err, return , "%s", err); */
+	char const *err = deinflect(deinflections, word);
+	Stopif(err, return , "%s", err);
 
 	for (int i = 0; i < deinflections->len; i++)
 		add_word_to_dict(dict, g_ptr_array_index(deinflections, i));
