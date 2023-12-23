@@ -88,7 +88,19 @@ search_query(const char *query, ResponseFunction respf)
 {
    char *request;
 
-   asprintf(&request, "{ \"action\": \"findCards\", \"version\": 6, \"params\": { \"%s\" } }", query);
+   asprintf(&request, "{ \"action\": \"findCards\", \"version\": 6, \"params\": { \"query\" : \"%s\" } }", query);
+
+   const char *err = sendRequest(request, respf);
+   free(request);
+   return err;
+}
+
+const char *
+action_query(const char *action, const char *query, ResponseFunction respf)
+{
+   char *request;
+
+   asprintf(&request, "{ \"action\": \"%s\", \"version\": 6, \"params\": { \"query\" : \"%s\" } }", action, query);
 
    const char *err = sendRequest(request, respf);
    free(request);

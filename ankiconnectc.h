@@ -14,8 +14,10 @@ typedef struct {
 /* Create a new anki card. Needs freeing. */
 ankicard* new_ankicard();
 
-/* Perform a database search. Reult is passed to the response function. */
+/* Perform a database search. Result is passed to the response function. */
 const char *search_query(const char *query, ResponseFunction respf);
+
+const char *action_query(const char *action, const char *query, ResponseFunction respf);
 
 /* Add ankicard to anki  */
 const char *addNote(ankicard ac);
