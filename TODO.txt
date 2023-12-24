@@ -24,3 +24,7 @@ Possible ideas:
 - "Add this entry"-button before every entry
 - Display the full lookup string with clickable characters (yomichan search)
   - Though I don't think a popup is suitable for this. This should be left to applications such as goldendict
+
+
+To check:
+- definflector assumes that constant strings given in the code are utf8 encoded. This might be wrong if compiled on windows for example.

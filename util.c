@@ -44,26 +44,25 @@ die(const char *fmt, ...) {
 }
 
 char *
-extract_kanji(char *str)
+extract_kanji(const char *str)
 {
     // TODO: Fix things like 嚙む・嚼む・咬む by looking at luw
     char *start_kanji, *end_kanji;
 
-    if(!(start_kanji = strstr(str, "【")))
-      return str;
-    if(!(end_kanji = strstr(start_kanji, "】")))
-      return str;
+    start_kanji = strstr(str, "【");
+    if (!start_kanji || !(end_kanji = strstr(start_kanji, "】")))
+      return strdup(str);
 
     start_kanji += strlen("【");
     return strndup(start_kanji, end_kanji - start_kanji);
 }
 
 char *
-extract_reading(char *str)
+extract_reading(const char *str)
 {
     char *end_read = strstr(str, "【");
     if (!end_read)
-      return str;
+      return strdup(str);
 
     return strndup(str, end_read - str);
 }

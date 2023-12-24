@@ -1,7 +1,7 @@
 include config.mk
 
 P=dictpopup
-SRC = main.c popup.c util.c xlib.c deinflector.c ankiconnectc.c
+SRC = main.c popup.c util.c xlib.c deinflector.c ankiconnectc.c unistr.c
 OBJ = $(SRC:.c=.o)
 
 all: options dictpopup

@@ -150,9 +150,8 @@ add_word_to_dict(GPtrArray *dict, char *word)
 void
 add_deinflections_to_dict(GPtrArray *dict, char *word)
 {
-	GPtrArray *deinflections = g_ptr_array_new_with_free_func(g_free);
-	char const *err = deinflect(deinflections, word);
-	Stopif(err, return , "%s", err);
+	GPtrArray *deinflections = deinflect(word);
+	Stopif(!deinflections, return , "Received a null pointer in add_deinflections_to_dict");
 
 	for (int i = 0; i < deinflections->len; i++)
 		add_word_to_dict(dict, g_ptr_array_index(deinflections, i));

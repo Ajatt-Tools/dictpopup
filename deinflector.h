@@ -6,4 +6,4 @@
    Contains all intermediate steps, e.g. してしまった -> してしまう, して, する
    Returns an error description on error and NULL else
 */
-const char *deinflect(GPtrArray *deinflections, char *wordSTR);
+GPtrArray *deinflect(char *wordSTR);
