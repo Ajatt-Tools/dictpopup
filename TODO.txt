@@ -1,27 +1,26 @@
 
 
 High priority
-- Config file
+- Show notifications on error
+- Add a Config file
+- package with autotools
 
 Mid priority
 - Skip certain lines
   - しず か （しづ—） [1]【静か・▽閑か】
   -（形動）〔文〕ナリ
-- Rewrite deinflector
 - Improve deinflector
-  - Expand list of different possible writings in deinflector, e.g.: 齧る -> 噛じる, 囓る
+  - Expand list of different possible writings in deinflector, e.g.: 齧る -> 噛る, 囓る
   - Try to search for hiragana conversion
-- Do yomichan-like lookup (decrease word length from right to left until getting some result)
-- If entry has multiple writings (e.g. 脈搏・脈拍) try to pick the one that was scanned
-- Kanjify the selected word according to the dictionary entry
+- Kanjify the selected word in the sentence according to the dictionary entry
 
 Low priority
+- Do yomichan-like lookup (decrease word length from right to left until getting some result)
 - Add unit tests for deinflector
-- Display small text about which deinflection occured for specific entry (same as yomichan)
-- Enable a configuration for displaying markdown text in the textview
-- Show notifications on error
+- Add option to display markdown text in the textview
 
 Possible ideas:
+- Display small text about which deinflection occured for specific entry (same as yomichan)
 - "Add this entry"-button before every entry
 - Display the full lookup string with clickable characters (yomichan search)
   - Though I don't think a popup is suitable for this. This should be left to applications such as goldendict

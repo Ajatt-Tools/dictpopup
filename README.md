@@ -11,7 +11,7 @@ sdcv, gtk3, glib, x11
 
 ## Setup
 First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github page. Copy `config.def.h` to `config.h` and change the configuration according to your setup.
-Then install with `sudo make install`.  You can uninstall with `sudo make uninstall`.
+Then install by running `./install.sh`. You can uninstall with `sudo make uninstall`.
 
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.
@@ -27,6 +27,5 @@ The green/red dot indicates wether the word is already present in your Anki coll
 The sound symbol plays a pronunciation from a local database using [jppron](https://github.com/GenjiFujimoto/jppron).
 
 ## Problems / Limitations
-* Currently there is only support for [targeted sentence cards](https://ankiweb.net/shared/info/1557722832).
 * There is currently only support for GNU/Linux with x11. Extending support should be easy however, since the only platform dependent code is for retrieving the selection. PRs welcome.
 * See TODO.txt file
