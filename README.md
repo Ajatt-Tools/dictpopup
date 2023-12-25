@@ -16,7 +16,7 @@ Then install by running `./install.sh`. You can uninstall with `sudo make uninst
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.
 
-You can switch between dictionary entries by pressing the arrow keys or the shortcuts `n` (next) and `p` (previous).
+You can switch between dictionary entries by clicking the arrow keys or by pressing the shortcuts `n` (next) and `p` (previous).
 The popup can be closed with `q` or `Esc`.
 
 The "+" sign (or Ctrl+s) adds the currently shown definition to Anki after prompting you to select a sentence.
