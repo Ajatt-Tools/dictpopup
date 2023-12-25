@@ -1,9 +1,8 @@
-#include <glib.h>
-
-
 /*
-   Fills the deinflections array with possible deinflections.
-   Contains all intermediate steps, e.g. してしまった -> してしまう, して, する
-   Returns an error description on error and NULL else
-*/
-GPtrArray *deinflect(char *wordSTR);
+ * @word: The japanese word to be deinflected
+ *
+ * Contains all intermediate steps, e.g. してしまった -> してしまう, して, する
+ *
+ * Returns: An array with possible deinflections. Array needs to be freed with g_strfreev() for example.
+ */
+char **deinflect(char *word);

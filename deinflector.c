@@ -101,7 +101,7 @@ check_te(unistr* word) /* Use past deinflection instead? */
 {
 	/* exceptions */
 	if (equals(word, "して"))
-		return add_str("する");
+		return add_str("為る");
 	else if (equals(word, "きて") || equals(word, "来て"))
 		return add_str("来る");
 	else if (equals(word, "いって") || equals(word, "行って"))
@@ -141,7 +141,7 @@ check_past(unistr* word)
 {
 	/* exceptions */
 	if (equals(word, "した"))
-		return add_str("する");
+		return add_str("為る");
 	else if (equals(word, "きた") || equals(word, "来た"))
 		return add_str("来る");
 	else if (equals(word, "いった") || equals(word, "行った"))
@@ -244,7 +244,7 @@ deinflect_one_iter(const char *word)
 	unistr_free(uniword);
 }
 
-GPtrArray *
+char**
 deinflect(const char *word)
 {
 	deinfs = g_ptr_array_new_with_free_func(g_free);
@@ -254,5 +254,7 @@ deinflect(const char *word)
 	for (int i = 0; i < deinfs->len; i++)
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
 
-	return deinfs;
+	
+	g_ptr_array_add (deinfs, NULL); /* Add NULL terminator */
+	return (char**) g_ptr_array_steal (deinfs, NULL);
 }

@@ -13,6 +13,7 @@ Mid priority
   - Try to search for hiragana conversion
 - Do yomichan-like lookup (decrease word length from right to left until getting some result)
 - If entry has multiple writings (e.g. 脈搏・脈拍) try to pick the one that was scanned
+- Kanjify the selected word according to the dictionary entry
 
 Low priority
 - Add unit tests for deinflector

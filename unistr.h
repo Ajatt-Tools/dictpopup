@@ -4,8 +4,10 @@ typedef struct {
 	size_t byte_len;
 } unistr;
 
-#define endswith(unistr, suffix)                   \
-	(strcmp (unistr->str + unistr->byte_len - strlen(suffix), suffix) == 0)
+#define endswith(unistr, suffix)                                                  \
+	(unistr->byte_len >= strlen(suffix) ? 					  \
+	  (strcmp (unistr->str + unistr->byte_len - strlen(suffix), suffix) == 0) \
+	 : 0)
 
 #define startswith(unistr, prefix)                 \
 	(strncmp (unistr->str, prefix, strlen (prefix)) == 0)

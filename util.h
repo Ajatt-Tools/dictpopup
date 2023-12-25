@@ -1,6 +1,7 @@
 void notify(const char *message);
 void die(const char *fmt, ...);
 
+char **extract_kanji_array(const char *str);
 char *extract_kanji(const char *str);
 char *extract_reading(const char *str);
 
