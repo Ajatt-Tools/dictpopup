@@ -20,9 +20,9 @@ GPtrArray *deinfs;
    e.g. add_replace(しまう, 1, 0) replaces う
  */
 int
-add_replace_ending(unistr* word, const char *c, size_t pos)
+add_replace_ending(unistr* word, const char *c, size_t len)
 {
-	char *replaced_str = unistr_replace_ending(word, c, pos);
+	char *replaced_str = unistr_replace_ending(word, c, len);
 
 	g_ptr_array_add(deinfs, replaced_str);
 	return 1;
@@ -56,23 +56,23 @@ add_str(const char* str)
 enum { itou, atou };
 
 int
-itou_atou_form(unistr *word, size_t pos, int conv_type)
+itou_atou_form(unistr *word, size_t len_ending, int conv_type)
 {
-	Stopif(pos < 0, return 0, "ERROR: Received an invalid position in itou_atou_form function.");
+	Stopif(len_ending > word->len - 3, return 0, "ERROR: Received an invalid position in itou_atou_form function.");
 
 	const char *aforms[] = { "さ", "か", "が", "ば", "た", "ま", "わ", "な", "ら", NULL };
 	const char *iforms[] = { "し", "き", "ぎ", "び", "ち", "み", "い", "に", "り", NULL };
 	const char *uforms[] = { "す", "く", "ぐ", "ぶ", "つ", "む", "う", "ぬ", "る", NULL };
-
 	const char **forms = (conv_type == atou) ? aforms : iforms;
 
-	while (*forms && !unichar_at_equals(word, word->len-pos, *forms))
+	char *chr = get_ptr_to_char_before(word, len_ending);
+	while (*forms && strncmp(chr, *forms, strlen(*forms)))
 		forms++;
 
 	if (*forms)
-		add_replace_ending(word, *uforms, pos);
+		add_replace_ending(word, *uforms, len_ending + strlen(*forms));
 	else if (!*forms || conv_type == itou) // Verb could always be a る-verb, e.g. 生きます
-		add_replace_ending(word, "る", pos + 1); // る-verb
+		add_replace_ending(word, "る", len_ending); // る-verb
 
 	return 1;
 }
@@ -84,54 +84,33 @@ itou_atou_form(unistr *word, size_t pos, int conv_type)
 /* 	return itou_atou_form(word, 1, itou); */
 /* } */
 
-void
+int
 kanjify(unistr* word)
 {
 	/* if (startswith(word, "ご") || startswith(word, "お")) */
-	/* 	add_replace(word, "御", word->len, 1); */
 
-	if (endswith(word, "ない"))
-		add_replace_ending(word, "無い", 2);
-	if (endswith(word, "なし"))
-		add_replace_ending(word, "無し", 2);
+	IF_ENDSWITH_REPLACE_1("ない", "無い");
+	IF_ENDSWITH_REPLACE_1("なし", "無し");
+	return 0;
 }
 
 int
 check_te(unistr* word) /* Use past deinflection instead? */
 {
 	/* exceptions */
-	if (equals(word, "して"))
-		return add_str("為る");
-	else if (equals(word, "きて") || equals(word, "来て"))
-		return add_str("来る");
-	else if (equals(word, "いって") || equals(word, "行って"))
-		return add_str("行く");
+	IF_EQUALS_ADD("して", "為る");
+	IF_EQUALS_ADD("きて", "来る");
+	IF_EQUALS_ADD("来て", "来る");
+	IF_EQUALS_ADD("いって", "行く");
+	IF_EQUALS_ADD("行って", "行く");
 	/* ----------- */
 
-	else if (endswith(word, "して"))
-		return add_replace_ending(word, "す", 2);
-
-	else if (endswith(word, "いて"))
-		return add_replace_ending(word, "く", 2);
-
-	else if (endswith(word, "いで"))
-		return add_replace_ending(word, "ぐ", 2);
-	else if (endswith(word, "んて"))
-	{
-		add_replace_ending(word, "む", 2);
-		add_replace_ending(word, "ぶ", 2);
-		add_replace_ending(word, "ぬ", 2);
-		return 1;
-	}
-	else if (endswith(word, "って"))
-	{
-		add_replace_ending(word, "る", 2);
-		add_replace_ending(word, "う", 2);
-		add_replace_ending(word, "つ", 2);
-		return 1;
-	}
-	else if (endswith(word, "て"))
-		return add_replace_ending(word, "る", 1); // る-verb
+	IF_ENDSWITH_REPLACE_1("して", "す");
+	IF_ENDSWITH_REPLACE_1("いて", "く");
+	IF_ENDSWITH_REPLACE_1("いで", "ぐ");
+	IF_ENDSWITH_REPLACE_3("んで", "む", "ぶ", "ぬ");
+	IF_ENDSWITH_REPLACE_3("って", "る", "う", "つ");
+	IF_ENDSWITH_REPLACE_1("て", "る");
 
 	return 0;
 }
@@ -140,36 +119,19 @@ int
 check_past(unistr* word)
 {
 	/* exceptions */
-	if (equals(word, "した"))
-		return add_str("為る");
-	else if (equals(word, "きた") || equals(word, "来た"))
-		return add_str("来る");
-	else if (equals(word, "いった") || equals(word, "行った"))
-		return add_str("行く");
+	IF_EQUALS_ADD("した", "為る");
+	IF_EQUALS_ADD("きた", "来る");
+	IF_EQUALS_ADD("来た", "来る");
+	IF_EQUALS_ADD("いった", "行く");
+	IF_EQUALS_ADD("行った", "行く");
 	/* ----------- */
 
-	else if (endswith(word, "した"))
-		return add_replace_ending(word, "す", 2);
-	else if (endswith(word, "いた"))
-		return add_replace_ending(word, "く", 2);
-	else if (endswith(word, "いだ"))
-		return add_replace_ending(word, "ぐ", 2);
-	else if (endswith(word, "んだ"))
-	{
-		add_replace_ending(word, "む", 2);
-		add_replace_ending(word, "ぶ", 2);
-		add_replace_ending(word, "ぬ", 2);
-		return 1;
-	}
-	else if (endswith(word, "った"))
-	{
-		add_replace_ending(word, "る", 2);
-		add_replace_ending(word, "う", 2);
-		add_replace_ending(word, "つ", 2);
-		return 1;
-	}
-	else if (endswith(word, "た"))
-		return add_replace_ending(word, "る", 1); // る-verb
+	IF_ENDSWITH_REPLACE_1("した", "す");
+	IF_ENDSWITH_REPLACE_1("いた", "く");
+	IF_ENDSWITH_REPLACE_1("いだ", "ぐ");
+	IF_ENDSWITH_REPLACE_3("んだ", "む", "ぶ", "ぬ");
+	IF_ENDSWITH_REPLACE_3("った", "る", "う", "つ");
+	IF_ENDSWITH_REPLACE_1("た", "る");
 
 	return 0;
 }
@@ -177,51 +139,77 @@ check_past(unistr* word)
 int
 check_masu(unistr* word)
 {
-	return endswith(word, "ます") ? itou_atou_form(word, 3, itou)
-	     : endswith(word, "ません") ? itou_atou_form(word, 4, itou)
-	     : 0;
+	IF_ENDSWITH_CONVERT_ITOU("ます");
+	IF_ENDSWITH_CONVERT_ITOU("ません");
+
+	return 0;
 }
 
 int
 check_shimau(unistr* word)
 {
-	return endswith(word, "しまう") ? add_truncate(word, 3)
-	     : 0;
+	IF_ENDSWITH_REPLACE_1("しまう", "");
+	IF_ENDSWITH_REPLACE_1("ちゃう", "る");
+	IF_ENDSWITH_REPLACE_1("いじゃう", "ぐ");
+	IF_ENDSWITH_REPLACE_1("いちゃう", "く");
+	IF_ENDSWITH_REPLACE_1("しちゃう", "す");
+
+	return 0;
 }
 
 int
 check_passive_causative(unistr* word)
 {
-	return endswith(word, "られる") ? add_replace_ending(word, "る", 3)
-	     : endswith(word, "させる") ? add_replace_ending(word, "る", 3)
-	     : endswith(word, "れる")   ? itou_atou_form(word, 3, atou)
-	     : endswith(word, "せる")   ? itou_atou_form(word, 3, atou)
-	     : 0;
+	IF_ENDSWITH_REPLACE_1("られる", "る");
+	IF_ENDSWITH_REPLACE_1("させる", "る");
+	IF_ENDSWITH_CONVERT_ATOU("れる");
+	IF_ENDSWITH_CONVERT_ATOU("せる");
+
+	return 0;
 }
 
 int
 check_adjective(unistr* word)
 {
-	return endswith(word, "かった") ? add_replace_ending(word, "い", 3)
-	     : endswith(word, "くない") ? add_replace_ending(word, "い", 3)
-	     : endswith(word, "くて")   ? add_replace_ending(word, "い", 2)
-	     : endswith(word, "よくて") ? add_replace_ending(word, "いい", 3) // e.g. 格好よくて
-	     : endswith(word, "さ")     ? add_replace_ending(word, "い", 1)
-	     : 0;
+	IF_ENDSWITH_REPLACE_1("かった", "い");
+	IF_ENDSWITH_REPLACE_1("くない", "い");
+	IF_ENDSWITH_REPLACE_1("くて", "い");
+	IF_ENDSWITH_REPLACE_1("よくて", "いい");
+	IF_ENDSWITH_REPLACE_1("さ", "い");
+
+	return 0;
 }
 
 int
 check_volitional(unistr* word)
 {
-	return endswith(word, "たい") ? itou_atou_form(word, 3, itou)
-	     : 0;
+	IF_ENDSWITH_CONVERT_ITOU("たい");
+	return 0;
 }
 
 int
 check_negation(unistr* word)
 {
-	return endswith(word, "ない") ? itou_atou_form(word, 3, atou)
-	     : 0;
+	IF_ENDSWITH_CONVERT_ATOU("ない");
+	return 0;
+}
+
+int check_potential(unistr* word)
+{
+	/* Exceptions */
+	IF_EQUALS_ADD("できる", "為る");
+	IF_EQUALS_ADD("こられる", "来る");
+	/* ---------- */
+
+	IF_ENDSWITH_REPLACE_1("せる", "す");
+	IF_ENDSWITH_REPLACE_1("ける", "く");
+	IF_ENDSWITH_REPLACE_1("べる", "ぶ");
+	IF_ENDSWITH_REPLACE_1("てる", "つ");
+	IF_ENDSWITH_REPLACE_1("める", "む");
+	IF_ENDSWITH_REPLACE_1("れる", "る");
+	IF_ENDSWITH_REPLACE_1("ねる", "ぬ");
+	IF_ENDSWITH_REPLACE_1("える", "う");
+	return 0;
 }
 
 void
@@ -229,19 +217,16 @@ deinflect_one_iter(const char *word)
 {
 	unistr *uniword = init_unistr(word);
 
-	if (uniword->len < 2) return;
-
-	check_shimau(uniword);
-	if(check_adjective(uniword))
-	  return;
-	check_masu(uniword);
-	check_passive_causative(uniword);
-	check_volitional(uniword);
-	check_negation(uniword);
-	check_te(uniword);
-	check_past(uniword);
-
-	kanjify(uniword);
+	if(check_shimau(uniword));
+	else if(check_adjective(uniword));
+	else if(check_masu(uniword));
+	else if(check_passive_causative(uniword));
+	else if(check_volitional(uniword));
+	else if(check_negation(uniword));
+	else if(check_te(uniword));
+	else if(check_past(uniword));
+	else if(check_potential(uniword));
+	else kanjify(uniword);
 
 	unistr_free(uniword);
 }
@@ -254,10 +239,7 @@ deinflect(const char *word)
 	deinflect_one_iter(word);
 
 	for (int i = 0; i < deinfs->len; i++)
-	{
-		printf("%s\n", (char *) g_ptr_array_index(deinfs, i));
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
-	}
 
 	
 	g_ptr_array_add (deinfs, NULL); /* Add NULL terminator */

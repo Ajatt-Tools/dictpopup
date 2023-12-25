@@ -14,26 +14,28 @@
 unistr*
 init_unistr(const char *str)
 {
-	unistr *us = malloc(sizeof(unistr));
+	return g_string_new(str);
+	/* unistr *us = malloc(sizeof(unistr)); */
 
-	GError *e = NULL;
-	setlocale(LC_ALL, "");
-	char *str_utf8 = g_locale_to_utf8(str, -1, NULL, NULL, &e);
-	Stopif(!g_utf8_validate(str_utf8, -1, NULL), free(str_utf8); free(us); return NULL,
-	       "ERROR: Word could not be converted to a valid UTF-8 string.");
+	/* GError *e = NULL; */
+	/* setlocale(LC_ALL, ""); */
+	/* char *str_utf8 = g_locale_to_utf8(str, -1, NULL, NULL, &e); */
+	/* Stopif(!g_utf8_validate(str_utf8, -1, NULL), free(str_utf8); free(us); return NULL, */
+	/*        "ERROR: Word could not be converted to a valid UTF-8 string."); */
 
-	us->str = str_utf8;
-	us->len = g_utf8_strlen(us->str, -1);
-	us->byte_len = strlen(str);
+	/* us->str = str_utf8; */
+	/* us->len = g_utf8_strlen(us->str, -1); */
+	/* us->byte_len = strlen(str); */
 
-	return us;
+	/* return us; */
 }
 
 void
 unistr_free(unistr *us)
 {
-	g_free(us->str);
-	free(us);
+	g_string_free(us, TRUE);
+	/* g_free(us->str); */
+	/* free(us); */
 }
 
 /**
@@ -54,30 +56,47 @@ char_at_pos(const char *input, size_t n)
 /**
  * unistr_replace_ending:
  * @str: The UTF-8 encoded string to replace with
- * @len: The length of the ending that should be replaced
+ * @len: The length of the ending (in bytes) that should be replaced
  *
- * Replaces the last @len number of characters with @str
+ * Replaces the last @len bytes of characters with @str. Assumes replacement is smaller than ending.
+ * NO ERROR CHECKING.
  *
  * Returns: The newly allocated string with replaced ending.
  */
 char *
-unistr_replace_ending(unistr* word, const char *str, size_t len)
+unistr_replace_ending(const unistr* word, const char *replacement, size_t len_ending)
 {
-	Stopif(len > word->len, return NULL, 
-	    "ERROR: Received a length greater than word length in unistr_replace_ending");
+	Stopif(len_ending > word->len, return NULL, 
+	    "ERROR: Received a length greater than word length in unistr_replace_ending.");
 
-	GString *gword = g_string_sized_new(word->byte_len + 5); // Try to avoid resizing
-	const char *start_ending = char_at_pos(word->str, word->len - len);
+	char *retstr = malloc(word->len + 1);
+	char *end = mempcpy(retstr, word->str, word->len - len_ending);
+	strcpy(end, replacement);
 
-	g_string_append_len(gword, word->str, start_ending - word->str);
-	g_string_append(gword, str);
+	return retstr;
+
+	/* GString *gword = g_string_sized_new(word->byte_len + 5); // Try to avoid resizing */
+	/* const char *start_ending = char_at_pos(word->str, word->len - len); */
+
+	/* g_string_append_len(gword, word->str, start_ending - word->str); */
+	/* g_string_append(gword, str); */
 
 	/* GError *e = NULL; */
 	/* char *str_locale = g_locale_from_utf8(gword->str, gword->len, NULL, NULL, &e); */
 	/* g_string_free(gword, TRUE); */
 
 	/* return str_locale; */
-	return g_string_free_and_steal(gword);
+	/* return g_string_free_and_steal(gword); */
+}
+
+char *
+get_ptr_to_char_before(unistr *word, size_t len_ending)
+{
+    char *chr_after = word->str + len_ending;
+    return chr_after - 3; 
+    // Might be dangerous. However we know that data is UTF-8 encoded and that japanese characters are 3 bytes long,
+    // so should be fine.
+    // NO ERROR CHECKING.
 }
 
 int
