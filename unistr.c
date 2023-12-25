@@ -72,16 +72,17 @@ unistr_replace_ending(unistr* word, const char *str, size_t len)
 	g_string_append_len(gword, word->str, start_ending - word->str);
 	g_string_append(gword, str);
 
-	GError *e = NULL;
-	char *str_locale = g_locale_from_utf8(gword->str, gword->len, NULL, NULL, &e);
-	g_string_free(gword, TRUE);
+	/* GError *e = NULL; */
+	/* char *str_locale = g_locale_from_utf8(gword->str, gword->len, NULL, NULL, &e); */
+	/* g_string_free(gword, TRUE); */
 
-	return str_locale;
+	/* return str_locale; */
+	return g_string_free_and_steal(gword);
 }
 
 int
 unichar_at_equals(unistr *word, size_t pos, const char *str)
 {
 	const char *charat = char_at_pos(word->str, pos);
-	return strncmp(charat, str, strlen(str));
+	return (strncmp(charat, str, strlen(str)) == 0);
 }

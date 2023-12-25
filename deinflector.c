@@ -23,8 +23,8 @@ int
 add_replace_ending(unistr* word, const char *c, size_t pos)
 {
 	char *replaced_str = unistr_replace_ending(word, c, pos);
-	g_ptr_array_add(deinfs, replaced_str);
 
+	g_ptr_array_add(deinfs, replaced_str);
 	return 1;
 }
 
@@ -66,7 +66,7 @@ itou_atou_form(unistr *word, size_t pos, int conv_type)
 
 	const char **forms = (conv_type == atou) ? aforms : iforms;
 
-	while (*forms && !unichar_at_equals(word, pos, *forms))
+	while (*forms && !unichar_at_equals(word, word->len-pos, *forms))
 		forms++;
 
 	if (*forms)
@@ -203,7 +203,8 @@ int
 check_adjective(unistr* word)
 {
 	return endswith(word, "かった") ? add_replace_ending(word, "い", 3)
-	     : endswith(word, "くて")   ? add_replace_ending(word, "い", 1)
+	     : endswith(word, "くない") ? add_replace_ending(word, "い", 3)
+	     : endswith(word, "くて")   ? add_replace_ending(word, "い", 2)
 	     : endswith(word, "よくて") ? add_replace_ending(word, "いい", 3) // e.g. 格好よくて
 	     : endswith(word, "さ")     ? add_replace_ending(word, "い", 1)
 	     : 0;
@@ -230,16 +231,17 @@ deinflect_one_iter(const char *word)
 
 	if (uniword->len < 2) return;
 
-	kanjify(uniword);
-
 	check_shimau(uniword);
+	if(check_adjective(uniword))
+	  return;
 	check_masu(uniword);
 	check_passive_causative(uniword);
 	check_volitional(uniword);
 	check_negation(uniword);
-	check_adjective(uniword);
 	check_te(uniword);
 	check_past(uniword);
+
+	kanjify(uniword);
 
 	unistr_free(uniword);
 }
@@ -252,7 +254,10 @@ deinflect(const char *word)
 	deinflect_one_iter(word);
 
 	for (int i = 0; i < deinfs->len; i++)
+	{
+		printf("%s\n", (char *) g_ptr_array_index(deinfs, i));
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
+	}
 
 	
 	g_ptr_array_add (deinfs, NULL); /* Add NULL terminator */
