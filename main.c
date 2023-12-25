@@ -137,7 +137,8 @@ add_from_json(GPtrArray *dict, char *lookupstr, char *json)
 				*i++ = '\0';
 
 				if (entries[k])
-					fprintf(stderr, "WARNING: Overwriting previous entry. Expects to see all of dict, word and definition before next entry.");
+					fprintf(stderr, "WARNING: Overwriting previous entry. \
+					    Expects to see dict, word and definition before next entry.");
 				entries[k] = start;
 
 				if (entries[0] && entries[1] && entries[2])

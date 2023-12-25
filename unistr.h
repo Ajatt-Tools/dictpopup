@@ -1,26 +1,7 @@
-/* typedef struct { */
-/* 	char *str; */
-/* 	size_t len;	 /1* Number of unicode characters in str *1/ */
-/* 	size_t byte_len; /1* Number of bytes occupied by str *1/ */
-/* } unistr; */
-
-/* #define endswith(unistr, suffix)                                                  \ */
-/* 	(unistr->byte_len >= strlen(suffix) ? 					  \ */
-/* 	  (strcmp(unistr->str + unistr->byte_len - strlen(suffix), suffix) == 0) \ */
-/* 	 : 0) */
-
-/* #define startswith(unistr, prefix)                 \ */
-/* 	(strncmp (unistr->str, prefix, strlen (prefix)) == 0) */
-
-/* #define equals(us, string)                     \ */
-/* 	(strcmp((us)->str, string) == 0) */
-
-/* unistr* init_unistr(const char *str); */
-/* void unistr_free(unistr *us); */
-/* char *unistr_replace_ending(unistr* word, const char *str, size_t len); */
-/* int unichar_at_equals(unistr *word, size_t pos, const char *str); */
-
-typedef GString unistr;
+typedef struct {
+	const char *str;
+	size_t len;
+} unistr;
 
 #define endswith(unistr, suffix)                                                  \
 	(unistr->len >= strlen(suffix) ?                                          \
@@ -66,8 +47,7 @@ typedef GString unistr;
 		return itou_atou_form(word, strlen(ending), atou);    \
 	}
 
-unistr* init_unistr(const char *str);
-void unistr_free(unistr *us);
-char *unistr_replace_ending(const unistr* word, const char *str, size_t len);
+void unistr_init(unistr *us, const char *str);
 
-char *get_ptr_to_char_before(unistr *word, size_t len_ending);
+char *unistr_replace_ending(const unistr* word, const char *str, size_t len);
+const char * get_ptr_to_char_before(unistr *word, size_t len_ending);

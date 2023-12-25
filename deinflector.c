@@ -56,7 +56,7 @@ add_str(const char* str)
 enum { itou, atou };
 
 int
-itou_atou_form(unistr *word, size_t len_ending, int conv_type)
+itou_atou_form(unistr* word, size_t len_ending, int conv_type)
 {
 	Stopif(len_ending > word->len - 3, return 0, "ERROR: Received an invalid position in itou_atou_form function.");
 
@@ -65,7 +65,7 @@ itou_atou_form(unistr *word, size_t len_ending, int conv_type)
 	const char *uforms[] = { "す", "く", "ぐ", "ぶ", "つ", "む", "う", "ぬ", "る", NULL };
 	const char **forms = (conv_type == atou) ? aforms : iforms;
 
-	char *chr = get_ptr_to_char_before(word, len_ending);
+	const char *chr = get_ptr_to_char_before(word, len_ending);
 	while (*forms && strncmp(chr, *forms, strlen(*forms)))
 		forms++;
 
@@ -102,7 +102,7 @@ check_te(unistr* word) /* Use past deinflection instead? */
 	IF_EQUALS_ADD("きて", "来る");
 	IF_EQUALS_ADD("来て", "来る");
 	IF_EQUALS_ADD("いって", "行く");
-	IF_EQUALS_ADD("行って", "行く");
+	IF_ENDSWITH_REPLACE_1("行って", "行く");
 	/* ----------- */
 
 	IF_ENDSWITH_REPLACE_1("して", "す");
@@ -123,7 +123,7 @@ check_past(unistr* word)
 	IF_EQUALS_ADD("きた", "来る");
 	IF_EQUALS_ADD("来た", "来る");
 	IF_EQUALS_ADD("いった", "行く");
-	IF_EQUALS_ADD("行った", "行く");
+	IF_ENDSWITH_REPLACE_1("行った", "行く");
 	/* ----------- */
 
 	IF_ENDSWITH_REPLACE_1("した", "す");
@@ -139,6 +139,10 @@ check_past(unistr* word)
 int
 check_masu(unistr* word)
 {
+	/* exceptions */
+	IF_ENDSWITH_REPLACE_1("きます", "くる");
+	/* ----------- */
+
 	IF_ENDSWITH_CONVERT_ITOU("ます");
 	IF_ENDSWITH_CONVERT_ITOU("ません");
 
@@ -215,20 +219,19 @@ int check_potential(unistr* word)
 void
 deinflect_one_iter(const char *word)
 {
-	unistr *uniword = init_unistr(word);
+	unistr uniword;
+	unistr_init(&uniword, word);
 
-	if(check_shimau(uniword));
-	else if(check_adjective(uniword));
-	else if(check_masu(uniword));
-	else if(check_passive_causative(uniword));
-	else if(check_volitional(uniword));
-	else if(check_negation(uniword));
-	else if(check_te(uniword));
-	else if(check_past(uniword));
-	else if(check_potential(uniword));
-	else kanjify(uniword);
-
-	unistr_free(uniword);
+	if(check_shimau(&uniword));
+	else if(check_adjective(&uniword));
+	else if(check_masu(&uniword));
+	else if(check_passive_causative(&uniword));
+	else if(check_volitional(&uniword));
+	else if(check_negation(&uniword));
+	else if(check_te(&uniword));
+	else if(check_past(&uniword));
+	else if(check_potential(&uniword));
+	else kanjify(&uniword);
 }
 
 char**
@@ -239,7 +242,10 @@ deinflect(const char *word)
 	deinflect_one_iter(word);
 
 	for (int i = 0; i < deinfs->len; i++)
+	{
+		printf("%s\n", (char *)g_ptr_array_index(deinfs, i));
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
+	}
 
 	
 	g_ptr_array_add (deinfs, NULL); /* Add NULL terminator */
