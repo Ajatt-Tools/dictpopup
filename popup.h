@@ -21,4 +21,4 @@ void lock_dictionary_data();
 /*
  * Signals that the dictionary data isn't in use anymore.
  */
-void release_dictionary_data();
+void dictionary_data_done();

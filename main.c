@@ -248,8 +248,6 @@ p_free(char **p)
 void*
 lookup_and_create_dictionary(void *voidin)
 {
-	lock_dictionary_data();
-
 	ThreadData *in = voidin;
 	char **p = in->p;
 	GPtrArray *dict = in->dict;
@@ -264,7 +262,7 @@ lookup_and_create_dictionary(void *voidin)
 	create_dictionary_from(dict, p[LookedUpString]);
 	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); exit(1), "No dictionary entry found.");
 
-	release_dictionary_data();
+	dictionary_data_done();
 	return NULL;
 }
 

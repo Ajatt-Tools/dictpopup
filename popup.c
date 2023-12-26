@@ -5,9 +5,9 @@
 #include "util.h"
 #include "structs.h"
 
-GMutex dict_mutex;
-GCond dict_set_condition;
-gboolean dict_data_set = 0;
+GMutex vars_mutex;
+GCond vars_set_condition;
+gboolean vars_set = 0;
 
 GPtrArray *dict;
 size_t *curde = 0;
@@ -23,18 +23,24 @@ GtkWidget *exists_dot;
 int word_exists_in_db = 0;
 int EXIT_CODE = 0; /* 0 = close, 1 = anki */
 
+void update_window();
+void check_if_exists();
+
 void
-lock_dictionary_data()
+dictionary_data_done()
 {
-	g_mutex_lock(&dict_mutex);
+	g_mutex_lock(&vars_mutex);
+	while (!vars_set)
+		g_cond_wait(&vars_set_condition, &vars_mutex);
+	g_mutex_unlock(&vars_mutex);
+
+	update_window();
+	check_if_exists(); // Check only once
 }
 
 void
 release_dictionary_data()
 {
-	dict_data_set = 1;
-	g_cond_signal(&dict_set_condition);
-	g_mutex_unlock(&dict_mutex);
 }
 
 enum { WORD, DEFINITION, DICTNAME };
@@ -42,7 +48,6 @@ enum { WORD, DEFINITION, DICTNAME };
 const char*
 get_cur(int entry)
 {
-
 	dictentry *cur_entry = g_ptr_array_index(dict, *curde);
 	const char *retstr = NULL;
 
@@ -66,7 +71,7 @@ void
 play_pronunciation()
 {
 	// TODO: Look up different writing if nothing found. Currently simply uses first one
-	const char* curword = get_cur(WORD); 
+	const char* curword = get_cur(WORD);
 	char **kanji_writings = extract_kanji_array(curword);
 	const char *pron_word = *kanji_writings ? *kanji_writings : curword;
 
@@ -265,6 +270,7 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 
 	gtk_init(NULL, NULL);
 
+	g_mutex_lock(&vars_mutex);
 	/* ------------ WINDOW ------------ */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_default_size(GTK_WINDOW(window), WIN_WIDTH, WIN_HEIGHT);
@@ -305,7 +311,6 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tw), FALSE);
 
 	set_margins();
-
 	/* ------------------------------------- */
 
 
@@ -339,17 +344,11 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 	g_signal_connect(G_OBJECT(exists_dot), "draw", G_CALLBACK(on_draw_event), NULL);
 	/* ------------------------------------ */
 
+	vars_set = 1;
+	g_cond_signal(&vars_set_condition);
+	g_mutex_unlock(&vars_mutex);
+
 	gtk_widget_show_all(window);
-
-	// Wait for dictionary data to arrive.
-	g_mutex_lock(&dict_mutex);
-	while (!dict_data_set)
-		g_cond_wait(&dict_set_condition, &dict_mutex);
-	g_mutex_unlock(&dict_mutex);
-	//
-	update_window();
-	check_if_exists(); // Check only once at beginning
-
 	gtk_main();
 
 	return EXIT_CODE;
