@@ -1,3 +1,11 @@
+#define Stopif(assertion, error_action, ...)          \
+	if (assertion) {                              \
+		notify(__VA_ARGS__);	  	      \
+		fprintf(stderr, __VA_ARGS__);         \
+		fprintf(stderr, "\n");                \
+		error_action;                         \
+	}
+
 void notify(char const *fmt, ...);
 
 char **extract_kanji_array(const char *str);

@@ -1,7 +1,7 @@
 include config.mk
 
 P=dictpopup
-SRC = main.c popup.c util.c xlib.c deinflector.c unistr.c
+SRC = main.c popup.c util.c xlib.c deinflector.c unistr.c readsettings.c
 OBJ = $(SRC:.c=.o)
 
 all: options dictpopup
@@ -14,11 +14,6 @@ options:
 
 .c.o:
 	$(CC) -c $(CFLAGS) $<
-
-$(OBJ): config.h config.mk
-
-config.h:
-	cp config.def.h $@
 
 $(P): ${OBJ}
 	$(CC) ${OBJ} ${LDFLAGS} -o $@ 

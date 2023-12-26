@@ -8,13 +8,6 @@
 
 GPtrArray *deinfs;
 
-#define Stopif(assertion, error_action, ...)          \
-	if (assertion) {                              \
-		fprintf(stderr, __VA_ARGS__);         \
-		fprintf(stderr, "\n");                \
-		error_action;                         \
-	}
-
 /*
    Replaces char at position wordlen - pos with c and adds it to the deinflections array.
    e.g. add_replace(しまう, 1, 0) replaces う
@@ -63,13 +56,16 @@ itou_atou_form(unistr* word, size_t len_ending, int conv_type)
 	const char *uforms[] = { "す", "く", "ぐ", "ぶ", "つ", "む", "う", "ぬ", "る", NULL };
 
 	const char *chr = get_ptr_to_char_before(word, len_ending);
-	Stopif(!chr, return 0, "ERROR: Could not convert the word: \"%s\" removing the ending: \"%s\"",
-	    word->str, word->str + word->len - len_ending);
+	if (!chr)
+	{
+		g_warning("ERROR: Could not convert the word: \"%s\" removing the ending: \"%s\"", word->str, word->str + word->len - len_ending);
+		return 0;
+	}
 
 	const char **forms = (conv_type == atou) ? aforms : iforms;
 	int i = 0;
 	while (forms[i] && strncmp(chr, forms[i], strlen(*forms)))
-	  i++;
+		i++;
 
 	if (forms[i])
 		add_replace_ending(word, uforms[i], len_ending + strlen(forms[i]));
@@ -225,16 +221,26 @@ deinflect_one_iter(const char *word)
 	unistr uniword;
 	unistr_init(&uniword, word);
 
-	if(check_shimau(&uniword));
-	else if(check_adjective(&uniword));
-	else if(check_masu(&uniword));
-	else if(check_passive_causative(&uniword));
-	else if(check_volitional(&uniword));
-	else if(check_negation(&uniword));
-	else if(check_te(&uniword));
-	else if(check_past(&uniword));
-	else if(check_potential(&uniword));
-	else kanjify(&uniword);
+	if (check_shimau(&uniword))
+		;
+	else if (check_adjective(&uniword))
+		;
+	else if (check_masu(&uniword))
+		;
+	else if (check_passive_causative(&uniword))
+		;
+	else if (check_volitional(&uniword))
+		;
+	else if (check_negation(&uniword))
+		;
+	else if (check_te(&uniword))
+		;
+	else if (check_past(&uniword))
+		;
+	else if (check_potential(&uniword))
+		;
+	else
+		kanjify(&uniword);
 }
 
 char**
@@ -246,7 +252,7 @@ deinflect(const char *word)
 
 	for (int i = 0; i < deinfs->len; i++)
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
-	
-	g_ptr_array_add (deinfs, NULL); /* Add NULL terminator */
-	return (char**) g_ptr_array_steal (deinfs, NULL);
+
+	g_ptr_array_add(deinfs, NULL);  /* Add NULL terminator */
+	return (char**)g_ptr_array_steal(deinfs, NULL);
 }

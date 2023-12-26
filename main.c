@@ -7,39 +7,21 @@
 
 #include "xlib.h"
 #include "util.h"
-#define IMPORT_VARIABLES
-#include "config.h"
-#undef IMPORT_VARIABLES
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-/* #include "debug.h" */
+#include "readsettings.h"
 
 #include <pthread.h>
 
 #define SDCV_CMD "sdcv -nej --utf8-output"
 
-#define Stopif(assertion, error_action, ...)          \
-	if (assertion) {                              \
-		fprintf(stderr, __VA_ARGS__);         \
-		fprintf(stderr, "\n");                \
-		error_action;                         \
-	}
-
-size_t num_fields = sizeof(fieldnames) / sizeof(fieldnames[0]);
+settings *user_settings;
 
 typedef struct {
-	unsigned int copysent : 1; /* Prompt for sentence copy */
-	unsigned int nuke_whitespace : 1; /* Remove whitespace */
-	unsigned int win_width;
-	unsigned int win_height;
-	unsigned int win_margin;
-} settings;
-
-typedef struct {
-    char *p[NUMBER_POSS_ENTRIES];
-    GPtrArray *dict;
-    char *argv1;
+	char *p[NUMBER_POSS_ENTRIES];
+	GPtrArray *dict;
+	char *argv1;
 } ThreadData;
 
 void
@@ -79,7 +61,7 @@ char *
 lookup(char *word)
 {
 	char *sdcv_json = read_cmd_sync("sdcv -nej --utf8-output '%s'", word);
-	Stopif(!sdcv_json, exit(1),"Error calling sdcv. Is it installed?");
+	Stopif(!sdcv_json, exit(1), "Error calling sdcv. Is it installed?");
 	return sdcv_json;
 }
 
@@ -167,7 +149,7 @@ add_deinflections_to_dict(GPtrArray *dict, char *word)
 	for (char **ptr = deinflections; *ptr; ptr++)
 		add_word_to_dict(dict, *ptr);
 
-	g_strfreev(deinflections); 
+	g_strfreev(deinflections);
 }
 
 void
@@ -207,14 +189,18 @@ create_furigana(char *kanji, char* reading)
 void
 populate_entries(char *pe[], dictentry* de)
 {
-	notify("Please select the sentence.");
-	clipnotify();
-	pe[CopiedSentence] = sselp();
-	nuke_whitespace(pe[CopiedSentence]);
+	if (user_settings->copysentence)
+	{
+		notify("Please select the sentence.");
+		clipnotify();
+		pe[CopiedSentence] = sselp();
+		if (user_settings->nukewhitespace)
+			nuke_whitespace(pe[CopiedSentence]);
+	}
 
 	pe[BoldSentence] = boldWord(pe[CopiedSentence], pe[LookedUpString]);
 
-	pe[DeinflectedLookup] = de->lookup;
+	pe[DeinflectedLookup] = strdup(de->lookup);
 
 	pe[DictionaryReading] = extract_reading(de->word);
 
@@ -226,16 +212,16 @@ populate_entries(char *pe[], dictentry* de)
 void
 prepare_anki_card(ankicard *ac, char **pe)
 {
-	ac->deck = ANKI_DECK;
-	ac->notetype = ANKI_MODEL;
+	ac->deck = user_settings->deck;
+	ac->notetype = user_settings->notetype;
 
-	ac->num_fields = num_fields;
-	ac->fieldnames = fieldnames;
-	ac->fieldentries = calloc(num_fields, sizeof(char *));
+	ac->num_fields = user_settings->num_fields;
+	ac->fieldnames = user_settings->fieldnames;
+	ac->fieldentries = calloc(ac->num_fields, sizeof(char *));
 
-	for (int i = 0; i < num_fields; i++)
-		ac->fieldentries[i] = pe[fieldmapping[i]];
-	// Not copying data might cause bugs if not carefull
+	for (int i = 0; i < ac->num_fields; i++)
+		ac->fieldentries[i] = pe[user_settings->fieldmapping[i]];
+	// Be careful to not free pe before using the anki card
 }
 
 void
@@ -253,16 +239,20 @@ lookup_and_create_dictionary(void *voidin)
 	GPtrArray *dict = in->dict;
 	char *argv1 = in->argv1;
 
+	user_settings = read_user_settings();
+
 	p[LookedUpString] = argv1 ? g_strdup(argv1) : sselp(); //strdup, so can be freed afterwards
 	Stopif(!p[LookedUpString] || !*p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
-	nuke_whitespace(p[LookedUpString]);
+
+	if (user_settings->nukewhitespace)
+		nuke_whitespace(p[LookedUpString]);
 
 	p[FocusedWindowName] = getwindowname();
 
 	create_dictionary_from(dict, p[LookedUpString]);
 	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); exit(1), "No dictionary entry found.");
 
-	dictionary_data_done();
+	dictionary_data_done(user_settings);
 	return NULL;
 }
 
@@ -274,7 +264,7 @@ display_popup(void *voidin)
 	GPtrArray *dict = in->dict;
 
 	size_t de_num;
-	if (popup(dict, &p[DictionaryDefinition], &de_num))
+	if (popup(dict, &p[DictionaryDefinition], &de_num, user_settings) && user_settings->ankisupport)
 	{
 		dictentry *chosen_dict = g_ptr_array_index(dict, de_num);
 		populate_entries(p, chosen_dict);
@@ -282,9 +272,10 @@ display_popup(void *voidin)
 		ankicard ac;
 		prepare_anki_card(&ac, p);
 
-		const char *err = addNote(ac);
+		const char *err = ac_addNote(ac);
+		if (!err)
+			notify("Successfully added card");
 		Stopif(err, , "Error creating note: %s", err);
-		if (!err) notify("Successfully added card");
 
 		free(ac.fieldentries);
 	}
@@ -296,14 +287,16 @@ int
 main(int argc, char**argv)
 {
 	ThreadData data;
-	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++) data.p[i] = NULL;
+	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
+		data.p[i] = NULL;
 	data.dict = g_ptr_array_new_with_free_func(dictentry_free);
 	data.argv1 = argc > 1 ? argv[1] : NULL;
 
 	pthread_t threads[2];
 	pthread_create(&threads[0], NULL, lookup_and_create_dictionary, &data);
 	pthread_create(&threads[1], NULL, display_popup, &data);
-	for (int i = 0; i < 2; i++) pthread_join(threads[i], NULL);
+	for (int i = 0; i < 2; i++)
+		pthread_join(threads[i], NULL);
 
 	p_free(data.p);
 	g_ptr_array_free(data.dict, TRUE);

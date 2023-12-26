@@ -1,9 +1,13 @@
 #include <gtk/gtk.h>
 #include <ankiconnectc.h>
 
-#include "config.h"
 #include "util.h"
 #include "structs.h"
+#include "readsettings.h"
+
+#define WIN_WIDTH 530
+#define WIN_HEIGHT 350
+#define WIN_MARGIN 5
 
 GMutex vars_mutex;
 GCond vars_set_condition;
@@ -27,7 +31,7 @@ void update_window();
 void check_if_exists();
 
 void
-dictionary_data_done()
+dictionary_data_done(settings *cfg)
 {
 	g_mutex_lock(&vars_mutex);
 	while (!vars_set)
@@ -35,12 +39,21 @@ dictionary_data_done()
 	g_mutex_unlock(&vars_mutex);
 
 	update_window();
-	check_if_exists(); // Check only once
+	check_if_exists(cfg); // Check only once
 }
 
-void
-release_dictionary_data()
+size_t
+check_search_response(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
+	if (word_exists_in_db)
+		return nmemb;
+
+	if (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0)
+		word_exists_in_db = 1;
+
+	gtk_widget_queue_draw(exists_dot);
+
+	return nmemb;
 }
 
 enum { WORD, DEFINITION, DICTNAME };
@@ -65,6 +78,18 @@ get_cur(int entry)
 	}
 
 	return retstr;
+}
+
+void
+check_if_exists(settings *cfg)
+{
+	char **kanji_writings = extract_kanji_array(get_cur(WORD));
+	char **ptr = kanji_writings;
+	while (*ptr)
+		ac_search(cfg->deck, cfg->searchfield, *ptr++, check_search_response);
+	// Accessing user settings should be safe since update occurs after reading dict
+
+	g_strfreev(kanji_writings);
 }
 
 void
@@ -99,20 +124,6 @@ on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_data)
 {
 	draw_dot(widget, cr);
 	return FALSE;
-}
-
-size_t
-check_search_response(char *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	if (word_exists_in_db)
-		return nmemb;
-
-	if (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0)
-		word_exists_in_db = 1;
-
-	gtk_widget_queue_draw(exists_dot);
-
-	return nmemb;
 }
 
 void
@@ -240,17 +251,6 @@ set_margins()
 }
 
 void
-check_if_exists()
-{
-	char **kanji_writings = extract_kanji_array(get_cur(WORD));
-	char **ptr = kanji_writings;
-	while (*ptr)
-		search(ANKI_DECK, SEARCH_FIELD, *ptr++, check_search_response);
-
-	g_strfreev(kanji_writings);
-}
-
-void
 move_win_to_mouse_ptr()
 {
 	GdkDisplay *display = gdk_display_get_default();
@@ -261,7 +261,7 @@ move_win_to_mouse_ptr()
 }
 
 int
-popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_curde)
+popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_curde, settings* cfg)
 {
 	dict = passed_dictionary;
 	def = passed_definition;

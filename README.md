@@ -14,6 +14,40 @@ sdcv, gtk3, glib, x11
 First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github page. Copy `config.def.h` to `config.h` and change the configuration according to your setup.
 Then install by running `./install.sh`. You can uninstall with `sudo make uninstall`.
 
+## Configuration
+Copy the example below into `~/.config/dictpopup/config` and configure it according to your setup. 
+The syntax follows the [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec).
+```
+[Anki]
+Deck = Japanese
+NoteType = Japanese sentences
+
+# Available entries for the field mapping:
+#
+# 0	Empty			 An empty string.
+# 1	LookedUpString		 The selected word or the argument dictpopup was called with
+# 2	DeinflectedLookup	 The deinflected version of the lookup string
+# 3	CopiedSentence		 The copied sentence
+# 4	BoldSentence		 The copied sentence with the looked up string in bold
+# 5	DictionaryKanji		 All kanji writings from the chosen dictionary entry, e.g. 嚙む・嚼む・咬む
+# 6	DictionaryReading	 The hiragana reading form the dictionary entry
+# 7	DictionaryDefinition	 The chosen dictionary definition
+# 8	DeinflectedFurigana	 Currently the string: [DeinflectedLookup][DictionaryReading]
+# 9	FocusedWindowName	 The name of the focused window at lookup time
+#
+FieldNames = SentKanji;VocabKanji;VocabFurigana;VocabDef;Notes;
+FieldMapping = 4;2;8;7;9;
+
+SearchField = VocabKanji
+
+[Behaviour]
+EnableAnkiSupport = true
+CheckIfExists = true
+CopySentence = true
+NukeWhitespace = true
+```
+Be careful to not include trailing spaces after your variables.
+
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.
 

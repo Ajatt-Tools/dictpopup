@@ -4,13 +4,6 @@
 
 #include "unistr.h"
 
-#define Stopif(assertion, error_action, ...)          \
-	if (assertion) {                              \
-		fprintf(stderr, __VA_ARGS__);         \
-		fprintf(stderr, "\n");                \
-		error_action;                         \
-	}
-
 /* Assumes string is already UTF-8 encoded! */
 void
 unistr_init(unistr *us, const char *str)
@@ -32,8 +25,11 @@ unistr_init(unistr *us, const char *str)
 char *
 unistr_replace_ending(const unistr* word, const char *replacement, size_t len_ending)
 {
-	Stopif(len_ending > word->len, return NULL, 
-	    "ERROR: Received a length greater than word length in unistr_replace_ending.");
+	if (len_ending > word->len)
+	{
+		fprintf(stderr, "ERROR: Received a length greater than word length in unistr_replace_ending.");
+		return NULL;
+	}
 
 	char *retstr = malloc(word->len + 1);
 	char *end = mempcpy(retstr, word->str, word->len - len_ending);
@@ -45,8 +41,8 @@ unistr_replace_ending(const unistr* word, const char *replacement, size_t len_en
 const char *
 get_ptr_to_char_before(unistr *word, size_t len_ending)
 {
-    const size_t single_chr_len = strlen("あ");
-    return len_ending + single_chr_len > word->len ? NULL
+	const size_t single_chr_len = strlen("あ");
+	return len_ending + single_chr_len > word->len ? NULL
       : word->str + word->len - len_ending - single_chr_len;
-    // Might be dangerous if string is not UTF-8 encoded
+	// Might be dangerous if string is not UTF-8 encoded
 }

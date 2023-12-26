@@ -1,4 +1,24 @@
-#ifdef IMPORT_VARIABLES
+#ifndef SETTINGS_H
+#define SETTINGS_H
+
+typedef struct {
+	// Anki
+	char *deck;
+	char *notetype;
+	char **fieldnames;
+	size_t num_fields;
+	int *fieldmapping;
+	char *searchfield;
+	// Popup
+	unsigned int win_width;
+	unsigned int win_height;
+	unsigned int win_margin;
+	// Behaviour
+	gboolean ankisupport;
+	gboolean checkexisting;
+	gboolean copysentence;
+	gboolean nukewhitespace;
+} settings;
 
 #define NUMBER_POSS_ENTRIES 10
 enum PossibleEntries {
@@ -14,16 +34,8 @@ enum PossibleEntries {
 	FocusedWindowName	/* The name of the focused window at lookup time */
 };
 
-char *fieldnames[] = { "SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes" };
-int fieldmapping[] = { BoldSentence, DeinflectedLookup, DeinflectedFurigana, DictionaryDefinition, FocusedWindowName };
-#endif // IMPORT_VARIABLES
+void print_settings(settings *cfg);
+settings* read_user_settings();
+void free_settings(settings *cfg);
 
-/* Anki settings */
-#define ANKI_DECK "Japanese::Mining"
-#define ANKI_MODEL "Japanese sentences"
-#define SEARCH_FIELD "VocabKanji"
-
-/* Popup settings */
-#define WIN_MARGIN 5
-#define WIN_WIDTH 480
-#define WIN_HEIGHT 300
+#endif /* SETTINGS_H */

@@ -1,4 +1,4 @@
-
+#include "readsettings.h"
 
 
 /*
@@ -11,7 +11,7 @@
  * 
  * Returns: TRUE if an Anki card should be made and FALSE otherwise.
  */
-int popup(GPtrArray *dictionary, char** definition, size_t *de_num);
+int popup(GPtrArray *dictionary, char** definition, size_t *de_num, settings *cfg);
 
 /*
  * Signals that the dictionary data is currently in use.
@@ -21,4 +21,4 @@ void lock_dictionary_data();
 /*
  * Signals that the dictionary data isn't in use anymore.
  */
-void dictionary_data_done();
+void dictionary_data_done(settings *cfg);
