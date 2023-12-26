@@ -58,20 +58,22 @@ enum { itou, atou };
 int
 itou_atou_form(unistr* word, size_t len_ending, int conv_type)
 {
-	Stopif(len_ending > word->len - 3, return 0, "ERROR: Received an invalid position in itou_atou_form function.");
-
 	const char *aforms[] = { "さ", "か", "が", "ば", "た", "ま", "わ", "な", "ら", NULL };
 	const char *iforms[] = { "し", "き", "ぎ", "び", "ち", "み", "い", "に", "り", NULL };
 	const char *uforms[] = { "す", "く", "ぐ", "ぶ", "つ", "む", "う", "ぬ", "る", NULL };
-	const char **forms = (conv_type == atou) ? aforms : iforms;
 
 	const char *chr = get_ptr_to_char_before(word, len_ending);
-	while (*forms && strncmp(chr, *forms, strlen(*forms)))
-		forms++;
+	Stopif(!chr, return 0, "ERROR: Could not convert the word: \"%s\" removing the ending: \"%s\"",
+	    word->str, word->str + word->len - len_ending);
 
-	if (*forms)
-		add_replace_ending(word, *uforms, len_ending + strlen(*forms));
-	else if (!*forms || conv_type == itou) // Verb could always be a る-verb, e.g. 生きます
+	const char **forms = (conv_type == atou) ? aforms : iforms;
+	int i = 0;
+	while (forms[i] && strncmp(chr, forms[i], strlen(*forms)))
+	  i++;
+
+	if (forms[i])
+		add_replace_ending(word, uforms[i], len_ending + strlen(forms[i]));
+	if (!forms[i] || conv_type == itou) // Verb could always be a る-verb, e.g. 生きます
 		add_replace_ending(word, "る", len_ending); // る-verb
 
 	return 1;
@@ -175,10 +177,11 @@ check_passive_causative(unistr* word)
 int
 check_adjective(unistr* word)
 {
+	IF_ENDSWITH_REPLACE_1("よくて", "いい");
 	IF_ENDSWITH_REPLACE_1("かった", "い");
 	IF_ENDSWITH_REPLACE_1("くない", "い");
 	IF_ENDSWITH_REPLACE_1("くて", "い");
-	IF_ENDSWITH_REPLACE_1("よくて", "いい");
+	IF_ENDSWITH_REPLACE_1("そう", "い");
 	IF_ENDSWITH_REPLACE_1("さ", "い");
 
 	return 0;
@@ -242,11 +245,7 @@ deinflect(const char *word)
 	deinflect_one_iter(word);
 
 	for (int i = 0; i < deinfs->len; i++)
-	{
-		printf("%s\n", (char *)g_ptr_array_index(deinfs, i));
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
-	}
-
 	
 	g_ptr_array_add (deinfs, NULL); /* Add NULL terminator */
 	return (char**) g_ptr_array_steal (deinfs, NULL);

@@ -6,6 +6,10 @@ High priority
 - package with autotools
 
 Mid priority
+- Add mulithreading 
+  - Open popup and lookup dictionary entries in different threads
+  - Update popup buffer when lookup and definflection is done
+- Enable choosing a dictionary sort order
 - Skip certain lines
   - しず か （しづ—） [1]【静か・▽閑か】
   -（形動）〔文〕ナリ
@@ -15,6 +19,7 @@ Mid priority
 - Kanjify the selected word in the sentence according to the dictionary entry
 
 Low priority
+- Convert string from locale to UTF-8 and back to locale in unistr (To support other OSes, i.e. Windows)
 - Do yomichan-like lookup (decrease word length from right to left until getting some result)
 - Add unit tests for deinflector
 - Add option to display markdown text in the textview

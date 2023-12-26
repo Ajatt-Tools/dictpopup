@@ -15,6 +15,8 @@
 #include "popup.h"
 /* #include "debug.h" */
 
+#include <pthread.h>
+
 #define SDCV_CMD "sdcv -nej --utf8-output"
 
 #define Stopif(assertion, error_action, ...)          \
@@ -33,6 +35,12 @@ typedef struct {
 	unsigned int win_height;
 	unsigned int win_margin;
 } settings;
+
+typedef struct {
+    char *p[NUMBER_POSS_ENTRIES];
+    GPtrArray *dict;
+    char *argv1;
+} ThreadData;
 
 void
 dictentry_free(void *ptr)
@@ -70,26 +78,9 @@ dictentry_init(char *dictname, char *dictword, char *definition, char *lookup)
 char *
 lookup(char *word)
 {
-	char *cmd;
-	asprintf(&cmd, SDCV_CMD " '%s'", word); // single quot to make sure no cmd gets interpreted
-
-	FILE *fp;
-	fp = popen(cmd, "r");
-	Stopif(!fp, free(cmd); exit(1), "Failed calling command \"%s\". Is sdcv installed?", cmd);
-
-	char *buf = NULL;
-	size_t size = 0;
-	Stopif(!getline(&buf, &size, fp), free(cmd); exit(1), "Failed reading output of the command: %s.", cmd);
-
-	pclose(fp);
-	free(cmd);
-	return buf;
-}
-
-int
-is_empty_json(char *json)
-{
-	return !json || !json[0] ? 1 : !strncmp(json, "[]", 2);
+	char *sdcv_json = read_cmd_sync("sdcv -nej --utf8-output '%s'", word);
+	Stopif(!sdcv_json, exit(1),"Error calling sdcv. Is it installed?");
+	return sdcv_json;
 }
 
 /*
@@ -102,9 +93,16 @@ add_to_dictionary(GPtrArray *dict, char *dictname, char *dictword, char *definit
 	g_ptr_array_add(dict, de);
 }
 
+int
+is_empty_json(char *json)
+{
+	return !json || !json[0] ? 1 : !strncmp(json, "[]", 2);
+}
+
 /*
  * Adds all dictionary entries from json string to dict.
- * Changes json in process
+ * Changes json string in process
+ * json can be NULL.
  */
 void
 add_from_json(GPtrArray *dict, char *lookupstr, char *json)
@@ -172,15 +170,11 @@ add_deinflections_to_dict(GPtrArray *dict, char *word)
 	g_strfreev(deinflections); 
 }
 
-GPtrArray*
-create_dictionary_from(char *word)
+void
+create_dictionary_from(GPtrArray *dict, char *word)
 {
-	GPtrArray *dict = g_ptr_array_new_with_free_func(dictentry_free);
-
 	add_word_to_dict(dict, word);
 	add_deinflections_to_dict(dict, word);
-
-	return dict;
 }
 
 char *
@@ -241,6 +235,7 @@ prepare_anki_card(ankicard *ac, char **pe)
 
 	for (int i = 0; i < num_fields; i++)
 		ac->fieldentries[i] = pe[fieldmapping[i]];
+	// Not copying data might cause bugs if not carefull
 }
 
 void
@@ -250,23 +245,37 @@ p_free(char **p)
 		free(p[i]);
 }
 
-
-int
-main(int argc, char**argv)
+void*
+lookup_and_create_dictionary(void *voidin)
 {
-	char *p[NUMBER_POSS_ENTRIES] = { NULL };
+	lock_dictionary_data();
 
-	p[LookedUpString] = (argc > 1) ? g_strdup(argv[1]) : sselp(); //strdup, so can be freed afterwards
-	Stopif(!p[LookedUpString] || !*p[LookedUpString], return 1, "No selection and no argument provided. Exiting.");
+	ThreadData *in = voidin;
+	char **p = in->p;
+	GPtrArray *dict = in->dict;
+	char *argv1 = in->argv1;
 
+	p[LookedUpString] = argv1 ? g_strdup(argv1) : sselp(); //strdup, so can be freed afterwards
+	Stopif(!p[LookedUpString] || !*p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
 	nuke_whitespace(p[LookedUpString]);
 
 	p[FocusedWindowName] = getwindowname();
 
-	GPtrArray *dict = create_dictionary_from(p[LookedUpString]);
-	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); return 1, "No dictionary entry found.");
+	create_dictionary_from(dict, p[LookedUpString]);
+	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); exit(1), "No dictionary entry found.");
 
-	size_t de_num = 0;
+	release_dictionary_data();
+	return NULL;
+}
+
+void*
+display_popup(void *voidin)
+{
+	ThreadData *in = voidin;
+	char **p = in->p;
+	GPtrArray *dict = in->dict;
+
+	size_t de_num;
 	if (popup(dict, &p[DictionaryDefinition], &de_num))
 	{
 		dictentry *chosen_dict = g_ptr_array_index(dict, de_num);
@@ -277,10 +286,27 @@ main(int argc, char**argv)
 
 		const char *err = addNote(ac);
 		Stopif(err, , "Error creating note: %s", err);
+		if (!err) notify("Successfully added card");
 
 		free(ac.fieldentries);
 	}
 
-	p_free(p);
-	g_ptr_array_free(dict, TRUE);
+	return NULL;
+}
+
+int
+main(int argc, char**argv)
+{
+	ThreadData data;
+	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++) data.p[i] = NULL;
+	data.dict = g_ptr_array_new_with_free_func(dictentry_free);
+	data.argv1 = argc > 1 ? argv[1] : NULL;
+
+	pthread_t threads[2];
+	pthread_create(&threads[0], NULL, lookup_and_create_dictionary, &data);
+	pthread_create(&threads[1], NULL, display_popup, &data);
+	for (int i = 0; i < 2; i++) pthread_join(threads[i], NULL);
+
+	p_free(data.p);
+	g_ptr_array_free(data.dict, TRUE);
 }

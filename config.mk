@@ -19,8 +19,8 @@ LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes -lankiconnectc $(GTK3LI
 
 # flags
 # CPPFLAGS = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\"
-CFLAGS   = -std=gnu11 -O3 -g -pedantic -Wall $(INCS) $(CPPFLAGS) $(GTK3CFLAGS) $(NOTIFYCFLAGS)
-LDFLAGS  = $(LIBS) -g
+CFLAGS   = -std=gnu11 -O3 -g -pedantic -Wall $(INCS) $(CPPFLAGS) $(GTK3CFLAGS) $(NOTIFYCFLAGS) -pthread
+LDFLAGS  = $(LIBS) -g -lpthread
 
 # compiler and linker
 CC = cc

@@ -45,8 +45,8 @@ unistr_replace_ending(const unistr* word, const char *replacement, size_t len_en
 const char *
 get_ptr_to_char_before(unistr *word, size_t len_ending)
 {
-    const char *chr_after = word->str + len_ending;
-    return chr_after - 3;
-    // Might be dangerous. However we know that data is UTF-8 encoded and that japanese characters are 3 bytes long,
-    // so should be fine. NO ERROR CHECKING though.
+    const size_t single_chr_len = strlen("あ");
+    return len_ending + single_chr_len > word->len ? NULL
+      : word->str + word->len - len_ending - single_chr_len;
+    // Might be dangerous if string is not UTF-8 encoded
 }

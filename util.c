@@ -2,47 +2,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "util.h"
 
 #include <libnotify/notify.h>
 #include <unistd.h>
+#include <glib.h>
+
+#include "util.h"
 
 void
-notify(const char *message)
+notify(char const *fmt, ...)
 {
-	NotifyNotification *n;
+	char *msg;
+	va_list argp;
+	va_start(argp, fmt);
+	vasprintf(&msg, fmt, argp);
+	va_end(argp);
 
+	NotifyNotification *n;
 	notify_init("Basics");
 
-	n = notify_notification_new(message, NULL, NULL);
-	notify_notification_set_app_name(n, "dictpopup");  /* Maybe set to argv[0] */
-	/* notify_notification_set_timeout (n, 3000); */
+	n = notify_notification_new(msg, NULL, NULL);
+	notify_notification_set_app_name(n, "dictpopup");  /* Maybe set it to argv[0] */
 
 	if (!notify_notification_show(n, NULL))
-		fprintf(stderr, "failed to send notification\n");
+		fprintf(stderr, "ERROR: Failed to send notification.\n");
 
 	g_object_unref(G_OBJECT(n));
-}
-
-void
-die(const char *fmt, ...)
-{
-	char buffer[512];
-	va_list ap;
-
-	va_start(ap, fmt);
-	vsprintf(buffer, fmt, ap);
-	va_end(ap);
-
-	notify(buffer);
-	fprintf(stderr, "%s\n", buffer);
-
-	if (fmt[0] && fmt[strlen(fmt) - 1] == ':')
-	{
-		perror(NULL); // Only to stderr
-	}
-
-	exit(1);
 }
 
 /*
@@ -135,4 +120,45 @@ nuke_whitespace(char *str)
 	str_repl_by_char(str, "\t", '\0');
 	str_repl_by_char(str, " ", '\0');
 	str_repl_by_char(str, "　", '\0');
+}
+
+/*
+ * Calls a command in printf style.
+ *
+ * Returns: Newly allocated string with the standard output of the command or NULL on error.
+ */
+char*
+read_cmd_sync(char const *fmt, ...)
+{
+    char *cmd;
+    va_list argp;
+    va_start(argp, fmt);
+    vasprintf(&cmd, fmt, argp);
+    va_end(argp);
+    
+    char *standard_out = NULL;
+    // Might want to switch to g_spawn_sync for safety
+    g_spawn_command_line_sync(cmd, &standard_out, NULL, NULL, NULL);
+
+    free(cmd);
+    return standard_out;
+}
+
+/*
+ * Calls a command in printf style fashion. 
+ *
+ * Returns: TRUE on success and FALSE if there was an error
+ */
+int
+spawn_cmd_async(char const *fmt, ...)
+{
+    char *cmd;
+    va_list argp;
+    va_start(argp, fmt);
+    vasprintf(&cmd, fmt, argp);
+    va_end(argp);
+
+    int retval = g_spawn_command_line_async(cmd, NULL);
+    free(cmd);
+    return retval;
 }

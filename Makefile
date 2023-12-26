@@ -21,7 +21,7 @@ config.h:
 	cp config.def.h $@
 
 $(P): ${OBJ}
-	$(CC) -o $@ ${OBJ} ${LDFLAGS}
+	$(CC) ${OBJ} ${LDFLAGS} -o $@ 
 
 clean:
 	rm -f dictpopup ${OBJ}
