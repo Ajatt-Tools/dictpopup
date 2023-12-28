@@ -172,12 +172,6 @@ boldWord(char *sent, char *word)
 }
 
 char *
-guess_kanji_writing(char **kanji_writings, char* reading, char *lookup)
-{
-	return strdup(*kanji_writings);
-}
-
-char *
 create_furigana(char *kanji, char* reading)
 {
 	// Broken if kanji contains hiragana
@@ -194,7 +188,6 @@ populate_entries(char *pe[], dictentry* de)
 		notify("Please select the sentence.");
 		clipnotify();
 		pe[CopiedSentence] = sselp();
-		fprintf(stderr, "%s\n", pe[CopiedSentence]);
 		if (user_settings->nukewhitespace)
 			nuke_whitespace(pe[CopiedSentence]);
 	}
@@ -294,8 +287,7 @@ int
 main(int argc, char**argv)
 {
 	ThreadData data;
-	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
-		data.p[i] = NULL;
+	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++) data.p[i] = NULL;
 	data.dict = g_ptr_array_new_with_free_func(dictentry_free);
 	data.argv1 = argc > 1 ? argv[1] : NULL;
 

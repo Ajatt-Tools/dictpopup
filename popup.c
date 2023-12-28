@@ -86,8 +86,12 @@ check_if_exists(settings *cfg)
 
 	char **kanji_writings = extract_kanji_array(get_cur(WORD));
 	char **ptr = kanji_writings;
-	while (*ptr)
-		ac_search(cfg->deck, cfg->searchfield, *ptr++, check_search_response);
+	const char *err = NULL;
+	while (*ptr && !err)
+	{
+		err = ac_search(cfg->deck, cfg->searchfield, *ptr++, check_search_response);
+		if (err) notify("Could not connect to AnkiConnect. Is Anki running?");
+	}
 
 	g_strfreev(kanji_writings);
 }
