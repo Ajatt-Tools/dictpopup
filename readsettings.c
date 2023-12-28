@@ -9,6 +9,19 @@
 #define printbool(boolean) \
 	boolean ? "TRUE" : "FALSE"
 
+/*
+ * Checks fieldmapping for validity
+ * Returns: TRUE for valid and FALSE for invalid.
+ */
+gboolean
+validate_fieldmapping(int fieldmapping[], size_t len)
+{
+	for (int i = 0; i < len; i++)
+		if (fieldmapping[i] < 0 || fieldmapping[i] >= NUMBER_POSS_ENTRIES)
+			return FALSE;
+	return TRUE;
+}
+
 void
 print_settings(settings *cfg)
 {
@@ -96,8 +109,7 @@ read_user_settings()
 		}
 		else
 		{
-			notify("Error opening \"%s\": %s.", config_fn, error->message);
-			g_warning("Error opening \"%s\": %s.", config_fn, error->message);
+			notify("Error opening \"%s\": %s.", config_fn, error->message); g_warning("Error opening \"%s\": %s.", config_fn, error->message);
 		}
 
 		g_error_free(error);
@@ -145,6 +157,7 @@ read_user_settings()
 		if (error)
 		{
 			notify("WARNING: %s. Disabling Anki support.", error->message);
+			g_warning("%s. Disabling Anki support.", error->message);
 			cfg->ankisupport = FALSE;
 			g_error_free(error);
 			error = NULL;
@@ -159,9 +172,16 @@ read_user_settings()
 		if (error)
 		{
 			notify("WARNING: %s. Disabling Anki support.", error->message);
+			g_warning("%s. Disabling Anki support.", error->message);
 			cfg->ankisupport = FALSE;
 			g_error_free(error);
 			error = NULL;
+		}
+		if (!validate_fieldmapping(cfg->fieldmapping, num_fieldmappings))
+		{
+			notify("WARNING: Encountered an invalid value in FieldMapping setting. Disabling Anki support.");
+			g_warning("Encountered an invalid value in FieldMapping setting. Disabling Anki support.");
+			cfg->ankisupport = FALSE;
 		}
 
 		Stopif(num_fieldnames != num_fieldmappings, exit(1), "Error: Number of fieldnames does not match number of fieldmappings.");

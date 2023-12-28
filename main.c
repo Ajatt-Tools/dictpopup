@@ -78,7 +78,7 @@ add_to_dictionary(GPtrArray *dict, char *dictname, char *dictword, char *definit
 int
 is_empty_json(char *json)
 {
-	return !json || !json[0] ? 1 : !strncmp(json, "[]", 2);
+	return !json || !*json ? 1 : (strncmp(json, "[]", 2) == 0);
 }
 
 /*
@@ -93,7 +93,7 @@ add_from_json(GPtrArray *dict, char *lookupstr, char *json)
 		return;
 
 	str_repl_by_char(json, "\\n", '\n');
-	const char *keywords[3] = { "\"dict\"", "\"word\"", "\"definition\"" };
+	const char *keywords[] = { "\"dict\"", "\"word\"", "\"definition\"" };
 	char *entries[3] = { NULL, NULL, NULL };
 
 	char *start;
@@ -275,7 +275,7 @@ display_popup(void *voidin)
 		prepare_anki_card(&ac, p);
 
 		const char *err = ac_addNote(ac, addNote_response);
-		if (err) notify("Error communicating with AnkiConnect. Is Anki running?");
+		if (err) notify("%s", err);
 
 		free(ac.fieldentries);
 	}
