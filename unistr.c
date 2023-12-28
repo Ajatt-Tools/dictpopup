@@ -2,47 +2,70 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <locale.h>
+#include <glib.h>
+
 #include "unistr.h"
 
-/* Assumes string is already UTF-8 encoded! */
-void
-unistr_init(unistr *us, const char *str)
+
+unistr*
+unistr_new(const char *str)
 {
-	us->str = str;
-	us->len = strlen(str);
+	unistr *us = malloc(sizeof(unistr));
+
+	GError *e = NULL;
+	setlocale(LC_ALL, "");
+	char *str_utf8 = g_locale_to_utf8(str, -1, NULL, NULL, &e);
+
+	if (!g_utf8_validate(str_utf8, -1, NULL))
+		g_warning("Could not convert word to a valid utf-8 string.");
+
+	us->str = str_utf8;
+	us->len = strlen(us->str);
+
+	return us;
+}
+
+void
+unistr_free(unistr *us)
+{
+	g_free(us->str);
+	free(us);
 }
 
 /**
  * unistr_replace_ending:
- * @str: The UTF-8 encoded string to replace with
- * @len: The length of the ending (in bytes) that should be replaced
+ * @word: The word whose ending should be replaced
+ * @replacement: The UTF-8 encoded string the ending should be replaced with
+ * @len_ending: The length of the ending (in bytes) that should be replaced
  *
- * Replaces the last @len bytes of characters with @str. Assumes replacement is smaller than ending.
- * NO ERROR CHECKING.
+ * Replaces the last @len_ending bytes of @word with @str.
  *
  * Returns: The newly allocated string with replaced ending.
  */
 char *
 unistr_replace_ending(const unistr* word, const char *replacement, size_t len_ending)
 {
-	if (len_ending > word->len)
-	{
-		fprintf(stderr, "ERROR: Received a length greater than word length in unistr_replace_ending.");
-		return NULL;
-	}
-
-	char *retstr = malloc(word->len + 1);
+	char *retstr = malloc(word->len - len_ending + strlen(replacement) + 1);
 	char *end = mempcpy(retstr, word->str, word->len - len_ending);
 	strcpy(end, replacement);
 
 	return retstr;
 }
 
+/*
+ *
+ *
+ * Returns: A pointer to the char in word->str, which is the 
+ * last character if the last @len_ending bytes were to be removed.
+ *
+ * WARNING: Only works if the previous character is expected to be encoded using 
+ * 3 bytes, e.g. japanese hiragana and katakana.
+ */
 const char *
 get_ptr_to_char_before(unistr *word, size_t len_ending)
 {
-	const size_t single_chr_len = strlen("あ");
+	const size_t single_chr_len = 3; // Byte length of a UTF-8 encoded japanese character
 	return len_ending + single_chr_len > word->len ? NULL
       : word->str + word->len - len_ending - single_chr_len;
-	// Might be dangerous if string is not UTF-8 encoded
 }

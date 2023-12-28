@@ -1,14 +1,10 @@
 
 
 High priority
-- Show notifications on error
-- Add a Config file
 - package with autotools
 
 Mid priority
-- Add mulithreading 
-  - Open popup and lookup dictionary entries in different threads
-  - Update popup buffer when lookup and definflection is done
+- enable runtime config for the popup window dimensions
 - Enable choosing a dictionary sort order
 - Skip certain lines
   - しず か （しづ—） [1]【静か・▽閑か】
@@ -21,8 +17,9 @@ Mid priority
 Low priority
 - Convert string from locale to UTF-8 and back to locale in unistr (To support other OSes, i.e. Windows)
 - Do yomichan-like lookup (decrease word length from right to left until getting some result)
-- Add unit tests for deinflector
+- Add unit tests (for deinflector)
 - Add option to display markdown text in the textview
+  - A workaround might be passing through lynx
 
 Possible ideas:
 - Display small text about which deinflection occured for specific entry (same as yomichan)

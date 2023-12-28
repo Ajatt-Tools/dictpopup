@@ -96,7 +96,7 @@ str_repl_by_char(char *str, char *target, char repl_c)
 {
 	if (!str || !target)
 	{
-		fprintf(stderr, "ERROR: str_repl_by_char has been called with NULL values.");
+		g_warning("str_repl_by_char has been called with NULL values.");
 		return;
 	}
 
@@ -104,7 +104,7 @@ str_repl_by_char(char *str, char *target, char repl_c)
 	char *s = str, *e = str;
 
 	do{
-		if (!strncmp(e, target, target_len))
+		while (strncmp(e, target, target_len) == 0)
 		{
 			if (repl_c)
 				*s++ = repl_c;

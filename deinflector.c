@@ -218,29 +218,30 @@ int check_potential(unistr* word)
 void
 deinflect_one_iter(const char *word)
 {
-	unistr uniword;
-	unistr_init(&uniword, word);
+	unistr *uniword = unistr_new(word);
 
-	if (check_shimau(&uniword))
+	if (check_shimau(uniword))
 		;
-	else if (check_adjective(&uniword))
+	else if (check_adjective(uniword))
 		;
-	else if (check_masu(&uniword))
+	else if (check_masu(uniword))
 		;
-	else if (check_passive_causative(&uniword))
+	else if (check_passive_causative(uniword))
 		;
-	else if (check_volitional(&uniword))
+	else if (check_volitional(uniword))
 		;
-	else if (check_negation(&uniword))
+	else if (check_negation(uniword))
 		;
-	else if (check_te(&uniword))
+	else if (check_te(uniword))
 		;
-	else if (check_past(&uniword))
+	else if (check_past(uniword))
 		;
-	else if (check_potential(&uniword))
+	else if (check_potential(uniword))
 		;
 	else
-		kanjify(&uniword);
+		kanjify(uniword);
+
+	unistr_free(uniword);
 }
 
 char**

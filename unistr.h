@@ -1,5 +1,5 @@
 typedef struct {
-	const char *str;
+	char *str;
 	size_t len;
 } unistr;
 
@@ -47,7 +47,8 @@ typedef struct {
 		return itou_atou_form(word, strlen(ending), atou);    \
 	}
 
-void unistr_init(unistr *us, const char *str);
+unistr* unistr_new(const char *str);
+void unistr_free(unistr *us);
 
 char *unistr_replace_ending(const unistr* word, const char *str, size_t len);
 const char * get_ptr_to_char_before(unistr *word, size_t len_ending);

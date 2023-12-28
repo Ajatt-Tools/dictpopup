@@ -18,6 +18,7 @@ typedef struct {
 	gboolean checkexisting;
 	gboolean copysentence;
 	gboolean nukewhitespace;
+	gboolean pronunciationbutton;
 } settings;
 
 #define NUMBER_POSS_ENTRIES 10

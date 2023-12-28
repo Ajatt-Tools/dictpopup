@@ -194,6 +194,7 @@ populate_entries(char *pe[], dictentry* de)
 		notify("Please select the sentence.");
 		clipnotify();
 		pe[CopiedSentence] = sselp();
+		fprintf(stderr, "%s\n", pe[CopiedSentence]);
 		if (user_settings->nukewhitespace)
 			nuke_whitespace(pe[CopiedSentence]);
 	}
@@ -229,6 +230,14 @@ p_free(char **p)
 {
 	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
 		free(p[i]);
+}
+
+void addNote_response(const char *err)
+{
+	if (!err)
+		notify("Sucessfully added card.");
+	else
+		notify("Error creating card: %s", err);
 }
 
 void*
@@ -272,10 +281,8 @@ display_popup(void *voidin)
 		ankicard ac;
 		prepare_anki_card(&ac, p);
 
-		const char *err = ac_addNote(ac);
-		if (!err)
-			notify("Successfully added card");
-		Stopif(err, , "Error creating note: %s", err);
+		const char *err = ac_addNote(ac, addNote_response);
+		if (err) notify("Error communicating with AnkiConnect. Is Anki running?");
 
 		free(ac.fieldentries);
 	}

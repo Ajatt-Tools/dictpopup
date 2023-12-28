@@ -42,18 +42,15 @@ dictionary_data_done(settings *cfg)
 	check_if_exists(cfg); // Check only once
 }
 
-size_t
-check_search_response(char *ptr, size_t size, size_t nmemb, void *userdata)
+void
+check_search_response(int exists)
 {
 	if (word_exists_in_db)
-		return nmemb;
-
-	if (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0)
+		return;
+	else if (exists)
 		word_exists_in_db = 1;
 
 	gtk_widget_queue_draw(exists_dot);
-
-	return nmemb;
 }
 
 enum { WORD, DEFINITION, DICTNAME };
@@ -83,11 +80,14 @@ get_cur(int entry)
 void
 check_if_exists(settings *cfg)
 {
+	// Accessing user settings should be safe since update occurs after reading dict
+	if(!cfg->checkexisting || !cfg->ankisupport)
+	  return;
+
 	char **kanji_writings = extract_kanji_array(get_cur(WORD));
 	char **ptr = kanji_writings;
 	while (*ptr)
 		ac_search(cfg->deck, cfg->searchfield, *ptr++, check_search_response);
-	// Accessing user settings should be safe since update occurs after reading dict
 
 	g_strfreev(kanji_writings);
 }
