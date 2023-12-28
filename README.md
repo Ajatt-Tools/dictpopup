@@ -15,7 +15,7 @@ First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github 
 Then install by running `./install.sh`. You can uninstall with `sudo make uninstall`.
 
 ## Configuration
-Copy the example below into `~/.config/dictpopup/config` and configure it according to your setup. 
+Copy the example below into `~/.config/dictpopup/config.ini` and configure it according to your setup. 
 The syntax follows the [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec).
 ```
 [Anki]
