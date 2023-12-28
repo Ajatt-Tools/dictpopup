@@ -10,13 +10,11 @@
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-#include "readsettings.h"
+/* #include "readsettings.h" */
 
 #include <pthread.h>
 
 #define SDCV_CMD "sdcv -nej --utf8-output"
-
-settings *user_settings;
 
 typedef struct {
 	char *p[NUMBER_POSS_ENTRIES];
@@ -117,7 +115,7 @@ add_from_json(GPtrArray *dict, char *lookupstr, char *json)
 				*i++ = '\0';
 
 				if (entries[k])
-					fprintf(stderr, "WARNING: Overwriting previous entry. \
+					g_warning("WARNING: Overwriting previous entry. \
 					    Expects to see dict, word and definition before next entry.");
 				entries[k] = start;
 
@@ -183,12 +181,12 @@ create_furigana(char *kanji, char* reading)
 void
 populate_entries(char *pe[], dictentry* de)
 {
-	if (user_settings->copysentence)
+	if (cfg.copysentence)
 	{
 		notify("Please select the sentence.");
 		clipnotify();
 		pe[CopiedSentence] = sselp();
-		if (user_settings->nukewhitespace)
+		if (cfg.nukewhitespace)
 			nuke_whitespace(pe[CopiedSentence]);
 	}
 
@@ -203,19 +201,22 @@ populate_entries(char *pe[], dictentry* de)
 	pe[DeinflectedFurigana] = create_furigana(pe[DeinflectedLookup], pe[DictionaryReading]);
 }
 
-void
-prepare_anki_card(ankicard *ac, char **pe)
+ankicard*
+ankicard_new(char **pe)
 {
-	ac->deck = user_settings->deck;
-	ac->notetype = user_settings->notetype;
-
-	ac->num_fields = user_settings->num_fields;
-	ac->fieldnames = user_settings->fieldnames;
-	ac->fieldentries = calloc(ac->num_fields, sizeof(char *));
+	ankicard *ac = malloc(sizeof(ankicard));
+	*ac = (ankicard) {
+	  .deck = cfg.deck,
+	  .notetype = cfg.notetype,
+	  .num_fields = cfg.num_fields,
+	  .fieldnames = cfg.fieldnames,
+	  .fieldentries = calloc(cfg.num_fields, sizeof(char *))
+	};
 
 	for (int i = 0; i < ac->num_fields; i++)
-		ac->fieldentries[i] = pe[user_settings->fieldmapping[i]];
-	// Be careful to not free pe before using the anki card
+		ac->fieldentries[i] = pe[cfg.fieldmapping[i]];
+
+	return ac;
 }
 
 void
@@ -241,12 +242,10 @@ lookup_and_create_dictionary(void *voidin)
 	GPtrArray *dict = in->dict;
 	char *argv1 = in->argv1;
 
-	user_settings = read_user_settings();
-
 	p[LookedUpString] = argv1 ? g_strdup(argv1) : sselp(); //strdup, so can be freed afterwards
 	Stopif(!p[LookedUpString] || !*p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
 
-	if (user_settings->nukewhitespace)
+	if (cfg.nukewhitespace)
 		nuke_whitespace(p[LookedUpString]);
 
 	p[FocusedWindowName] = getwindowname();
@@ -254,7 +253,7 @@ lookup_and_create_dictionary(void *voidin)
 	create_dictionary_from(dict, p[LookedUpString]);
 	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); exit(1), "No dictionary entry found.");
 
-	dictionary_data_done(user_settings);
+	dictionary_data_done();
 	return NULL;
 }
 
@@ -266,18 +265,18 @@ display_popup(void *voidin)
 	GPtrArray *dict = in->dict;
 
 	size_t de_num;
-	if (popup(dict, &p[DictionaryDefinition], &de_num, user_settings) && user_settings->ankisupport)
+	if (popup(dict, &p[DictionaryDefinition], &de_num) && cfg.ankisupport)
 	{
 		dictentry *chosen_dict = g_ptr_array_index(dict, de_num);
 		populate_entries(p, chosen_dict);
 
-		ankicard ac;
-		prepare_anki_card(&ac, p);
+		ankicard *ac = ankicard_new(p);
 
-		const char *err = ac_addNote(ac, addNote_response);
+		const char *err = ac_addNote(*ac, addNote_response);
 		if (err) notify("%s", err);
 
-		free(ac.fieldentries);
+		free(ac->fieldentries);
+		free(ac);
 	}
 
 	return NULL;
@@ -286,6 +285,8 @@ display_popup(void *voidin)
 int
 main(int argc, char**argv)
 {
+	read_user_settings();
+
 	ThreadData data;
 	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++) data.p[i] = NULL;
 	data.dict = g_ptr_array_new_with_free_func(dictentry_free);

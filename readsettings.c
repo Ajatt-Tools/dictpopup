@@ -9,6 +9,8 @@
 #define printbool(boolean) \
 	boolean ? "TRUE" : "FALSE"
 
+settings cfg;
+
 /*
  * Checks fieldmapping for validity
  * Returns: TRUE for valid and FALSE for invalid.
@@ -23,41 +25,41 @@ validate_fieldmapping(int fieldmapping[], size_t len)
 }
 
 void
-print_settings(settings *cfg)
+print_settings()
 {
 	printf("[Anki]\n");
-	printf("Anki deck: \"%s\"\n", cfg->deck);
-	printf("Anki Notetype: \"%s\"\n", cfg->notetype);
+	printf("Anki deck: \"%s\"\n", cfg.deck);
+	printf("Anki Notetype: \"%s\"\n", cfg.notetype);
 	printf("Fields: [");
-	for (int i = 0; i < cfg->num_fields; i++)
+	for (int i = 0; i < cfg.num_fields; i++)
 	{
-		printf("\"%s\"", cfg->fieldnames[i]);
-		if (i != cfg->num_fields - 1)
+		printf("\"%s\"", cfg.fieldnames[i]);
+		if (i != cfg.num_fields - 1)
 			printf(",");
 		else
 			printf("]\n");
 	}
 	printf("Mappings : [");
-	for (int i = 0; i < cfg->num_fields; i++)
+	for (int i = 0; i < cfg.num_fields; i++)
 	{
-		printf("%i", cfg->fieldmapping[i]);
-		if (i != cfg->num_fields - 1)
+		printf("%i", cfg.fieldmapping[i]);
+		if (i != cfg.num_fields - 1)
 			printf(",");
 		else
 			printf("]\n");
 	}
 	printf("\n");
 	printf("[Behaviour]\n");
-	printf("Anki support: %s\n", printbool(cfg->ankisupport));
-	printf("Check if existing: %s\n", printbool(cfg->checkexisting));
-	printf("Copy sentence: %s\n", printbool(cfg->copysentence));
-	printf("Nuke whitespace: %s\n", printbool(cfg->nukewhitespace));
+	printf("Anki support: %s\n", printbool(cfg.ankisupport));
+	printf("Check if existing: %s\n", printbool(cfg.checkexisting));
+	printf("Copy sentence: %s\n", printbool(cfg.copysentence));
+	printf("Nuke whitespace: %s\n", printbool(cfg.nukewhitespace));
 }
 
 void
-fill_anki_string(GKeyFile* kf, char **cfg_option, gboolean* ankisupport, const char* entry)
+fill_anki_string(GKeyFile* kf, char **cfg_option, const char* entry)
 {
-	if (*ankisupport)
+	if (cfg.ankisupport)
 	{
 		g_autoptr(GError) error = NULL;
 		char *value = g_key_file_get_string(kf, "Anki", entry, &error);
@@ -68,7 +70,7 @@ fill_anki_string(GKeyFile* kf, char **cfg_option, gboolean* ankisupport, const c
 			else
 				notify("WARNING: Missing entry \"%s\" in settings file. Disabling Anki support", entry);
 
-			*ankisupport = 0;
+			cfg.ankisupport = 0;
 		}
 		else
 			*cfg_option = value;
@@ -80,7 +82,7 @@ fill_behaviour(GKeyFile* kf, gboolean *cfg_option, const char* entry)
 {
 	g_autoptr(GError) error = NULL;
 	gboolean value = g_key_file_get_boolean(kf, "Behaviour", entry, &error);
-	if (error != NULL)
+	if (error)
 	{
 		notify("Error: %s. Setting \"%s\" to True.", error->message, entry);
 		g_warning("Error: %s. Setting \"%s\" to True.", error->message, entry);
@@ -90,11 +92,24 @@ fill_behaviour(GKeyFile* kf, gboolean *cfg_option, const char* entry)
 		*cfg_option = value;
 }
 
-settings*
+void
+fill_popup(GKeyFile* kf, int *cfg_option, const char* entry, int default_value)
+{
+	g_autoptr(GError) error = NULL;
+	int value = g_key_file_get_integer(kf, "Popup", entry, &error);
+	if (error)
+	{
+		notify("Error: %s. Defaulting to \"%i\".", error->message, default_value);
+		g_warning("Error: %s. Defaulting to \"%i\".", error->message, default_value);
+		*cfg_option = default_value;
+	}
+	else
+		*cfg_option = value;
+}
+
+void
 read_user_settings()
 {
-	settings *cfg = malloc(sizeof(settings));
-
 	const char* config_dir = g_get_user_config_dir();
 	const gchar *config_fn = g_build_filename(config_dir, "dictpopup", "config.ini", NULL);
 
@@ -115,17 +130,15 @@ read_user_settings()
 		g_error_free(error);
 		exit(1);
 	}
+	fill_behaviour(kf, &(cfg.ankisupport), "AnkiSupport");
+	fill_behaviour(kf, &(cfg.checkexisting), "CheckIfExists");
+	fill_behaviour(kf, &(cfg.copysentence), "CopySentence");
+	fill_behaviour(kf, &(cfg.nukewhitespace), "NukeWhitespace");
+	fill_behaviour(kf, &(cfg.pronunciationbutton), "PronunciationButton");
 
-
-	fill_behaviour(kf, &(cfg->ankisupport), "AnkiSupport");
-	fill_behaviour(kf, &(cfg->checkexisting), "CheckIfExists");
-	fill_behaviour(kf, &(cfg->copysentence), "CopySentence");
-	fill_behaviour(kf, &(cfg->nukewhitespace), "NukeWhitespace");
-	fill_behaviour(kf, &(cfg->pronunciationbutton), "PronunciationButton");
-
-	fill_anki_string(kf, &(cfg->deck), &(cfg->ankisupport), "Deck");
-	fill_anki_string(kf, &(cfg->notetype), &(cfg->ankisupport), "NoteType");
-	if (cfg->checkexisting && cfg->ankisupport)
+	fill_anki_string(kf, &(cfg.deck), "Deck");
+	fill_anki_string(kf, &(cfg.notetype), "NoteType");
+	if (cfg.checkexisting && cfg.ankisupport)
 	{
 		char *value = g_key_file_get_string(kf, "Anki", "SearchField", &error);
 		if (value == NULL || !*value)
@@ -142,50 +155,53 @@ read_user_settings()
 				notify("WARNING: Missing entry \"SearchField\" in settings file. Disabling existence searching.");
 				g_warning("WARNING: Missing entry \"SearchField\" in settings file. Disabling existence searching.");
 			}
-			cfg->checkexisting = 0;
+			cfg.checkexisting = 0;
 		}
 		else
-			cfg->searchfield = value;
+			cfg.searchfield = value;
 	}
 
 	// Fieldnames
 	size_t num_fieldnames = 0;
-	if (cfg->ankisupport)
+	if (cfg.ankisupport)
 	{
-		cfg->fieldnames = g_key_file_get_string_list(kf, "Anki", "FieldNames", &num_fieldnames, &error);
-		cfg->num_fields = num_fieldnames;
+		cfg.fieldnames = g_key_file_get_string_list(kf, "Anki", "FieldNames", &num_fieldnames, &error);
+		cfg.num_fields = num_fieldnames;
 		if (error)
 		{
 			notify("WARNING: %s. Disabling Anki support.", error->message);
 			g_warning("%s. Disabling Anki support.", error->message);
-			cfg->ankisupport = FALSE;
+			cfg.ankisupport = FALSE;
 			g_error_free(error);
 			error = NULL;
 		}
 	}
 
-	// Fieldmappoings
+	// Fieldmappings
 	size_t num_fieldmappings = 0;
-	if (cfg->ankisupport)
+	if (cfg.ankisupport)
 	{
-		cfg->fieldmapping = g_key_file_get_integer_list(kf, "Anki", "FieldMapping", &num_fieldmappings, &error);
+		cfg.fieldmapping = g_key_file_get_integer_list(kf, "Anki", "FieldMapping", &num_fieldmappings, &error);
 		if (error)
 		{
 			notify("WARNING: %s. Disabling Anki support.", error->message);
 			g_warning("%s. Disabling Anki support.", error->message);
-			cfg->ankisupport = FALSE;
+			cfg.ankisupport = FALSE;
 			g_error_free(error);
 			error = NULL;
 		}
-		if (!validate_fieldmapping(cfg->fieldmapping, num_fieldmappings))
+		if (!validate_fieldmapping(cfg.fieldmapping, num_fieldmappings))
 		{
 			notify("WARNING: Encountered an invalid value in FieldMapping setting. Disabling Anki support.");
 			g_warning("Encountered an invalid value in FieldMapping setting. Disabling Anki support.");
-			cfg->ankisupport = FALSE;
+			cfg.ankisupport = FALSE;
 		}
 
 		Stopif(num_fieldnames != num_fieldmappings, exit(1), "Error: Number of fieldnames does not match number of fieldmappings.");
 	}
 
-	return cfg;
+	// Popup
+	fill_popup(kf, &(cfg.win_height), "Height", 350);
+	fill_popup(kf, &(cfg.win_width), "Width", 500);
+	fill_popup(kf, &(cfg.win_margin), "Margin", 5);
 }

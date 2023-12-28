@@ -10,9 +10,9 @@ typedef struct {
 	int *fieldmapping;
 	char *searchfield;
 	// Popup
-	unsigned int win_width;
-	unsigned int win_height;
-	unsigned int win_margin;
+	int win_width;
+	int win_height;
+	int win_margin;
 	// Behaviour
 	gboolean ankisupport;
 	gboolean checkexisting;
@@ -20,6 +20,8 @@ typedef struct {
 	gboolean nukewhitespace;
 	gboolean pronunciationbutton;
 } settings;
+
+extern settings cfg;
 
 #define NUMBER_POSS_ENTRIES 10
 enum PossibleEntries {
@@ -35,8 +37,8 @@ enum PossibleEntries {
 	FocusedWindowName	/* The name of the focused window at lookup time */
 };
 
-void print_settings(settings *cfg);
-settings* read_user_settings();
-void free_settings(settings *cfg);
+void print_settings();
+void read_user_settings();
+void free_settings();
 
 #endif /* SETTINGS_H */

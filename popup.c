@@ -5,10 +5,6 @@
 #include "structs.h"
 #include "readsettings.h"
 
-#define WIN_WIDTH 530
-#define WIN_HEIGHT 350
-#define WIN_MARGIN 5
-
 GMutex vars_mutex;
 GCond vars_set_condition;
 gboolean vars_set = 0;
@@ -31,7 +27,7 @@ void update_window();
 void check_if_exists();
 
 void
-dictionary_data_done(settings *cfg)
+dictionary_data_done()
 {
 	g_mutex_lock(&vars_mutex);
 	while (!vars_set)
@@ -39,7 +35,7 @@ dictionary_data_done(settings *cfg)
 	g_mutex_unlock(&vars_mutex);
 
 	update_window();
-	check_if_exists(cfg); // Check only once
+	check_if_exists(); // Check only once
 }
 
 void
@@ -78,10 +74,9 @@ get_cur(int entry)
 }
 
 void
-check_if_exists(settings *cfg)
+check_if_exists()
 {
-	// Accessing user settings should be safe since update occurs after reading dict
-	if(!cfg->checkexisting || !cfg->ankisupport)
+	if(!cfg.checkexisting || !cfg.ankisupport)
 	  return;
 
 	char **kanji_writings = extract_kanji_array(get_cur(WORD));
@@ -89,7 +84,7 @@ check_if_exists(settings *cfg)
 	const char *err = NULL;
 	while (*ptr && !err)
 	{
-		err = ac_search(cfg->deck, cfg->searchfield, *ptr++, check_search_response);
+		err = ac_search(cfg.deck, cfg.searchfield, *ptr++, check_search_response);
 		if (err) notify("%s", err);
 	}
 
@@ -248,10 +243,10 @@ key_press_on_win(GtkWidget *widget, GdkEventKey *event)
 void
 set_margins()
 {
-	gtk_text_view_set_top_margin(GTK_TEXT_VIEW(dict_tw), WIN_MARGIN);
-	gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(dict_tw), WIN_MARGIN);
-	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(dict_tw), WIN_MARGIN);
-	gtk_text_view_set_right_margin(GTK_TEXT_VIEW(dict_tw), WIN_MARGIN);
+	gtk_text_view_set_top_margin(GTK_TEXT_VIEW(dict_tw), cfg.win_margin);
+	gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(dict_tw), cfg.win_margin);
+	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(dict_tw), cfg.win_margin);
+	gtk_text_view_set_right_margin(GTK_TEXT_VIEW(dict_tw), cfg.win_margin);
 }
 
 void
@@ -265,7 +260,7 @@ move_win_to_mouse_ptr()
 }
 
 int
-popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_curde, settings* cfg)
+popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_curde)
 {
 	dict = passed_dictionary;
 	def = passed_definition;
@@ -277,7 +272,7 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 	g_mutex_lock(&vars_mutex);
 	/* ------------ WINDOW ------------ */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size(GTK_WINDOW(window), WIN_WIDTH, WIN_HEIGHT);
+	gtk_window_set_default_size(GTK_WINDOW(window), cfg.win_width, cfg.win_height);
 
 	gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
 	gtk_window_set_type_hint(GTK_WINDOW(window), GDK_WINDOW_TYPE_HINT_POPUP_MENU);
@@ -314,7 +309,7 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(dict_tw), GTK_WRAP_CHAR);
 	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tw), FALSE);
 
-	set_margins();
+	/* set_margins(); */
 	/* ------------------------------------- */
 
 

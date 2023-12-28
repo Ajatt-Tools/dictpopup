@@ -19,9 +19,8 @@ Copy the example below into `~/.config/dictpopup/config` and configure it accord
 The syntax follows the [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec).
 ```
 [Anki]
-Deck = Japanese
-NoteType = Japanese sentences
-
+Deck = Japanese::4 - Sentences
+NoteType = Japanese sentences (Recognition)
 # Available entries for the field mapping:
 #
 # 0	Empty			 An empty string.
@@ -39,13 +38,19 @@ FieldNames = SentKanji;VocabKanji;VocabFurigana;VocabDef;Notes;
 FieldMapping = 4;2;8;7;9;
 SearchField = VocabKanji
 
+[Popup]
+Width = 500
+Height = 350
+Margin = 5
+
 [Behaviour]
 AnkiSupport = true
 CheckIfExists = true
 CopySentence = true
 NukeWhitespace = true
+PronunciationButton = true
 ```
-Be careful to not include trailing spaces after your variables.
+Be careful to not include trailing spaces after your variables (for now).
 
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.

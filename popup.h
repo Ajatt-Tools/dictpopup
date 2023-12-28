@@ -1,6 +1,5 @@
 #include "readsettings.h"
 
-
 /*
  * @dictionary: The dictionary to be displayed
  * @definition: Return location for the chosen definition by the user
@@ -11,7 +10,7 @@
  * 
  * Returns: TRUE if an Anki card should be made and FALSE otherwise.
  */
-int popup(GPtrArray *dictionary, char** definition, size_t *de_num, settings *cfg);
+int popup(GPtrArray *dictionary, char** definition, size_t *de_num);
 
 /*
  * Signals that the dictionary data is currently in use.
@@ -21,4 +20,4 @@ void lock_dictionary_data();
 /*
  * Signals that the dictionary data isn't in use anymore.
  */
-void dictionary_data_done(settings *cfg);
+void dictionary_data_done();
