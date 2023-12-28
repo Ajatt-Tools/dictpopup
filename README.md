@@ -37,11 +37,10 @@ NoteType = Japanese sentences
 #
 FieldNames = SentKanji;VocabKanji;VocabFurigana;VocabDef;Notes;
 FieldMapping = 4;2;8;7;9;
-
 SearchField = VocabKanji
 
 [Behaviour]
-EnableAnkiSupport = true
+AnkiSupport = true
 CheckIfExists = true
 CopySentence = true
 NukeWhitespace = true
