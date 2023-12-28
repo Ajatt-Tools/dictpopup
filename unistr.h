@@ -1,6 +1,6 @@
 typedef struct {
 	char *str;
-	size_t len;
+	size_t len; //byte length of str
 } unistr;
 
 #define endswith(unistr, suffix)                                                  \
@@ -14,19 +14,13 @@ typedef struct {
 #define equals(us, string)                     \
 	(strcmp((us)->str, string) == 0)
 
-#define IF_ENDSWITH_REPLACE_1(ending, replacement)                      \
-	if (endswith(word, ending))                                     \
-	{                                                               \
-		return add_replace_ending(word, replacement, strlen(ending)); \
-	}
-
-#define IF_ENDSWITH_REPLACE_3(ending, replacement1, replacement2, replacement3) \
-	if (endswith(word, ending))                                             \
-	{                                                                       \
-		add_replace_ending(word, replacement1, strlen(ending));         \
-		add_replace_ending(word, replacement2, strlen(ending));         \
-		add_replace_ending(word, replacement3, strlen(ending));         \
-		return 1;                                                       \
+#define IF_ENDSWITH_REPLACE(ending, ...) \
+	if (endswith(word, ending))                                                           \
+	{ 	                                                                              \
+		for (char **iterator = (char*[]){__VA_ARGS__, NULL}; *iterator; iterator++) { \
+		  add_replace_ending(word, *iterator, strlen(ending));			      \
+		}									      \
+		return 1;								      \
 	}
 
 #define IF_EQUALS_ADD(str, wordtoadd)           \

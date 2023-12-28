@@ -12,22 +12,12 @@ GPtrArray *deinfs;
    Replaces char at position wordlen - pos with c and adds it to the deinflections array.
    e.g. add_replace(しまう, 1, 0) replaces う
  */
-int
+void
 add_replace_ending(unistr* word, const char *c, size_t len)
 {
 	char *replaced_str = unistr_replace_ending(word, c, len);
 
 	g_ptr_array_add(deinfs, replaced_str);
-	return 1;
-}
-
-/*
-   Truncates num_chars of unicode characters and adds it to the deinflections array.
- */
-int
-add_truncate(unistr* word, size_t num_chars)
-{
-	return add_replace_ending(word, "", num_chars);
 }
 
 /*
@@ -39,7 +29,6 @@ add_str(const char* str)
 	g_ptr_array_add(deinfs, strdup(str));
 	return 1;
 }
-
 
 /*
  * Converts a word in い- or あ-form to the う-form.
@@ -87,8 +76,8 @@ kanjify(unistr* word)
 {
 	/* if (startswith(word, "ご") || startswith(word, "お")) */
 
-	IF_ENDSWITH_REPLACE_1("ない", "無い");
-	IF_ENDSWITH_REPLACE_1("なし", "無し");
+	IF_ENDSWITH_REPLACE("ない", "無い");
+	IF_ENDSWITH_REPLACE("なし", "無し");
 	return 0;
 }
 
@@ -100,15 +89,15 @@ check_te(unistr* word) /* Use past deinflection instead? */
 	IF_EQUALS_ADD("きて", "来る");
 	IF_EQUALS_ADD("来て", "来る");
 	IF_EQUALS_ADD("いって", "行く");
-	IF_ENDSWITH_REPLACE_1("行って", "行く");
+	IF_ENDSWITH_REPLACE("行って", "行く");
 	/* ----------- */
 
-	IF_ENDSWITH_REPLACE_1("して", "す");
-	IF_ENDSWITH_REPLACE_1("いて", "く");
-	IF_ENDSWITH_REPLACE_1("いで", "ぐ");
-	IF_ENDSWITH_REPLACE_3("んで", "む", "ぶ", "ぬ");
-	IF_ENDSWITH_REPLACE_3("って", "る", "う", "つ");
-	IF_ENDSWITH_REPLACE_1("て", "る");
+	IF_ENDSWITH_REPLACE("して", "す");
+	IF_ENDSWITH_REPLACE("いて", "く");
+	IF_ENDSWITH_REPLACE("いで", "ぐ");
+	IF_ENDSWITH_REPLACE("んで", "む", "ぶ", "ぬ");
+	IF_ENDSWITH_REPLACE("って", "る", "う", "つ");
+	IF_ENDSWITH_REPLACE("て", "る");
 
 	return 0;
 }
@@ -121,15 +110,15 @@ check_past(unistr* word)
 	IF_EQUALS_ADD("きた", "来る");
 	IF_EQUALS_ADD("来た", "来る");
 	IF_EQUALS_ADD("いった", "行く");
-	IF_ENDSWITH_REPLACE_1("行った", "行く");
+	IF_ENDSWITH_REPLACE("行った", "行く");
 	/* ----------- */
 
-	IF_ENDSWITH_REPLACE_1("した", "す");
-	IF_ENDSWITH_REPLACE_1("いた", "く");
-	IF_ENDSWITH_REPLACE_1("いだ", "ぐ");
-	IF_ENDSWITH_REPLACE_3("んだ", "む", "ぶ", "ぬ");
-	IF_ENDSWITH_REPLACE_3("った", "る", "う", "つ");
-	IF_ENDSWITH_REPLACE_1("た", "る");
+	IF_ENDSWITH_REPLACE("した", "す");
+	IF_ENDSWITH_REPLACE("いた", "く");
+	IF_ENDSWITH_REPLACE("いだ", "ぐ");
+	IF_ENDSWITH_REPLACE("んだ", "む", "ぶ", "ぬ");
+	IF_ENDSWITH_REPLACE("った", "る", "う", "つ");
+	IF_ENDSWITH_REPLACE("た", "る");
 
 	return 0;
 }
@@ -138,7 +127,7 @@ int
 check_masu(unistr* word)
 {
 	/* exceptions */
-	IF_ENDSWITH_REPLACE_1("きます", "くる");
+	IF_ENDSWITH_REPLACE("きます", "くる");
 	/* ----------- */
 
 	IF_ENDSWITH_CONVERT_ITOU("ます");
@@ -150,11 +139,11 @@ check_masu(unistr* word)
 int
 check_shimau(unistr* word)
 {
-	IF_ENDSWITH_REPLACE_1("しまう", "");
-	IF_ENDSWITH_REPLACE_1("ちゃう", "る");
-	IF_ENDSWITH_REPLACE_1("いじゃう", "ぐ");
-	IF_ENDSWITH_REPLACE_1("いちゃう", "く");
-	IF_ENDSWITH_REPLACE_1("しちゃう", "す");
+	IF_ENDSWITH_REPLACE("しまう", "");
+	IF_ENDSWITH_REPLACE("ちゃう", "る");
+	IF_ENDSWITH_REPLACE("いじゃう", "ぐ");
+	IF_ENDSWITH_REPLACE("いちゃう", "く");
+	IF_ENDSWITH_REPLACE("しちゃう", "す");
 
 	return 0;
 }
@@ -162,8 +151,8 @@ check_shimau(unistr* word)
 int
 check_passive_causative(unistr* word)
 {
-	IF_ENDSWITH_REPLACE_1("られる", "る");
-	IF_ENDSWITH_REPLACE_1("させる", "る");
+	IF_ENDSWITH_REPLACE("られる", "る");
+	IF_ENDSWITH_REPLACE("させる", "る");
 	IF_ENDSWITH_CONVERT_ATOU("れる");
 	IF_ENDSWITH_CONVERT_ATOU("せる");
 
@@ -173,12 +162,12 @@ check_passive_causative(unistr* word)
 int
 check_adjective(unistr* word)
 {
-	IF_ENDSWITH_REPLACE_1("よくて", "いい");
-	IF_ENDSWITH_REPLACE_1("かった", "い");
-	IF_ENDSWITH_REPLACE_1("くない", "い");
-	IF_ENDSWITH_REPLACE_1("くて", "い");
-	IF_ENDSWITH_REPLACE_1("そう", "い");
-	IF_ENDSWITH_REPLACE_1("さ", "い");
+	IF_ENDSWITH_REPLACE("よくて", "いい");
+	IF_ENDSWITH_REPLACE("かった", "い");
+	IF_ENDSWITH_REPLACE("くない", "い");
+	IF_ENDSWITH_REPLACE("くて", "い");
+	IF_ENDSWITH_REPLACE("そう", "い");
+	IF_ENDSWITH_REPLACE("さ", "い");
 
 	return 0;
 }
@@ -204,14 +193,14 @@ int check_potential(unistr* word)
 	IF_EQUALS_ADD("こられる", "来る");
 	/* ---------- */
 
-	IF_ENDSWITH_REPLACE_1("せる", "す");
-	IF_ENDSWITH_REPLACE_1("ける", "く");
-	IF_ENDSWITH_REPLACE_1("べる", "ぶ");
-	IF_ENDSWITH_REPLACE_1("てる", "つ");
-	IF_ENDSWITH_REPLACE_1("める", "む");
-	IF_ENDSWITH_REPLACE_1("れる", "る");
-	IF_ENDSWITH_REPLACE_1("ねる", "ぬ");
-	IF_ENDSWITH_REPLACE_1("える", "う");
+	IF_ENDSWITH_REPLACE("せる", "す");
+	IF_ENDSWITH_REPLACE("ける", "く");
+	IF_ENDSWITH_REPLACE("べる", "ぶ");
+	IF_ENDSWITH_REPLACE("てる", "つ");
+	IF_ENDSWITH_REPLACE("める", "む");
+	IF_ENDSWITH_REPLACE("れる", "る");
+	IF_ENDSWITH_REPLACE("ねる", "ぬ");
+	IF_ENDSWITH_REPLACE("える", "う");
 	return 0;
 }
 
@@ -252,7 +241,10 @@ deinflect(const char *word)
 	deinflect_one_iter(word);
 
 	for (int i = 0; i < deinfs->len; i++)
+	{
+		printf("%s\n", (char *)g_ptr_array_index(deinfs, i));
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
+	}
 
 	g_ptr_array_add(deinfs, NULL);  /* Add NULL terminator */
 	return (char**)g_ptr_array_steal(deinfs, NULL);
