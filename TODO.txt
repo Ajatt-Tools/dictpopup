@@ -1,22 +1,21 @@
-
-
 High priority
 - package with autotools
 
 Mid priority
-- enable runtime config for the popup window dimensions
+- Click on red/green dot to open in gui browser
+- Convert katakana to hiragana
 - Enable choosing a dictionary sort order
 - Skip certain lines
   - しず か （しづ—） [1]【静か・▽閑か】
   -（形動）〔文〕ナリ
 - Improve deinflector
   - Expand list of different possible writings in deinflector, e.g.: 齧る -> 噛る, 囓る
-  - Try to search for hiragana conversion
+  - Try to search for mecab hiragana conversion (as a last resort)
 - Kanjify the selected word in the sentence according to the dictionary entry
 
 Low priority
+- Save ankicard as csv if push to ankiconnect failed
 - Convert string from locale to UTF-8 and back to locale in unistr (To support other OSes, i.e. Windows)
-- Do yomichan-like lookup (decrease word length from right to left until getting some result)
 - Add unit tests (for deinflector)
 - Add option to display markdown text in the textview
   - A workaround might be passing through lynx
@@ -29,4 +28,5 @@ Possible ideas:
 
 
 To check:
+- Proper error handling on invalid utf-8 input
 - definflector assumes that constant strings given in the code are utf8 encoded. This might be wrong if compiled on windows for example.

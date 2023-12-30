@@ -18,10 +18,9 @@ unistr_new(const char *str)
 	char *str_utf8 = g_locale_to_utf8(str, -1, NULL, NULL, &e);
 
 	if (!g_utf8_validate(str_utf8, -1, NULL))
-		g_warning("Could not convert word to a valid utf-8 string.");
+		g_warning("Could not convert word to a valid UTF-8 string.");
 
-	us->str = str_utf8;
-	us->len = strlen(us->str);
+	*us = (unistr) { .str=str_utf8, .len=strlen(str_utf8) };
 
 	return us;
 }
@@ -51,21 +50,4 @@ unistr_replace_ending(const unistr* word, const char *replacement, size_t len_en
 	strcpy(end, replacement);
 
 	return retstr;
-}
-
-/*
- *
- *
- * Returns: A pointer to the char in word->str, which is the 
- * last character if the last @len_ending bytes were to be removed.
- *
- * WARNING: Only works if the previous character is expected to be encoded using 
- * 3 bytes, e.g. japanese hiragana and katakana.
- */
-const char *
-get_ptr_to_char_before(unistr *word, size_t len_ending)
-{
-	const size_t single_chr_len = 3; // Byte length of a UTF-8 encoded japanese character
-	return len_ending + single_chr_len > word->len ? NULL
-      : word->str + word->len - len_ending - single_chr_len;
 }

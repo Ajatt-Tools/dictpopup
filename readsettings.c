@@ -11,6 +11,11 @@
 
 settings cfg;
 
+void
+settings_free()
+{
+  // TODO: Implement
+}
 /*
  * Checks fieldmapping for validity
  * Returns: TRUE for valid and FALSE for invalid.
@@ -66,9 +71,9 @@ fill_anki_string(GKeyFile* kf, char **cfg_option, const char* entry)
 		if (value == NULL || !*value)
 		{
 			if (error)
-				notify("WARNING: %s. Disabling Anki support.", error->message);
+				notify(1, "WARNING: %s. Disabling Anki support.", error->message);
 			else
-				notify("WARNING: Missing entry \"%s\" in settings file. Disabling Anki support", entry);
+				notify(1, "WARNING: Missing entry \"%s\" in settings file. Disabling Anki support", entry);
 
 			cfg.ankisupport = 0;
 		}
@@ -84,7 +89,7 @@ fill_behaviour(GKeyFile* kf, gboolean *cfg_option, const char* entry)
 	gboolean value = g_key_file_get_boolean(kf, "Behaviour", entry, &error);
 	if (error)
 	{
-		notify("Error: %s. Setting \"%s\" to True.", error->message, entry);
+		notify(1, "Error: %s. Setting \"%s\" to True.", error->message, entry);
 		g_warning("Error: %s. Setting \"%s\" to True.", error->message, entry);
 		*cfg_option = TRUE;
 	}
@@ -99,7 +104,7 @@ fill_popup(GKeyFile* kf, int *cfg_option, const char* entry, int default_value)
 	int value = g_key_file_get_integer(kf, "Popup", entry, &error);
 	if (error)
 	{
-		notify("Error: %s. Defaulting to \"%i\".", error->message, default_value);
+		notify(1, "Error: %s. Defaulting to \"%i\".", error->message, default_value);
 		g_warning("Error: %s. Defaulting to \"%i\".", error->message, default_value);
 		*cfg_option = default_value;
 	}
@@ -111,7 +116,7 @@ void
 read_user_settings()
 {
 	const char* config_dir = g_get_user_config_dir();
-	const gchar *config_fn = g_build_filename(config_dir, "dictpopup", "config.ini", NULL);
+	g_autofree gchar *config_fn = g_build_filename(config_dir, "dictpopup", "config.ini", NULL);
 
 	GError *error = NULL;
 	g_autoptr(GKeyFile) kf = g_key_file_new();
@@ -119,17 +124,18 @@ read_user_settings()
 	{
 		if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
 		{
-			notify("Could not find config file: \"%s\"", config_fn);
+			notify(1, "Could not find config file: \"%s\"", config_fn);
 			g_warning("Could not find config file: \"%s\"", config_fn);
 		}
 		else
 		{
-			notify("Error opening \"%s\": %s.", config_fn, error->message); g_warning("Error opening \"%s\": %s.", config_fn, error->message);
+			notify(1, "Error opening \"%s\": %s.", config_fn, error->message); g_warning("Error opening \"%s\": %s.", config_fn, error->message);
 		}
 
 		g_error_free(error);
 		exit(1);
 	}
+
 	fill_behaviour(kf, &(cfg.ankisupport), "AnkiSupport");
 	fill_behaviour(kf, &(cfg.checkexisting), "CheckIfExists");
 	fill_behaviour(kf, &(cfg.copysentence), "CopySentence");
@@ -145,14 +151,14 @@ read_user_settings()
 		{
 			if (error)
 			{
-				notify("WARNING: %s. Disabling existence searching.", error->message);
+				notify(1, "WARNING: %s. Disabling existence searching.", error->message);
 				g_warning("WARNING: %s. Disabling existence searching.", error->message);
 				g_error_free(error);
 				error = NULL;
 			}
 			else
 			{
-				notify("WARNING: Missing entry \"SearchField\" in settings file. Disabling existence searching.");
+				notify(1, "WARNING: Missing entry \"SearchField\" in settings file. Disabling existence searching.");
 				g_warning("WARNING: Missing entry \"SearchField\" in settings file. Disabling existence searching.");
 			}
 			cfg.checkexisting = 0;
@@ -169,7 +175,7 @@ read_user_settings()
 		cfg.num_fields = num_fieldnames;
 		if (error)
 		{
-			notify("WARNING: %s. Disabling Anki support.", error->message);
+			notify(1, "WARNING: %s. Disabling Anki support.", error->message);
 			g_warning("%s. Disabling Anki support.", error->message);
 			cfg.ankisupport = FALSE;
 			g_error_free(error);
@@ -184,7 +190,7 @@ read_user_settings()
 		cfg.fieldmapping = g_key_file_get_integer_list(kf, "Anki", "FieldMapping", &num_fieldmappings, &error);
 		if (error)
 		{
-			notify("WARNING: %s. Disabling Anki support.", error->message);
+			notify(1, "WARNING: %s. Disabling Anki support.", error->message);
 			g_warning("%s. Disabling Anki support.", error->message);
 			cfg.ankisupport = FALSE;
 			g_error_free(error);
@@ -192,7 +198,7 @@ read_user_settings()
 		}
 		if (!validate_fieldmapping(cfg.fieldmapping, num_fieldmappings))
 		{
-			notify("WARNING: Encountered an invalid value in FieldMapping setting. Disabling Anki support.");
+			notify(1, "WARNING: Encountered an invalid value in FieldMapping setting. Disabling Anki support.");
 			g_warning("Encountered an invalid value in FieldMapping setting. Disabling Anki support.");
 			cfg.ankisupport = FALSE;
 		}

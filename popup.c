@@ -7,7 +7,8 @@
 
 GMutex vars_mutex;
 GCond vars_set_condition;
-gboolean vars_set = 0;
+gboolean gtk_vars_set = 0;
+gboolean dictionary_data_ready = 0;
 
 GPtrArray *dict;
 size_t *curde = 0;
@@ -30,8 +31,11 @@ void
 dictionary_data_done()
 {
 	g_mutex_lock(&vars_mutex);
-	while (!vars_set)
+
+	dictionary_data_ready = TRUE;
+	while (!gtk_vars_set)
 		g_cond_wait(&vars_set_condition, &vars_mutex);
+
 	g_mutex_unlock(&vars_mutex);
 
 	update_window();
@@ -76,8 +80,8 @@ get_cur(int entry)
 void
 check_if_exists()
 {
-	if(!cfg.checkexisting || !cfg.ankisupport)
-	  return;
+	if (!cfg.checkexisting || !cfg.ankisupport)
+		return;
 
 	char **kanji_writings = extract_kanji_array(get_cur(WORD));
 	char **ptr = kanji_writings;
@@ -85,7 +89,7 @@ check_if_exists()
 	while (*ptr && !err)
 	{
 		err = ac_search(cfg.deck, cfg.searchfield, *ptr++, check_search_response);
-		if (err) notify("%s", err);
+		if (err) notify(1, "%s", err);
 	}
 
 	g_strfreev(kanji_writings);
@@ -100,7 +104,7 @@ play_pronunciation()
 	const char *pron_word = *kanji_writings ? *kanji_writings : curword;
 
 	if (!spawn_cmd_async("jppron '%s'", pron_word))
-		notify("Error calling jppron. Is it installed?");
+		notify(1, "Error calling jppron. Is it installed?");
 
 	g_strfreev(kanji_writings);
 }
@@ -163,10 +167,13 @@ update_dictname_info()
 void
 update_window()
 {
-	update_buffer();
-	update_win_title();
-	update_dictnum_info();
-	update_dictname_info();
+	if (dictionary_data_ready) // Very unlikely but simultanous access possible
+	{
+		update_buffer();
+		update_win_title();
+		update_dictnum_info();
+		update_dictname_info();
+	}
 }
 
 gboolean
@@ -179,7 +186,7 @@ change_de(char c)
 	else if (c == '-')
 		*curde = (*curde != 0) ? *curde - 1 : dict->len - 1;
 	else
-		fprintf(stderr, "ERROR: Wrong usage of change_de function. Doing nothing.");
+		g_warning("Wrong usage of change_de function. Doing nothing.");
 
 	update_window();
 	return TRUE;
@@ -259,6 +266,18 @@ move_win_to_mouse_ptr()
 	gtk_window_move(GTK_WINDOW(window), x, y);
 }
 
+void
+search_in_anki_browser()
+{
+	//TODO: Search for all?
+	char **kanji_writings = extract_kanji_array(get_cur(WORD));
+
+	const char *err = err = ac_gui_search(cfg.deck, cfg.searchfield, kanji_writings[0], check_search_response);
+	if (err) notify(1, "%s", err);
+
+	g_strfreev(kanji_writings);
+}
+
 int
 popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_curde)
 {
@@ -300,7 +319,7 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 
 	dict_tw = gtk_text_view_new();
 	dict_tw_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(dict_tw));
-
+	gtk_text_buffer_set_text(dict_tw_buffer, "loading...", -1);
 	gtk_text_buffer_create_tag(dict_tw_buffer, "x-large", "scale", PANGO_SCALE_X_LARGE, NULL);
 
 	gtk_container_add(GTK_CONTAINER(swindow), dict_tw);
@@ -309,7 +328,7 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(dict_tw), GTK_WRAP_CHAR);
 	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tw), FALSE);
 
-	/* set_margins(); */
+	set_margins();
 	/* ------------------------------------- */
 
 
@@ -332,10 +351,12 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 	exists_dot = gtk_drawing_area_new();
 	gtk_widget_set_size_request(exists_dot, 10, 10);
 	gtk_widget_set_valign(exists_dot, GTK_ALIGN_CENTER);
+	/* g_signal_connect(exists_dot, "clicked", G_CALLBACK(search_in_anki_browser), NULL); */
 
 	gtk_box_pack_start(GTK_BOX(bottom_bar), btn_l, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(bottom_bar), add_anki_btn, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(bottom_bar), GTK_WIDGET(exists_dot), FALSE, FALSE, 0);
+	if (cfg.checkexisting && cfg.ankisupport)
+		gtk_box_pack_start(GTK_BOX(bottom_bar), GTK_WIDGET(exists_dot), FALSE, FALSE, 0);
 	gtk_box_set_center_widget(GTK_BOX(bottom_bar), dictnum_lbl);
 	gtk_box_pack_end(GTK_BOX(bottom_bar), btn_r, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(bottom_bar), btn_pron, FALSE, FALSE, 0);
@@ -343,7 +364,7 @@ popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_cur
 	g_signal_connect(G_OBJECT(exists_dot), "draw", G_CALLBACK(on_draw_event), NULL);
 	/* ------------------------------------ */
 
-	vars_set = 1;
+	gtk_vars_set = TRUE;
 	g_cond_signal(&vars_set_condition);
 	g_mutex_unlock(&vars_mutex);
 

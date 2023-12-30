@@ -9,19 +9,17 @@
 GPtrArray *deinfs;
 
 /*
-   Replaces char at position wordlen - pos with c and adds it to the deinflections array.
-   e.g. add_replace(しまう, 1, 0) replaces う
+ * Replaces the last @len bytes with @c and adds it to the deinflections array.
  */
 void
 add_replace_ending(unistr* word, const char *c, size_t len)
 {
 	char *replaced_str = unistr_replace_ending(word, c, len);
-
 	g_ptr_array_add(deinfs, replaced_str);
 }
 
 /*
-   Adds string to the deinflections array.
+ * Adds @str to the deinflections array.
  */
 int
 add_str(const char* str)
@@ -31,45 +29,63 @@ add_str(const char* str)
 }
 
 /*
- * Converts a word in い- or あ-form to the う-form.
- * Pos points to the (potential) character in い- or あ-form to be converted FROM BEHIND.
- * The result is added to the deinflections array.
+ * @word: The word to be converted
+ * @len: The length of the ending to be disregarded
+ *
+ * Converts a word in あ-form to the う-form.
+ * 
+ * Returns: TRUE if any conversion happened, FALSE otherwise
  */
-enum { itou, atou };
-
 int
-itou_atou_form(unistr* word, size_t len_ending, int conv_type)
+atou_form(unistr* word, size_t len_ending)
 {
-	const char *aforms[] = { "さ", "か", "が", "ば", "た", "ま", "わ", "な", "ら", NULL };
-	const char *iforms[] = { "し", "き", "ぎ", "び", "ち", "み", "い", "に", "り", NULL };
-	const char *uforms[] = { "す", "く", "ぐ", "ぶ", "つ", "む", "う", "ぬ", "る", NULL };
+	word->len -= len_ending;
 
-	const char *chr = get_ptr_to_char_before(word, len_ending);
-	if (!chr)
-	{
-		g_warning("ERROR: Could not convert the word: \"%s\" removing the ending: \"%s\"", word->str, word->str + word->len - len_ending);
-		return 0;
-	}
+	IF_ENDSWITH_REPLACE("さ", "す");
+	IF_ENDSWITH_REPLACE("か", "く");
+	IF_ENDSWITH_REPLACE("が", "ぐ");
+	IF_ENDSWITH_REPLACE("ば", "ぶ");
+	IF_ENDSWITH_REPLACE("た", "つ");
+	IF_ENDSWITH_REPLACE("ま", "む");
+	IF_ENDSWITH_REPLACE("わ", "う");
+	IF_ENDSWITH_REPLACE("な", "ぬ");
+	IF_ENDSWITH_REPLACE("ら", "る");
 
-	const char **forms = (conv_type == atou) ? aforms : iforms;
-	int i = 0;
-	while (forms[i] && strncmp(chr, forms[i], strlen(*forms)))
-		i++;
+	word->len += len_ending;
 
-	if (forms[i])
-		add_replace_ending(word, uforms[i], len_ending + strlen(forms[i]));
-	if (!forms[i] || conv_type == itou) // Verb could always be a る-verb, e.g. 生きます
-		add_replace_ending(word, "る", len_ending); // る-verb
-
-	return 1;
+	return 0;
 }
 
-/* const char* */
-/* check_itou(unistr *word) */
-/* { */
-/* 	// This will add る to every word */
-/* 	return itou_atou_form(word, 1, itou); */
-/* } */
+/*
+ * @word: The word to be converted
+ * @len: The length of the ending to be disregarded
+ *
+ * Converts a word in い-form to the う-form.
+ * 
+ * Returns: TRUE if any conversion happened, FALSE otherwise
+ */
+int
+itou_form(unistr* word, size_t len_ending)
+{
+	/* Word can alway be a る-verb, e.g. 生きます */
+	add_replace_ending(word, "る", len_ending);
+
+	word->len -= len_ending;
+
+	IF_ENDSWITH_REPLACE("し", "す");
+	IF_ENDSWITH_REPLACE("き", "く");
+	IF_ENDSWITH_REPLACE("ぎ", "ぐ");
+	IF_ENDSWITH_REPLACE("び", "ぶ");
+	IF_ENDSWITH_REPLACE("ち", "つ");
+	IF_ENDSWITH_REPLACE("み", "む");
+	IF_ENDSWITH_REPLACE("い", "う");
+	IF_ENDSWITH_REPLACE("に", "ぬ");
+	IF_ENDSWITH_REPLACE("り", "る");
+
+	word->len += len_ending;
+
+	return 0;
+}
 
 int
 kanjify(unistr* word)
@@ -82,7 +98,7 @@ kanjify(unistr* word)
 }
 
 int
-check_te(unistr* word) /* Use past deinflection instead? */
+check_te(unistr* word)
 {
 	/* exceptions */
 	IF_EQUALS_ADD("して", "為る");
@@ -126,10 +142,6 @@ check_past(unistr* word)
 int
 check_masu(unistr* word)
 {
-	/* exceptions */
-	IF_ENDSWITH_REPLACE("きます", "くる");
-	/* ----------- */
-
 	IF_ENDSWITH_CONVERT_ITOU("ます");
 	IF_ENDSWITH_CONVERT_ITOU("ません");
 
@@ -168,6 +180,7 @@ check_adjective(unistr* word)
 	IF_ENDSWITH_REPLACE("くて", "い");
 	IF_ENDSWITH_REPLACE("そう", "い");
 	IF_ENDSWITH_REPLACE("さ", "い");
+	IF_ENDSWITH_REPLACE("げ", "い");
 
 	return 0;
 }
@@ -209,26 +222,16 @@ deinflect_one_iter(const char *word)
 {
 	unistr *uniword = unistr_new(word);
 
-	if (check_shimau(uniword))
-		;
-	else if (check_adjective(uniword))
-		;
-	else if (check_masu(uniword))
-		;
-	else if (check_passive_causative(uniword))
-		;
-	else if (check_volitional(uniword))
-		;
-	else if (check_negation(uniword))
-		;
-	else if (check_te(uniword))
-		;
-	else if (check_past(uniword))
-		;
-	else if (check_potential(uniword))
-		;
-	else
-		kanjify(uniword);
+	if (check_shimau(uniword));
+	else if (check_adjective(uniword));
+	else if (check_masu(uniword));
+	else if (check_passive_causative(uniword));
+	else if (check_volitional(uniword));
+	else if (check_negation(uniword));
+	else if (check_te(uniword));
+	else if (check_past(uniword));
+	else if (check_potential(uniword));
+	else kanjify(uniword);
 
 	unistr_free(uniword);
 }
@@ -242,7 +245,7 @@ deinflect(const char *word)
 
 	for (int i = 0; i < deinfs->len; i++)
 	{
-		printf("%s\n", (char *)g_ptr_array_index(deinfs, i));
+		/* printf("%s\n", (char *)g_ptr_array_index(deinfs, i)); */
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
 	}
 

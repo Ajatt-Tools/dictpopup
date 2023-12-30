@@ -19,8 +19,8 @@ Copy the example below into `~/.config/dictpopup/config.ini` and configure it ac
 The syntax follows the [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec).
 ```
 [Anki]
-Deck = Japanese::4 - Sentences
-NoteType = Japanese sentences (Recognition)
+Deck = Japanese
+NoteType = Japanese sentences
 # Available entries for the field mapping:
 #
 # 0	Empty			 An empty string.

@@ -1,18 +1,16 @@
 typedef struct {
 	char *str;
-	size_t len; //byte length of str
+	int len; //byte length of str
 } unistr;
-
-#define endswith(unistr, suffix)                                                  \
-	(unistr->len >= strlen(suffix) ?                                          \
-	 (strcmp(unistr->str + unistr->len - strlen(suffix), suffix) == 0)       \
-	 : 0)
 
 #define startswith(unistr, prefix)                              \
 	(strncmp(unistr->str, prefix, strlen(prefix)) == 0)
 
-#define equals(us, string)                     \
-	(strcmp((us)->str, string) == 0)
+/* Doesn't assume that unistr is null terminated */
+#define endswith(unistr, suffix)                                                                  \
+	(unistr->len >= strlen(suffix) ?                                         		  \
+	 (strncmp(unistr->str + unistr->len - strlen(suffix), suffix, strlen(suffix)) == 0)       \
+       : 0)
 
 #define IF_ENDSWITH_REPLACE(ending, ...) \
 	if (endswith(word, ending))                                                           \
@@ -23,6 +21,9 @@ typedef struct {
 		return 1;								      \
 	}
 
+#define equals(us, string)                     \
+	(strcmp((us)->str, string) == 0)
+
 #define IF_EQUALS_ADD(str, wordtoadd)           \
 	if (equals(word, str))                  \
 	{                                       \
@@ -32,17 +33,16 @@ typedef struct {
 #define IF_ENDSWITH_CONVERT_ITOU(ending)                       	      \
 	if (endswith(word, ending))                                   \
 	{                                                             \
-		return itou_atou_form(word, strlen(ending), itou);    \
+		return itou_form(word, strlen(ending));    \
 	}
 
 #define IF_ENDSWITH_CONVERT_ATOU(ending)                       	      \
 	if (endswith(word, ending))                                   \
 	{                                                             \
-		return itou_atou_form(word, strlen(ending), atou);    \
+		return atou_form(word, strlen(ending));    \
 	}
 
 unistr* unistr_new(const char *str);
 void unistr_free(unistr *us);
 
 char *unistr_replace_ending(const unistr* word, const char *str, size_t len);
-const char * get_ptr_to_char_before(unistr *word, size_t len_ending);

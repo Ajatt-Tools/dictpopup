@@ -18,6 +18,6 @@ int popup(GPtrArray *dictionary, char** definition, size_t *de_num);
 void lock_dictionary_data();
 
 /*
- * Signals that the dictionary data isn't in use anymore.
+ * Signals that the dictionary data is ready.
  */
 void dictionary_data_done();

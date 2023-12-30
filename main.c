@@ -4,17 +4,39 @@
 
 #include <glib.h>
 #include <ankiconnectc.h>
+#include <pthread.h>
 
 #include "xlib.h"
 #include "util.h"
 #include "deinflector.h"
 #include "structs.h"
 #include "popup.h"
-/* #include "readsettings.h" */
+#include "readsettings.h"
 
-#include <pthread.h>
-
-#define SDCV_CMD "sdcv -nej --utf8-output"
+enum PossibleEntries {
+	Empty,                  /* An empty string. */
+	LookedUpString,         /* The word this program was called with */
+	DeinflectedLookup,      /* The deinflected version of the lookup string */
+	CopiedSentence,         /* The copied sentence */
+	BoldSentence,           /* The copied sentence with lookup string in bold */
+	DictionaryKanji,        /* All kanji writings from dictionary entry */
+	DictionaryReading,      /* The hiragana reading form the dictionary entry */
+	DictionaryDefinition,   /* The chosen dictionary definition */
+	DeinflectedFurigana,    /* The string: [DeinflectedLookup][DictionaryReading] */
+	FocusedWindowName       /* The name of the focused window at lookup time */
+};
+typedef struct possible_entries_s {
+	char *empty;
+	char *lookup;
+	char *deinflected_lookup;
+	char *copied_sentence;
+	char *bold_sentence;
+	char *dictionary_kanji;
+	char *dictionary_reading;
+	char *dictionary_definition;
+	char *deinflected_furigana;
+	char *windowname;
+} possible_entries_s;
 
 typedef struct {
 	char *p[NUMBER_POSS_ENTRIES];
@@ -22,6 +44,34 @@ typedef struct {
 	char *argv1;
 } ThreadData;
 
+/* GLOBALS */
+char *SDCV_PATH;
+/* ------- */
+
+/* --- dictentry --- */
+/*
+ * Returns a dictionary entry with the given entries.
+ * Result needs to be freed with dictentry_free
+ */
+dictentry *
+dictentry_new(char *dictname, char *dictword, char *definition, char *lookup)
+{
+	dictentry *de = malloc(sizeof(dictentry));
+	Stopif(!de, return NULL, "ERROR: Could not allocate memory for dictionary entry.");
+
+	*de = (dictentry) {
+		.dictname = dictname ? g_strdup(dictname) : NULL,
+		.word = dictword ? g_strdup(dictword) : NULL,
+		.definition = definition ? g_strdup(definition) : NULL,
+		.lookup = lookup ? g_strdup(lookup) : NULL
+	};
+
+	return de;
+}
+
+/*
+ * Frees a dictentry created with dictentry_new
+ */
 void
 dictentry_free(void *ptr)
 {
@@ -32,44 +82,34 @@ dictentry_free(void *ptr)
 	g_free(de->lookup);
 	free(de);
 }
+/* -------------- */
 
-/*
-   Returns a dictionary entry with the given entries.
-   Result needs to be freed with dictentry_free
- */
-dictentry *
-dictentry_init(char *dictname, char *dictword, char *definition, char *lookup)
+void
+retrieve_sdcv_path()
 {
-	dictentry *de = malloc(sizeof(dictentry));
-	Stopif(!de, return NULL, "ERROR: Could not allocate memory for dictionary entry.");
-
-	de->dictname = dictname ? g_strdup(dictname) : NULL;
-	de->word = dictword ? g_strdup(dictword) : NULL;
-	de->definition = definition ? g_strdup(definition) : NULL;
-	de->lookup = lookup ? g_strdup(lookup) : NULL;
-
-	return de;
+	SDCV_PATH = g_find_program_in_path("sdcv");
+	Stopif(!SDCV_PATH, exit(1), "Could not find sdcv executable. Is it installed?");
 }
 
-/**
-   Execute sdcv to look up the word.
-   Returns the output as a string in json format, which needs to be freed.
+/*
+ * Execute sdcv to look up the word.
+ * Returns: The output as a string in json format. Needs to be freed.
  */
 char *
 lookup(char *word)
 {
-	char *sdcv_json = read_cmd_sync("sdcv -nej --utf8-output '%s'", word);
-	Stopif(!sdcv_json, exit(1), "Error calling sdcv. Is it installed?");
+	char *sdcv_json = read_cmd_sync((char *[]) { SDCV_PATH, "-nej", "--utf8-output", word, NULL });
+	Stopif(!sdcv_json, exit(1), "Error executing sdcv.");
 	return sdcv_json;
 }
 
 /*
-   Creates a dictionary entry and adds it to dict from given entries.
+ * Creates a dictionary entry and adds it to dict from given entries.
  */
 void
 add_to_dictionary(GPtrArray *dict, char *dictname, char *dictword, char *definition, char *lookup)
 {
-	dictentry *de = dictentry_init(dictname, dictword, definition, lookup);
+	dictentry *de = dictentry_new(dictname, dictword, definition, lookup);
 	g_ptr_array_add(dict, de);
 }
 
@@ -154,7 +194,7 @@ void
 create_dictionary_from(GPtrArray *dict, char *word)
 {
 	add_word_to_dict(dict, word);
-	add_deinflections_to_dict(dict, word);
+	/* add_deinflections_to_dict(dict, word); */
 }
 
 char *
@@ -183,7 +223,7 @@ populate_entries(char *pe[], dictentry* de)
 {
 	if (cfg.copysentence)
 	{
-		notify("Please select the sentence.");
+		notify(0, "Please select the sentence.");
 		clipnotify();
 		pe[CopiedSentence] = sselp();
 		if (cfg.nukewhitespace)
@@ -201,22 +241,35 @@ populate_entries(char *pe[], dictentry* de)
 	pe[DeinflectedFurigana] = create_furigana(pe[DeinflectedLookup], pe[DictionaryReading]);
 }
 
-ankicard*
-ankicard_new(char **pe)
+void
+check_addNote_response(const char *err)
 {
-	ankicard *ac = malloc(sizeof(ankicard));
+	if (err)
+		notify(1, "Error creating card: %s", err);
+	else
+		notify(0, "Sucessfully added card.");
+}
+
+const char*
+send_ankicard(char **pe)
+{
+	ankicard *ac = ankicard_new();
 	*ac = (ankicard) {
-	  .deck = cfg.deck,
-	  .notetype = cfg.notetype,
-	  .num_fields = cfg.num_fields,
-	  .fieldnames = cfg.fieldnames,
-	  .fieldentries = calloc(cfg.num_fields, sizeof(char *))
+		.deck = cfg.deck,
+		.notetype = cfg.notetype,
+		.num_fields = cfg.num_fields,
+		.fieldnames = cfg.fieldnames,
+		.fieldentries = calloc(cfg.num_fields, sizeof(char *))
 	};
 
 	for (int i = 0; i < ac->num_fields; i++)
 		ac->fieldentries[i] = pe[cfg.fieldmapping[i]];
 
-	return ac;
+	const char *err = ac_addNote(ac, check_addNote_response);
+
+	free(ac->fieldentries);
+	free(ac);
+	return err;
 }
 
 void
@@ -224,14 +277,6 @@ p_free(char **p)
 {
 	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
 		free(p[i]);
-}
-
-void addNote_response(const char *err)
-{
-	if (!err)
-		notify("Sucessfully added card.");
-	else
-		notify("Error creating card: %s", err);
 }
 
 void*
@@ -250,7 +295,17 @@ lookup_and_create_dictionary(void *voidin)
 
 	p[FocusedWindowName] = getwindowname();
 
-	create_dictionary_from(dict, p[LookedUpString]);
+	int lookup_strlen = strlen(p[LookedUpString]);
+	while (dict->len == 0 && lookup_strlen >= 3)
+	{
+		create_dictionary_from(dict, p[LookedUpString]);
+		if (dict->len == 0)
+		{
+			p[LookedUpString][lookup_strlen - 3] = '\0'; // Remove last char. Expects UTF-8
+			lookup_strlen = strlen(p[LookedUpString]);
+		}
+	}
+
 	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); exit(1), "No dictionary entry found.");
 
 	dictionary_data_done();
@@ -270,13 +325,9 @@ display_popup(void *voidin)
 		dictentry *chosen_dict = g_ptr_array_index(dict, de_num);
 		populate_entries(p, chosen_dict);
 
-		ankicard *ac = ankicard_new(p);
-
-		const char *err = ac_addNote(*ac, addNote_response);
-		if (err) notify("%s", err);
-
-		free(ac->fieldentries);
-		free(ac);
+		const char *err = send_ankicard(p);
+		if (err)
+			notify(1, "%s", err);
 	}
 
 	return NULL;
@@ -286,9 +337,11 @@ int
 main(int argc, char**argv)
 {
 	read_user_settings();
+	retrieve_sdcv_path();
 
 	ThreadData data;
-	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++) data.p[i] = NULL;
+	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
+		data.p[i] = NULL;
 	data.dict = g_ptr_array_new_with_free_func(dictentry_free);
 	data.argv1 = argc > 1 ? argv[1] : NULL;
 
@@ -300,4 +353,6 @@ main(int argc, char**argv)
 
 	p_free(data.p);
 	g_ptr_array_free(data.dict, TRUE);
+	free(SDCV_PATH);
+	settings_free();
 }

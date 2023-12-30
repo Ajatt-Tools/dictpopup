@@ -10,7 +10,7 @@
 #include "util.h"
 
 void
-notify(char const *fmt, ...)
+notify(bool error, char const *fmt, ...)
 {
 	char *msg;
 	va_list argp;
@@ -23,6 +23,7 @@ notify(char const *fmt, ...)
 
 	n = notify_notification_new(msg, NULL, NULL);
 	notify_notification_set_app_name(n, "dictpopup");  /* Maybe set it to argv[0] */
+	if (error) notify_notification_set_urgency(n, NOTIFY_URGENCY_CRITICAL);
 
 	if (!notify_notification_show(n, NULL))
 		fprintf(stderr, "ERROR: Failed to send notification.\n");
@@ -122,30 +123,16 @@ nuke_whitespace(char *str)
 	str_repl_by_char(str, "　", '\0');
 }
 
-/*
- * Calls a command in printf style.
- *
- * Returns: Newly allocated string with the standard output of the command or NULL on error.
- */
 char*
-read_cmd_sync(char const *fmt, ...)
+read_cmd_sync(char** argv)
 {
-    char *cmd;
-    va_list argp;
-    va_start(argp, fmt);
-    vasprintf(&cmd, fmt, argp);
-    va_end(argp);
-    
     char *standard_out = NULL;
-    // Might want to switch to g_spawn_sync for safety
-    g_spawn_command_line_sync(cmd, &standard_out, NULL, NULL, NULL);
-
-    free(cmd);
+    g_spawn_sync(NULL, argv, NULL, G_SPAWN_DEFAULT, NULL, NULL, &standard_out, NULL, NULL, NULL);
     return standard_out;
 }
 
 /*
- * Calls a command in printf style fashion. 
+ * Calls a command asynchronously in printf style.
  *
  * Returns: TRUE on success and FALSE if there was an error
  */
