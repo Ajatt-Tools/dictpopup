@@ -295,16 +295,7 @@ lookup_and_create_dictionary(void *voidin)
 
 	p[FocusedWindowName] = getwindowname();
 
-	int lookup_strlen = strlen(p[LookedUpString]);
-	while (dict->len == 0 && lookup_strlen >= 3)
-	{
-		create_dictionary_from(dict, p[LookedUpString]);
-		if (dict->len == 0)
-		{
-			p[LookedUpString][lookup_strlen - 3] = '\0'; // Remove last char. Expects UTF-8
-			lookup_strlen = strlen(p[LookedUpString]);
-		}
-	}
+	create_dictionary_from(dict, p[LookedUpString]);
 
 	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); exit(1), "No dictionary entry found.");
 
