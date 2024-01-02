@@ -3,6 +3,6 @@
  *
  * Contains all intermediate steps, e.g. してしまった -> してしまう, して, する
  *
- * Returns: An array with possible deinflections. Array needs to be freed with g_strfreev() for example.
+ * Returns: A null terminated array with possible deinflections. Array needs to be freed with g_strfreev() for example.
  */
 char **deinflect(char *word);

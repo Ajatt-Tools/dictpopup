@@ -14,7 +14,7 @@ NOTIFYLIBS = $(shell $(PKGCONFIG) --libs libnotify)
 
 # includes and libs
 INCS = -I$(X11INC)
-LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes -lankiconnectc $(GTK3LIBS) $(NOTIFYLIBS)
+LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes -lankiconnectc $(GTK3LIBS) $(NOTIFYLIBS) -lmecab
 # LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) $(NOTIFYLIBS)
 
 # flags

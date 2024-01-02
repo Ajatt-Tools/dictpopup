@@ -2,7 +2,7 @@
 #include <ankiconnectc.h>
 
 #include "util.h"
-#include "structs.h"
+#include "dictionary.h"
 #include "readsettings.h"
 
 GMutex vars_mutex;
@@ -10,7 +10,7 @@ GCond vars_set_condition;
 gboolean gtk_vars_set = 0;
 gboolean dictionary_data_ready = 0;
 
-GPtrArray *dict;
+dictionary* dict;
 size_t *curde = 0;
 char **def;
 
@@ -43,7 +43,7 @@ dictionary_data_done()
 }
 
 void
-check_search_response(int exists)
+check_search_response(bool exists)
 {
 	if (word_exists_in_db)
 		return;
@@ -58,7 +58,7 @@ enum { WORD, DEFINITION, DICTNAME };
 const char*
 get_cur(int entry)
 {
-	dictentry *cur_entry = g_ptr_array_index(dict, *curde);
+	dictentry *cur_entry = dictentry_at_index(dict, *curde);
 	const char *retstr = NULL;
 
 	switch (entry)
@@ -272,16 +272,16 @@ search_in_anki_browser()
 	//TODO: Search for all?
 	char **kanji_writings = extract_kanji_array(get_cur(WORD));
 
-	const char *err = err = ac_gui_search(cfg.deck, cfg.searchfield, kanji_writings[0], check_search_response);
+	const char *err = ac_gui_search(cfg.deck, cfg.searchfield, kanji_writings[0]);
 	if (err) notify(1, "%s", err);
 
 	g_strfreev(kanji_writings);
 }
 
 int
-popup(GPtrArray *passed_dictionary, char **passed_definition, size_t *passed_curde)
+popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 {
-	dict = passed_dictionary;
+	dict = passed_dict;
 	def = passed_definition;
 	curde = passed_curde;
 	*curde = 0;

@@ -1,13 +1,13 @@
 include config.mk
 
 P=dictpopup
-SRC = main.c popup.c util.c xlib.c deinflector.c unistr.c readsettings.c
+SRC = main.c popup.c util.c xlib.c deinflector.c unistr.c readsettings.c dictionary.c dictionarylookup.c kanaconv.c
 OBJ = $(SRC:.c=.o)
 
-all: options dictpopup
+all: options $(P)
 
 options:
-	@echo popup build options:
+	@echo $(P) build options:
 	@echo "CFLAGS   = $(CFLAGS)"
 	@echo "LDFLAGS  = $(LDFLAGS)"
 	@echo "CC       = $(CC)"
@@ -19,13 +19,13 @@ $(P): ${OBJ}
 	$(CC) ${OBJ} ${LDFLAGS} -o $@ 
 
 clean:
-	rm -f dictpopup ${OBJ}
+	rm -f $(P) ${OBJ}
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp -f dictpopup ${DESTDIR}${PREFIX}/bin
+	cp -f $(P) ${DESTDIR}${PREFIX}/bin
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/dictpopup
+	rm -f ${DESTDIR}${PREFIX}/bin/$(P)
 
 .PHONY: all options clean install uninstall

@@ -9,9 +9,11 @@
 #include "xlib.h"
 #include "util.h"
 #include "deinflector.h"
-#include "structs.h"
 #include "popup.h"
 #include "readsettings.h"
+#include "dictionary.h"
+#include "dictionarylookup.h"
+#include "kanaconv.h"
 
 enum PossibleEntries {
 	Empty,                  /* An empty string. */
@@ -25,162 +27,28 @@ enum PossibleEntries {
 	DeinflectedFurigana,    /* The string: [DeinflectedLookup][DictionaryReading] */
 	FocusedWindowName       /* The name of the focused window at lookup time */
 };
-typedef struct possible_entries_s {
-	char *empty;
-	char *lookup;
-	char *deinflected_lookup;
-	char *copied_sentence;
-	char *bold_sentence;
-	char *dictionary_kanji;
-	char *dictionary_reading;
-	char *dictionary_definition;
-	char *deinflected_furigana;
-	char *windowname;
-} possible_entries_s;
+
+//Might be better to switch to a struct:
+/* typedef struct possible_entries_s { */
+/* 	char *empty; */
+/* 	char *lookup; */
+/* 	char *deinflected_lookup; */
+/* 	char *copied_sentence; */
+/* 	char *bold_sentence; */
+/* 	char *dictionary_kanji; */
+/* 	char *dictionary_reading; */
+/* 	char *dictionary_definition; */
+/* 	char *deinflected_furigana; */
+/* 	char *windowname; */
+/* } possible_entries_s; */
 
 typedef struct {
 	char *p[NUMBER_POSS_ENTRIES];
-	GPtrArray *dict;
-	char *argv1;
-} ThreadData;
-
-/* GLOBALS */
-char *SDCV_PATH;
-/* ------- */
-
-/* --- dictentry --- */
-/*
- * Returns a dictionary entry with the given entries.
- * Result needs to be freed with dictentry_free
- */
-dictentry *
-dictentry_new(char *dictname, char *dictword, char *definition, char *lookup)
-{
-	dictentry *de = malloc(sizeof(dictentry));
-	Stopif(!de, return NULL, "ERROR: Could not allocate memory for dictionary entry.");
-
-	*de = (dictentry) {
-		.dictname = dictname ? g_strdup(dictname) : NULL,
-		.word = dictword ? g_strdup(dictword) : NULL,
-		.definition = definition ? g_strdup(definition) : NULL,
-		.lookup = lookup ? g_strdup(lookup) : NULL
-	};
-
-	return de;
-}
-
-/*
- * Frees a dictentry created with dictentry_new
- */
-void
-dictentry_free(void *ptr)
-{
-	dictentry *de = ptr;
-	g_free(de->dictname);
-	g_free(de->word);
-	g_free(de->definition);
-	g_free(de->lookup);
-	free(de);
-}
-/* -------------- */
+	dictionary* dict;
+} SharedData;
 
 void
-retrieve_sdcv_path()
-{
-	SDCV_PATH = g_find_program_in_path("sdcv");
-	Stopif(!SDCV_PATH, exit(1), "Could not find sdcv executable. Is it installed?");
-}
-
-/*
- * Execute sdcv to look up the word.
- * Returns: The output as a string in json format. Needs to be freed.
- */
-char *
-lookup(char *word)
-{
-	char *sdcv_json = read_cmd_sync((char *[]) { SDCV_PATH, "-nej", "--utf8-output", word, NULL });
-	Stopif(!sdcv_json, exit(1), "Error executing sdcv.");
-	return sdcv_json;
-}
-
-/*
- * Creates a dictionary entry and adds it to dict from given entries.
- */
-void
-add_to_dictionary(GPtrArray *dict, char *dictname, char *dictword, char *definition, char *lookup)
-{
-	dictentry *de = dictentry_new(dictname, dictword, definition, lookup);
-	g_ptr_array_add(dict, de);
-}
-
-int
-is_empty_json(char *json)
-{
-	return !json || !*json ? 1 : (strncmp(json, "[]", 2) == 0);
-}
-
-/*
- * Adds all dictionary entries from json string to dict.
- * Changes json string in process
- * json can be NULL.
- */
-void
-add_from_json(GPtrArray *dict, char *lookupstr, char *json)
-{
-	if (is_empty_json(json))
-		return;
-
-	str_repl_by_char(json, "\\n", '\n');
-	const char *keywords[] = { "\"dict\"", "\"word\"", "\"definition\"" };
-	char *entries[3] = { NULL, NULL, NULL };
-
-	char *start;
-	for (char* i = json + 1; *i ; i++)
-	{
-		for (int k = 0; k < 3; k++)
-		{
-			if (strncmp(i, keywords[k], strlen(keywords[k])) == 0)
-			{       /* TODO: string bounds checking */
-				i += strlen(keywords[k]);
-				while (*i != '"')
-					i++;
-
-				while (*(++i) == '\n') // Skip leading newlines
-					;
-				start = i;
-
-				while (*i != '"' || *(i - 1) == '\\') // not escaped
-					i++;
-
-				*i++ = '\0';
-
-				if (entries[k])
-					g_warning("WARNING: Overwriting previous entry. \
-					    Expects to see dict, word and definition before next entry.");
-				entries[k] = start;
-
-				if (entries[0] && entries[1] && entries[2])
-				{
-					add_to_dictionary(dict, entries[0], entries[1], entries[2], lookupstr);
-					for (int l = 0; l < 3; l++)
-						entries[l] = NULL;
-				}
-				break;
-			}
-		}
-	}
-}
-
-void
-add_word_to_dict(GPtrArray *dict, char *word)
-{
-	char *sdcv_output = lookup(word);
-	add_from_json(dict, word, sdcv_output);
-	free(sdcv_output);
-}
-
-void
-add_deinflections_to_dict(GPtrArray *dict, char *word)
+add_deinflections_to_dict(dictionary *dict, char *word)
 {
 	char **deinflections = deinflect(word);
 
@@ -191,10 +59,10 @@ add_deinflections_to_dict(GPtrArray *dict, char *word)
 }
 
 void
-create_dictionary_from(GPtrArray *dict, char *word)
+fill_dictionary_with(dictionary* dict, char *word)
 {
 	add_word_to_dict(dict, word);
-	/* add_deinflections_to_dict(dict, word); */
+	add_deinflections_to_dict(dict, word);
 }
 
 char *
@@ -282,22 +150,22 @@ p_free(char **p)
 void*
 lookup_and_create_dictionary(void *voidin)
 {
-	ThreadData *in = voidin;
+	SharedData *in = voidin;
 	char **p = in->p;
-	GPtrArray *dict = in->dict;
-	char *argv1 = in->argv1;
-
-	p[LookedUpString] = argv1 ? g_strdup(argv1) : sselp(); //strdup, so can be freed afterwards
-	Stopif(!p[LookedUpString] || !*p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
-
-	if (cfg.nukewhitespace)
-		nuke_whitespace(p[LookedUpString]);
+	dictionary* dict = in->dict;
 
 	p[FocusedWindowName] = getwindowname();
 
-	create_dictionary_from(dict, p[LookedUpString]);
+	fill_dictionary_with(dict, p[LookedUpString]);
 
-	Stopif(dict->len == 0, p_free(p); g_ptr_array_free(dict, TRUE); exit(1), "No dictionary entry found.");
+	if (dict->len == 0)
+	{   // Try hiragana conversion as a last resort. Meant for lookups like 思いつく
+	    char *hira = kanji2hira(p[LookedUpString]);
+	    fill_dictionary_with(dict, hira);
+	    free(hira);
+	}
+
+	Stopif(dict->len == 0, p_free(p); dictionary_free(dict); exit(1), "No dictionary entry found.");
 
 	dictionary_data_done();
 	return NULL;
@@ -306,14 +174,14 @@ lookup_and_create_dictionary(void *voidin)
 void*
 display_popup(void *voidin)
 {
-	ThreadData *in = voidin;
+	SharedData *in = voidin;
 	char **p = in->p;
-	GPtrArray *dict = in->dict;
+	dictionary *dict = in->dict;
 
 	size_t de_num;
 	if (popup(dict, &p[DictionaryDefinition], &de_num) && cfg.ankisupport)
 	{
-		dictentry *chosen_dict = g_ptr_array_index(dict, de_num);
+		dictentry *chosen_dict = dictentry_at_index(dict, de_num);
 		populate_entries(p, chosen_dict);
 
 		const char *err = send_ankicard(p);
@@ -328,13 +196,13 @@ int
 main(int argc, char**argv)
 {
 	read_user_settings();
-	retrieve_sdcv_path();
 
-	ThreadData data;
-	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
-		data.p[i] = NULL;
-	data.dict = g_ptr_array_new_with_free_func(dictentry_free);
-	data.argv1 = argc > 1 ? argv[1] : NULL;
+	SharedData data = (SharedData) { .dict = dictionary_new(), .p = { 0 } };
+
+	data.p[LookedUpString] = argc > 1 ? g_strdup(argv[1]) : sselp(); //strdup, so can be freed afterwards
+	Stopif(!data.p[LookedUpString] || !*data.p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
+	if (cfg.nukewhitespace)
+		nuke_whitespace(data.p[LookedUpString]);
 
 	pthread_t threads[2];
 	pthread_create(&threads[0], NULL, lookup_and_create_dictionary, &data);
@@ -343,7 +211,6 @@ main(int argc, char**argv)
 		pthread_join(threads[i], NULL);
 
 	p_free(data.p);
-	g_ptr_array_free(data.dict, TRUE);
-	free(SDCV_PATH);
-	settings_free();
+	dictionary_free(data.dict);
+	free_user_settings();
 }

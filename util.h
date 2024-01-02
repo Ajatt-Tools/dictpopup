@@ -8,19 +8,35 @@
 		error_action;                         \
 	}
 
+/*
+ * Sends a notification. @error=1 sets to urgency level to urgent.
+ */
 void notify(bool error, char const *fmt, ...);
 
+/*
+ * Returns an array of kanji readings
+ * Currently supported format:
+ *
+ *  * かむ【嚙む・嚼む・咬む】
+ *
+ * The returned string should be freed with g_strfreev()
+ */
 char **extract_kanji_array(const char *str);
+/*
+ * Simply returns the kanji part of the string, which
+ * is expected to be enclosed in 【】
+ *
+ * The returned string should be freed.
+ */
 char *extract_kanji(const char *str);
 char *extract_reading(const char *str);
 
 void str_repl_by_char(char *str, char *target, char repl_c);
 void nuke_whitespace(char *str);
 
-/* 
- * Reads the standard output of a command and waits for it to finish.
- * Argv is the null terminated list of arguments, argv[0] being the
- * full path to the executable.
+/*
+ * Calls a command asynchronously in printf style.
+ *
+ * Returns: TRUE on success and FALSE if there was an error
  */
-char* read_cmd_sync(char **argv);
 int spawn_cmd_async(char const *fmt, ...);

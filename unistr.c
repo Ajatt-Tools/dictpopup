@@ -13,14 +13,15 @@ unistr_new(const char *str)
 {
 	unistr *us = malloc(sizeof(unistr));
 
-	GError *e = NULL;
-	setlocale(LC_ALL, "");
-	char *str_utf8 = g_locale_to_utf8(str, -1, NULL, NULL, &e);
+	// TODO: Check necessity of commented code
+	/* GError *e = NULL; */
+	/* setlocale(LC_ALL, ""); */
+	/* char *str_utf8 = g_locale_to_utf8(str, -1, NULL, NULL, &e); */
 
-	if (!g_utf8_validate(str_utf8, -1, NULL))
-		g_warning("Could not convert word to a valid UTF-8 string.");
+	/* if (!g_utf8_validate(str_utf8, -1, NULL)) */
+	/* 	g_warning("Could not convert word to a valid UTF-8 string."); */
 
-	*us = (unistr) { .str=str_utf8, .len=strlen(str_utf8) };
+	*us = (unistr) { .str=str, .len=strlen(str) };
 
 	return us;
 }
@@ -28,7 +29,7 @@ unistr_new(const char *str)
 void
 unistr_free(unistr *us)
 {
-	g_free(us->str);
+	/* g_free(us->str); */
 	free(us);
 }
 

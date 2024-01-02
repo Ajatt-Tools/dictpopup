@@ -5,6 +5,7 @@
 #include <glib.h>
 
 #include "unistr.h"
+#include "kanaconv.h"
 
 GPtrArray *deinfs;
 
@@ -94,6 +95,13 @@ kanjify(unistr* word)
 
 	IF_ENDSWITH_REPLACE("ない", "無い");
 	IF_ENDSWITH_REPLACE("なし", "無し");
+	IF_ENDSWITH_REPLACE("つく", "付く");
+
+	// Opposite of kanjifying actually, but similar spirit
+	g_autofree gchar* hira_conv = kata2hira(word->str);
+	if (strcmp(word->str, hira_conv) != 0) // TODO: Might change kataconv to ouput NULL on no change
+	    add_str(hira_conv);
+
 	return 0;
 }
 
@@ -231,7 +239,8 @@ deinflect_one_iter(const char *word)
 	else if (check_te(uniword));
 	else if (check_past(uniword));
 	else if (check_potential(uniword));
-	else kanjify(uniword);
+	else 
+	  kanjify(uniword);
 
 	unistr_free(uniword);
 }
@@ -245,7 +254,7 @@ deinflect(const char *word)
 
 	for (int i = 0; i < deinfs->len; i++)
 	{
-		/* printf("%s\n", (char *)g_ptr_array_index(deinfs, i)); */
+		printf("%s\n", (char *)g_ptr_array_index(deinfs, i));
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
 	}
 

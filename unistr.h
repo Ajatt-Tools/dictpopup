@@ -1,5 +1,5 @@
 typedef struct {
-	char *str;
+	const char *str;
 	int len; //byte length of str
 } unistr;
 

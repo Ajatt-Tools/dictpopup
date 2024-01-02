@@ -27,6 +27,6 @@ extern settings cfg;
 
 void print_settings();
 void read_user_settings();
-void settings_free();
+void free_user_settings();
 
 #endif /* SETTINGS_H */

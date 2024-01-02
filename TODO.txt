@@ -14,6 +14,7 @@ Mid priority
 - Kanjify the selected word in the sentence according to the dictionary entry
 
 Low priority
+- Switch possibleEntries to struct and change FieldMappings to Strings instead of numbers
 - Save ankicard as csv if push to ankiconnect failed
 - Convert string from locale to UTF-8 and back to locale in unistr (To support other OSes, i.e. Windows)
 - Add unit tests (for deinflector)

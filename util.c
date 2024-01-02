@@ -31,14 +31,6 @@ notify(bool error, char const *fmt, ...)
 	g_object_unref(G_OBJECT(n));
 }
 
-/*
- * Returns an array of kanji readings
- * Supported formats:
- *
- *  * かむ【嚙む・嚼む・咬む】
- *
- * The returned string should be freed with g_strfreev()
- */
 char **
 extract_kanji_array(const char *str)
 {
@@ -64,13 +56,6 @@ extract_kanji_array(const char *str)
 	return g_strv_builder_end(builder);
 }
 
-/*
- * Simply returns the kanji part of the string
- *
- * The kanji part is expected to be enclosed in 【】
- *
- * The returned string should be freed.
- */
 char *
 extract_kanji(const char *str)
 {
@@ -91,7 +76,6 @@ extract_reading(const char *str)
 	return strndup(str, end_read - str);
 }
 
-/*--------- String functions -------- */
 void
 str_repl_by_char(char *str, char *target, char repl_c)
 {
@@ -127,15 +111,10 @@ char*
 read_cmd_sync(char** argv)
 {
     char *standard_out = NULL;
-    g_spawn_sync(NULL, argv, NULL, G_SPAWN_DEFAULT, NULL, NULL, &standard_out, NULL, NULL, NULL);
+    g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &standard_out, NULL, NULL, NULL);
     return standard_out;
 }
 
-/*
- * Calls a command asynchronously in printf style.
- *
- * Returns: TRUE on success and FALSE if there was an error
- */
 int
 spawn_cmd_async(char const *fmt, ...)
 {
