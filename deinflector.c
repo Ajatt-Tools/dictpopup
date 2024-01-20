@@ -34,7 +34,7 @@ add_str(const char* str)
  * @len: The length of the ending to be disregarded
  *
  * Converts a word in あ-form to the う-form.
- * 
+ *
  * Returns: TRUE if any conversion happened, FALSE otherwise
  */
 int
@@ -57,12 +57,32 @@ atou_form(unistr* word, size_t len_ending)
 	return 0;
 }
 
+/* int */
+/* etou_form(unistr* word, size_t len_ending) */
+/* { */
+/* 	word->len -= len_ending; */
+
+/* 	IF_ENDSWITH_REPLACE("せ", "す"); */
+/* 	IF_ENDSWITH_REPLACE("け", "く"); */
+/* 	IF_ENDSWITH_REPLACE("げ", "ぐ"); */
+/* 	IF_ENDSWITH_REPLACE("べ", "ぶ"); */
+/* 	IF_ENDSWITH_REPLACE("て", "つ"); */
+/* 	IF_ENDSWITH_REPLACE("め", "む"); */
+/* 	IF_ENDSWITH_REPLACE("え", "う"); */
+/* 	IF_ENDSWITH_REPLACE("ね", "ぬ"); */
+/* 	IF_ENDSWITH_REPLACE("れ", "る"); */
+
+/* 	word->len += len_ending; */
+
+/* 	return 0; */
+/* } */
+
 /*
  * @word: The word to be converted
  * @len: The length of the ending to be disregarded
  *
  * Converts a word in い-form to the う-form.
- * 
+ *
  * Returns: TRUE if any conversion happened, FALSE otherwise
  */
 int
@@ -91,16 +111,22 @@ itou_form(unistr* word, size_t len_ending)
 int
 kanjify(unistr* word)
 {
-	/* if (startswith(word, "ご") || startswith(word, "お")) */
+	if (startswith(word, "ご") || startswith(word, "お"))
+	{	// FIXME: Cleaner implementation
+		g_autofree gchar* word_copy = strdup(word->str);
+		memcpy(word_copy, "御", strlen("ご"));
+		add_str(word_copy);
+	}
 
 	IF_ENDSWITH_REPLACE("ない", "無い");
 	IF_ENDSWITH_REPLACE("なし", "無し");
 	IF_ENDSWITH_REPLACE("つく", "付く");
 
 	// Opposite of kanjifying actually, but similar spirit
+	// FIXME: Cleaner implementation
 	g_autofree gchar* hira_conv = kata2hira(word->str);
 	if (strcmp(word->str, hira_conv) != 0) // TODO: Might change kataconv to ouput NULL on no change
-	    add_str(hira_conv);
+		add_str(hira_conv);
 
 	return 0;
 }
@@ -183,7 +209,7 @@ int
 check_adjective(unistr* word)
 {
 	IF_ENDSWITH_REPLACE("よくて", "いい");
-	IF_ENDSWITH_REPLACE("かった", "い");
+	IF_ENDSWITH_REPLACE("かった", "い"); // FIXME: Should not return. Can be 授かった for example
 	IF_ENDSWITH_REPLACE("くない", "い");
 	IF_ENDSWITH_REPLACE("くて", "い");
 	IF_ENDSWITH_REPLACE("そう", "い");
@@ -204,10 +230,12 @@ int
 check_negation(unistr* word)
 {
 	IF_ENDSWITH_CONVERT_ATOU("ない");
+	IF_ENDSWITH_CONVERT_ATOU("ねぇ");
 	return 0;
 }
 
-int check_potential(unistr* word)
+int
+check_potential(unistr* word)
 {
 	/* Exceptions */
 	IF_EQUALS_ADD("できる", "為る");
@@ -225,22 +253,48 @@ int check_potential(unistr* word)
 	return 0;
 }
 
+int
+check_conditional(unistr* word)
+{
+	IF_ENDSWITH_REPLACE("せば", "す");
+	IF_ENDSWITH_REPLACE("けば", "く");
+	IF_ENDSWITH_REPLACE("げば", "ぐ");
+	IF_ENDSWITH_REPLACE("べば", "ぶ");
+	IF_ENDSWITH_REPLACE("てば", "つ");
+	IF_ENDSWITH_REPLACE("めば", "む");
+	IF_ENDSWITH_REPLACE("えば", "う");
+	IF_ENDSWITH_REPLACE("ねば", "ぬ");
+	IF_ENDSWITH_REPLACE("れば", "る");
+	return 0;
+}
+
 void
 deinflect_one_iter(const char *word)
 {
 	unistr *uniword = unistr_new(word);
 
-	if (check_shimau(uniword));
-	else if (check_adjective(uniword));
-	else if (check_masu(uniword));
-	else if (check_passive_causative(uniword));
-	else if (check_volitional(uniword));
-	else if (check_negation(uniword));
-	else if (check_te(uniword));
-	else if (check_past(uniword));
-	else if (check_potential(uniword));
-	else 
-	  kanjify(uniword);
+	if (check_shimau(uniword))
+		;
+	else if (check_adjective(uniword))
+		;
+	else if (check_masu(uniword))
+		;
+	else if (check_passive_causative(uniword))
+		;
+	else if (check_volitional(uniword))
+		;
+	else if (check_negation(uniword))
+		;
+	else if (check_te(uniword))
+		;
+	else if (check_past(uniword))
+		;
+	else if (check_potential(uniword))
+		;
+	else if (check_conditional(uniword))
+		;
+	else
+		kanjify(uniword);
 
 	unistr_free(uniword);
 }
@@ -254,7 +308,7 @@ deinflect(const char *word)
 
 	for (int i = 0; i < deinfs->len; i++)
 	{
-		printf("%s\n", (char *)g_ptr_array_index(deinfs, i));
+		/* printf("deinflected: %s\n", (char *)g_ptr_array_index(deinfs, i)); */
 		deinflect_one_iter(g_ptr_array_index(deinfs, i));
 	}
 
