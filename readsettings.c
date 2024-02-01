@@ -9,12 +9,24 @@
 #define printbool(boolean) \
 	boolean ? "TRUE" : "FALSE"
 
-settings cfg = {0};
+settings cfg = { 0 };
+
+void
+error_msg(char const *fmt, ...)
+{
+	va_list argp;
+	va_start(argp, fmt);
+	g_autofree char* msg = g_strdup_vprintf(fmt, argp);
+	va_end(argp);
+
+	notify(1, "WARNING: %s", msg);
+	g_warning(msg);
+}
 
 void
 free_user_settings()
 {
-  // TODO: Implement
+	// TODO: Implement
 }
 
 void
@@ -59,9 +71,9 @@ fill_anki_string(GKeyFile* kf, char **cfg_option, const char* entry)
 		if (value == NULL || !*value)
 		{
 			if (error)
-				notify(1, "WARNING: %s. Disabling Anki support.", error->message);
+				error_msg("%s. Disabling Anki support.", error->message);
 			else
-				notify(1, "WARNING: Missing entry \"%s\" in settings file. Disabling Anki support", entry);
+				error_msg("Missing entry \"%s\" in settings file. Disabling Anki support", entry);
 
 			cfg.ankisupport = 0;
 		}
@@ -70,16 +82,16 @@ fill_anki_string(GKeyFile* kf, char **cfg_option, const char* entry)
 	}
 }
 
+
 void
-fill_behaviour(GKeyFile* kf, gboolean *cfg_option, const char* entry)
+fill_behaviour(GKeyFile* kf, gboolean *cfg_option, const char* entry, gboolean defaultv)
 {
 	g_autoptr(GError) error = NULL;
 	gboolean value = g_key_file_get_boolean(kf, "Behaviour", entry, &error);
 	if (error)
 	{
-		notify(1, "Error: %s. Setting \"%s\" to True.", error->message, entry);
-		g_warning("Error: %s. Setting \"%s\" to True.", error->message, entry);
-		*cfg_option = TRUE;
+		error_msg("%s. Setting \"%s\" to %s.", error->message, entry, defaultv ? "true" : "false");
+		*cfg_option = defaultv;
 	}
 	else
 		*cfg_option = value;
@@ -92,8 +104,7 @@ fill_popup(GKeyFile* kf, int *cfg_option, const char* entry, int default_value)
 	int value = g_key_file_get_integer(kf, "Popup", entry, &error);
 	if (error)
 	{
-		notify(1, "Error: %s. Defaulting to \"%i\".", error->message, default_value);
-		g_warning("Error: %s. Defaulting to \"%i\".", error->message, default_value);
+		error_msg("%s. Defaulting to \"%i\".", error->message, default_value);
 		*cfg_option = default_value;
 	}
 	else
@@ -111,24 +122,22 @@ read_user_settings()
 	if (!g_key_file_load_from_file(kf, config_fn, G_KEY_FILE_NONE, &error))
 	{
 		if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
-		{
-			notify(1, "Could not find config file: \"%s\"", config_fn);
-			g_warning("Could not find config file: \"%s\"", config_fn);
-		}
+			error_msg("Could not find config file: \"%s\"", config_fn);
 		else
-		{
-			notify(1, "Error opening \"%s\": %s.", config_fn, error->message); g_warning("Error opening \"%s\": %s.", config_fn, error->message);
-		}
+			error_msg("Error opening \"%s\": %s.", config_fn, error->message);
 
 		g_error_free(error);
-		exit(1);
+		exit(1); // TODO: default config
 	}
 
-	fill_behaviour(kf, &(cfg.ankisupport), "AnkiSupport");
-	fill_behaviour(kf, &(cfg.checkexisting), "CheckIfExists");
-	fill_behaviour(kf, &(cfg.copysentence), "CopySentence");
-	fill_behaviour(kf, &(cfg.nukewhitespace), "NukeWhitespace");
-	fill_behaviour(kf, &(cfg.pronunciationbutton), "PronunciationButton");
+	fill_behaviour(kf, &(cfg.ankisupport), "AnkiSupport", FALSE);
+	fill_behaviour(kf, &(cfg.checkexisting), "CheckIfExists", FALSE);
+	fill_behaviour(kf, &(cfg.copysentence), "CopySentence", FALSE);
+	fill_behaviour(kf, &(cfg.nukewhitespace), "NukeWhitespace", TRUE);
+	fill_behaviour(kf, &(cfg.pronunciationbutton), "PronunciationButton", FALSE);
+	fill_behaviour(kf, &(cfg.pronounceonstart), "PronounceOnStart", FALSE);
+	fill_behaviour(kf, &(cfg.mecabconversion), "MecabConversion", FALSE);
+	fill_behaviour(kf, &(cfg.substringsearch), "SubstringSearch", TRUE);
 
 	fill_anki_string(kf, &(cfg.deck), "Deck");
 	fill_anki_string(kf, &(cfg.notetype), "NoteType");
@@ -139,16 +148,13 @@ read_user_settings()
 		{
 			if (error)
 			{
-				notify(1, "WARNING: %s. Disabling existence searching.", error->message);
-				g_warning("WARNING: %s. Disabling existence searching.", error->message);
+				error_msg("%s. Disabling existence searching.", error->message);
 				g_error_free(error);
 				error = NULL;
 			}
 			else
-			{
-				notify(1, "WARNING: Missing entry \"SearchField\" in settings file. Disabling existence searching.");
-				g_warning("WARNING: Missing entry \"SearchField\" in settings file. Disabling existence searching.");
-			}
+				error_msg("Missing entry \"SearchField\" in settings file. Disabling existence searching.");
+
 			cfg.checkexisting = 0;
 		}
 		else
@@ -163,8 +169,7 @@ read_user_settings()
 		cfg.num_fields = num_fieldnames;
 		if (error)
 		{
-			notify(1, "WARNING: %s. Disabling Anki support.", error->message);
-			g_warning("%s. Disabling Anki support.", error->message);
+			error_msg("%s. Disabling Anki support.", error->message);
 			cfg.ankisupport = FALSE;
 			g_error_free(error);
 			error = NULL;
@@ -178,14 +183,20 @@ read_user_settings()
 		cfg.fieldmapping = g_key_file_get_integer_list(kf, "Anki", "FieldMapping", &num_fieldmappings, &error);
 		if (error)
 		{
-			notify(1, "WARNING: %s. Disabling Anki support.", error->message);
-			g_warning("%s. Disabling Anki support.", error->message);
+			error_msg("%s. Disabling Anki support.", error->message);
 			cfg.ankisupport = FALSE;
 			g_error_free(error);
 			error = NULL;
 		}
 
 		Stopif(num_fieldnames != num_fieldmappings, exit(1), "Error: Number of fieldnames does not match number of fieldmappings.");
+	}
+
+	// Database
+	cfg.db_path = g_key_file_get_string(kf, "Database", "Path", &error);
+	if (error)
+	{
+	  //TODO: Implement
 	}
 
 	// Popup

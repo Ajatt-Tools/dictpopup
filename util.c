@@ -6,32 +6,53 @@
 #include <libnotify/notify.h>
 #include <unistd.h>
 #include <glib.h>
+#include <gio/gio.h>
 
 #include "util.h"
 
 void
-notify(bool error, char const *fmt, ...)
+notify(bool urgent, char const *fmt, ...)
 {
-	char *msg;
 	va_list argp;
 	va_start(argp, fmt);
-	vasprintf(&msg, fmt, argp);
+	g_autofree char* msg = g_strdup_vprintf(fmt, argp);
 	va_end(argp);
 
-	NotifyNotification *n;
-	notify_init("Basics");
+	// This is wack
+	g_autoptr(GApplication) app = g_application_new("org.example.notification", G_APPLICATION_NON_UNIQUE);
+	g_application_register(app, NULL, NULL);
+	//
 
-	n = notify_notification_new(msg, NULL, NULL);
-	notify_notification_set_app_name(n, "dictpopup");  /* Maybe set it to argv[0] */
-	if (error) notify_notification_set_urgency(n, NOTIFY_URGENCY_CRITICAL);
+	GNotification *notification = g_notification_new("dictpopup");
+	g_notification_set_body(notification, msg);
+	if (urgent)
+		g_notification_set_priority(notification, G_NOTIFICATION_PRIORITY_URGENT);
+	g_application_send_notification(app, NULL, notification);
 
-	if (!notify_notification_show(n, NULL))
-		fprintf(stderr, "ERROR: Failed to send notification.\n");
+	/* NotifyNotification *n; */
+	/* notify_init("Basics"); */
 
-	g_object_unref(G_OBJECT(n));
+	/* n = notify_notification_new(msg, NULL, NULL); */
+	/* notify_notification_set_app_name(n, "dictpopup");  /1* Maybe set it to argv[0] *1/ */
+	/* if (error) */
+	/* 	notify_notification_set_urgency(n, NOTIFY_URGENCY_CRITICAL); */
+
+	/* if (!notify_notification_show(n, NULL)) */
+	/* 	fprintf(stderr, "ERROR: Failed to send notification.\n"); */
+
+	/* g_object_unref(G_OBJECT(n)); */
 }
 
-char **
+
+void
+remove_last_unichar(char* str, int* len)
+{
+	// TODO: Implement this properly
+	str[*len - 3] = '\0';
+	*len -= 3;
+}
+
+char**
 extract_kanji_array(const char *str)
 {
 	char *start = strstr(str, "【");
@@ -63,26 +84,26 @@ extract_kanji(const char *str)
 	start = start ? start + strlen("【") : NULL;
 	char *end = start ? strstr(start, "】") : NULL;
 
-	return (start && end) ? g_strndup(start, end-start) : g_strdup(str);
+	return (start && end) ? g_strndup(start, end - start) : g_strdup(str);
 }
 
-char *
+char*
 extract_reading(const char *str)
 {
 	char *end_read = strstr(str, "【");
 	if (!end_read)
-		return strdup(str);
+		return g_strdup(str);
 
-	return strndup(str, end_read - str);
+	return g_strndup(str, end_read - str);
 }
 
-void
+char*
 str_repl_by_char(char *str, char *target, char repl_c)
 {
 	if (!str || !target)
 	{
 		g_warning("str_repl_by_char has been called with NULL values.");
-		return;
+		return str;
 	}
 
 	size_t target_len = strlen(target);
@@ -96,6 +117,8 @@ str_repl_by_char(char *str, char *target, char repl_c)
 			e += target_len;
 		}
 	} while ((*s++ = *e++));
+
+	return str;
 }
 
 void
@@ -110,21 +133,30 @@ nuke_whitespace(char *str)
 char*
 read_cmd_sync(char** argv)
 {
-    char *standard_out = NULL;
-    g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &standard_out, NULL, NULL, NULL);
-    return standard_out;
+	char *standard_out = NULL;
+	g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &standard_out, NULL, NULL, NULL);
+	return standard_out;
 }
 
 int
-spawn_cmd_async(char const *fmt, ...)
+printf_cmd_async(char const *fmt, ...)
 {
-    char *cmd;
-    va_list argp;
-    va_start(argp, fmt);
-    vasprintf(&cmd, fmt, argp);
-    va_end(argp);
+	va_list argp;
+	va_start(argp, fmt);
+	g_autofree char* cmd = g_strdup_vprintf(fmt, argp);
+	va_end(argp);
 
-    int retval = g_spawn_command_line_async(cmd, NULL);
-    free(cmd);
-    return retval;
+	return g_spawn_command_line_async(cmd, NULL);
+}
+
+int
+printf_cmd_sync(char const *fmt, ...)
+{
+	va_list argp;
+	va_start(argp, fmt);
+	g_autofree char* cmd = g_strdup_vprintf(fmt, argp);
+	va_end(argp);
+
+	return system(cmd);
+	/* return g_spawn_command_line_sync(cmd, NULL); */
 }

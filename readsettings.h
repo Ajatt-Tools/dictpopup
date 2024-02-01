@@ -15,12 +15,17 @@ typedef struct {
 	int win_width;
 	int win_height;
 	int win_margin;
+	// Database
+	char* db_path;
 	// Behaviour
 	gboolean ankisupport;
 	gboolean checkexisting;
 	gboolean copysentence;
 	gboolean nukewhitespace;
 	gboolean pronunciationbutton;
+	gboolean mecabconversion;
+	gboolean substringsearch;
+	gboolean pronounceonstart;
 } settings;
 
 extern settings cfg;

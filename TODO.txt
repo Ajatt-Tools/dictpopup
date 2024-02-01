@@ -1,33 +1,45 @@
 High priority
+- integrate database builder into this git repo
+- create man page
+- Import ankiconnectC as a git submodule
+- Check error handling for missing config
+- Search for card in anki gui by clicking on the dot. Auto open first result
+- publish on AUR
 - package with autotools
 
 Mid priority
-- Click on red/green dot to open in gui browser
-- Convert katakana to hiragana
-- Enable choosing a dictionary sort order
-- Skip certain lines
-  - しず か （しづ—） [1]【静か・▽閑か】
-  -（形動）〔文〕ナリ
-- Improve deinflector
-  - Expand list of different possible writings in deinflector, e.g.: 齧る -> 噛る, 囓る
-  - Try to search for mecab hiragana conversion (as a last resort)
-- Kanjify the selected word in the sentence according to the dictionary entry
+- Implement some error checking macros. Especially for malloc
+- Properly use gapplication (as in sending notifications right now)
+- Consider using GTask for loading dictionary information in the backround and running the popup in the main thread
+- Leave "SearchField" option empty to search in whole collection
+- Convert selected word and sentence to UTF-8 (for Windows support)
+- Improve deinflection
+- Kanjify the word in the copied sentence according to the dictionary entry
+- Remove trailing spaces from user settings
 
 Low priority
+- Refactor popup.c
+- merge unistr and deinflector into 1 file
+- replace unistr with GString
+- Skip certain lines on definition add (without selection)
+  - しず か （しづ—） [1]【静か・▽閑か】
+  -（形動）〔文〕ナリ
 - Switch possibleEntries to struct and change FieldMappings to Strings instead of numbers
-- Save ankicard as csv if push to ankiconnect failed
-- Convert string from locale to UTF-8 and back to locale in unistr (To support other OSes, i.e. Windows)
-- Add unit tests (for deinflector)
-- Add option to display markdown text in the textview
-  - A workaround might be passing through lynx
+- Add unit tests
+- write a gui config tool
+  - Select dictionaries
+  - Choose dictionary sort order
+  - build database
+  - change general config
 
 Possible ideas:
-- Display small text about which deinflection occured for specific entry (same as yomichan)
 - "Add this entry"-button before every entry
-- Display the full lookup string with clickable characters (yomichan search)
-  - Though I don't think a popup is suitable for this. This should be left to applications such as goldendict
-
+- Save ankicard as csv if push to ankiconnect failed
+- Write a browser addon which enables using dictpopup just by pressing Shift (like yomichan)
 
 To check:
-- Proper error handling on invalid utf-8 input
 - definflector assumes that constant strings given in the code are utf8 encoded. This might be wrong if compiled on windows for example.
+
+database related:
+- Put length of longest entry into database under LENGTH_OF_LONGEST_ENTRY
+- Try: One LMDB database for keys -> ids mapping (dup entries) + 1 LMDB DB for id -> dictentry mapping

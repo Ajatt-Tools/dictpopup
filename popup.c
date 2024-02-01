@@ -1,17 +1,22 @@
 #include <gtk/gtk.h>
 #include <ankiconnectc.h>
+#include <stdbool.h>
 
 #include "util.h"
 #include "dictionary.h"
 #include "readsettings.h"
 
+const char* error;
+#define E(expr) if ((error = expr)) { notify(1, "%s", error); return; }
+
 GMutex vars_mutex;
 GCond vars_set_condition;
 gboolean gtk_vars_set = 0;
-gboolean dictionary_data_ready = 0;
+gboolean dict_data_ready = 0;
 
 dictionary* dict;
-size_t *curde = 0;
+dictentry *cur_entry;
+size_t *cur_entry_num = 0;
 char **def;
 
 GtkWidget *window = NULL;
@@ -26,18 +31,23 @@ int EXIT_CODE = 0; /* 0 = close, 1 = anki */
 
 void update_window();
 void check_if_exists();
+void play_pronunciation();
 
 void
 dictionary_data_done()
 {
 	g_mutex_lock(&vars_mutex);
 
-	dictionary_data_ready = TRUE;
+	dict_data_ready = TRUE;
 	while (!gtk_vars_set)
 		g_cond_wait(&vars_set_condition, &vars_mutex);
 
 	g_mutex_unlock(&vars_mutex);
 
+	cur_entry = dictentry_at_index(dict, *cur_entry_num);
+
+	if (cfg.pronounceonstart)
+		play_pronunciation();
 	update_window();
 	check_if_exists(); // Check only once
 }
@@ -45,36 +55,7 @@ dictionary_data_done()
 void
 check_search_response(bool exists)
 {
-	if (word_exists_in_db)
-		return;
-	else if (exists)
-		word_exists_in_db = 1;
-
-	gtk_widget_queue_draw(exists_dot);
-}
-
-enum { WORD, DEFINITION, DICTNAME };
-
-const char*
-get_cur(int entry)
-{
-	dictentry *cur_entry = dictentry_at_index(dict, *curde);
-	const char *retstr = NULL;
-
-	switch (entry)
-	{
-	case WORD:
-		retstr = cur_entry->word;
-		break;
-	case DEFINITION:
-		retstr = cur_entry->definition;
-		break;
-	case DICTNAME:
-		retstr = cur_entry->dictname;
-		break;
-	}
-
-	return retstr;
+	word_exists_in_db = exists ? 1 : 0;
 }
 
 void
@@ -83,37 +64,35 @@ check_if_exists()
 	if (!cfg.checkexisting || !cfg.ankisupport)
 		return;
 
-	char **kanji_writings = extract_kanji_array(get_cur(WORD));
-	char **ptr = kanji_writings;
-	const char *err = NULL;
-	while (*ptr && !err)
+	// exclude suspended cards
+	E(ac_search(false, cfg.deck, cfg.searchfield, cur_entry->kanji, check_search_response));
+
+	if (!word_exists_in_db)
 	{
-		err = ac_search(cfg.deck, cfg.searchfield, *ptr++, check_search_response);
-		if (err) notify(1, "%s", err);
+		// include suspended cards
+		E(ac_search(true, cfg.deck, cfg.searchfield, cur_entry->kanji, check_search_response));
+
+		if (word_exists_in_db)
+			word_exists_in_db = 2;
 	}
 
-	g_strfreev(kanji_writings);
+	gtk_widget_queue_draw(exists_dot);
 }
 
 void
 play_pronunciation()
 {
-	// TODO: Look up different writing if nothing found. Currently simply uses first one
-	const char* curword = get_cur(WORD);
-	char **kanji_writings = extract_kanji_array(curword);
-	const char *pron_word = *kanji_writings ? *kanji_writings : curword;
-
-	if (!spawn_cmd_async("jppron '%s'", pron_word))
+	if (!printf_cmd_async("jppron '%s'", cur_entry->kanji))
 		notify(1, "Error calling jppron. Is it installed?");
-
-	g_strfreev(kanji_writings);
 }
 
 void
 draw_dot(GtkWidget *widget, cairo_t *cr)
 {
-	if (word_exists_in_db)
+	if (word_exists_in_db == 1)
 		cairo_set_source_rgb(cr, 0, 1, 0); // green
+	else if (word_exists_in_db == 2)
+		cairo_set_source_rgb(cr, 1, 0.5, 0); //orange
 	else
 		cairo_set_source_rgb(cr, 1, 0, 0); // red
 
@@ -132,7 +111,7 @@ on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_data)
 void
 update_buffer()
 {
-	gtk_text_buffer_set_text(dict_tw_buffer, get_cur(DEFINITION), -1);
+	gtk_text_buffer_set_text(dict_tw_buffer, cur_entry->definition, -1);
 
 	GtkTextIter start, end;
 	gtk_text_buffer_get_bounds(dict_tw_buffer, &start, &end);
@@ -142,32 +121,27 @@ update_buffer()
 void
 update_win_title()
 {
-	// Might switch to dynamic, but there isn't much space anyway in the title bar.
-	char title[100];
-	snprintf(title, sizeof(title), "dictpopup - %s", get_cur(WORD));
-
+	g_autofree char* title = g_strdup_printf("dictpopup - %s (%s)", cur_entry->kanji, cur_entry->dictname);
 	gtk_window_set_title(GTK_WINDOW(window), title);
 }
 
 void
 update_dictnum_info()
 {
-	char info_txt[8]; // max 999 dictionaries
-	snprintf(info_txt, sizeof(info_txt), "%li/%i", *curde + 1, dict->len);
-
+	g_autofree char* info_txt = g_strdup_printf("%li/%i", *cur_entry_num + 1, dict->len);
 	gtk_label_set_text(GTK_LABEL(dictnum_lbl), info_txt);
 }
 
 void
 update_dictname_info()
 {
-	gtk_label_set_text(GTK_LABEL(dictname_lbl), get_cur(DICTNAME));
+	gtk_label_set_text(GTK_LABEL(dictname_lbl), cur_entry->dictname);
 }
 
 void
 update_window()
 {
-	if (dictionary_data_ready) // Very unlikely but simultanous access possible
+	if (dict_data_ready) // Very unlikely but simultanous access possible
 	{
 		update_buffer();
 		update_win_title();
@@ -182,12 +156,13 @@ change_de(char c)
 	/* incr == '+' -> increment
 	   incr == '-' -> decrement */
 	if (c == '+')
-		*curde = (*curde != dict->len - 1) ? *curde + 1 : 0;
+		*cur_entry_num = (*cur_entry_num != dict->len - 1) ? *cur_entry_num + 1 : 0;
 	else if (c == '-')
-		*curde = (*curde != 0) ? *curde - 1 : dict->len - 1;
+		*cur_entry_num = (*cur_entry_num != 0) ? *cur_entry_num - 1 : dict->len - 1;
 	else
 		g_warning("Wrong usage of change_de function. Doing nothing.");
 
+	cur_entry = dictentry_at_index(dict, *cur_entry_num);
 	update_window();
 	return TRUE;
 }
@@ -220,7 +195,7 @@ add_anki()
 	if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end)) // Use text selection on selection
 		*def = gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE);
 	else
-		*def = g_strdup(get_cur(DEFINITION));
+		*def = g_strdup(cur_entry->definition);
 
 	return close_with_code(1);
 }
@@ -269,13 +244,10 @@ move_win_to_mouse_ptr()
 void
 search_in_anki_browser()
 {
-	//TODO: Search for all?
-	char **kanji_writings = extract_kanji_array(get_cur(WORD));
-
-	const char *err = ac_gui_search(cfg.deck, cfg.searchfield, kanji_writings[0]);
-	if (err) notify(1, "%s", err);
-
-	g_strfreev(kanji_writings);
+	//TODO: Search for all kanji writings?
+	const char *err = ac_gui_search(cfg.deck, cfg.searchfield, cur_entry->kanji);
+	if (err)
+		notify(1, "%s", err);
 }
 
 int
@@ -283,8 +255,8 @@ popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 {
 	dict = passed_dict;
 	def = passed_definition;
-	curde = passed_curde;
-	*curde = 0;
+	cur_entry_num = passed_curde;
+	*cur_entry_num = 0;
 
 	gtk_init(NULL, NULL);
 

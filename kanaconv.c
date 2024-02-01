@@ -1,17 +1,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mecab.h>
+
 #include <glib.h>
 
 char*
 kata2hira(const char* katakana_in)
 {
-	unsigned char* hiragana_out = (unsigned char*)strdup(katakana_in);
+	if (!katakana_in)
+	  return NULL;
+
+	unsigned char* hiragana_out = (unsigned char*) g_strdup(katakana_in);
 	unsigned char* h = hiragana_out;
+
 	while (*h)
 	{
-		/* Check that this is within the katakana block from E3 82 A0
-		   to E3 83 BF. */
+		/* Check that this is within the katakana block from E3 82 A0 to E3 83 BF. */
 		if (h[0] == 0xe3 && (h[1] == 0x82 || h[1] == 0x83) && h[2] != '\0')
 		{
 			/* Check that this is within the range of katakana which
@@ -32,20 +36,20 @@ kata2hira(const char* katakana_in)
 					h[2] += 0x20;
 				}
 			}
-			h += 3;
+			h = (unsigned char*) g_utf8_next_char(h);
 		}
 		else
-		{
 			h++;
-		}
 	}
 
+	printf("Conversion: %s\n", (char*) hiragana_out);
 	return (char *)hiragana_out;
 }
 
 char*
 kanji2hira(char *input)
 {
+	// TODO: Write this properly
 	GString* output = g_string_sized_new(strlen(input) + 2);
 
 	mecab_t *mecab = mecab_new2("");
@@ -72,36 +76,3 @@ kanji2hira(char *input)
 	mecab_destroy(mecab);
 	return g_string_free_and_steal(output);
 }
-
-/* char* */
-/* hira2kata (const char *hira_input) */
-/* { */
-/*     unsigned char* output = (unsigned char*) strdup(hira_input); */
-/*     unsigned char* k = output; */
-/*     while (*k) { */
-/*         /1* Check that this is within the hiragana block *1/ */
-/*         if (k[0] == 0xe3 && (k[1] == 0x81 || k[1] == 0x82) && k[2] != '\0') { */
-/*             /1* Check that this is within the range of katakana which */
-/*                can be converted into hiragana. *1/ */
-/*             if ((k[1] == 0x81 && (k[2] >= 0x81 && k[2] <= 0xbf)) || */
-/*                 (k[1] == 0x82 && (k[2] >= 0x80 && k[2] <= 0x96))) { */
-/*                 /1* Byte conversion from katakana to hiragana. *1/ */
-/* 		/1* if (h[1] >= 0x82) *1/ */
-/*                 if (k[1] == 0x82 || k[2] <= 0x9f) { */
-/*                     k[1] = k[1] + 1; */
-/*                     k[2] += 0x20; */
-/*                 } */
-/*                 else { */
-/*                     k[1] = k[1] + 2; */
-/*                     k[2] -= 0x20; */
-/*                 } */
-/*             } */
-/*             k += 3; */
-/*         } */
-/*         else { */
-/*             k++; */
-/*         } */
-/*     } */
-
-/*     return (char *)output; */
-/* } */

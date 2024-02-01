@@ -18,7 +18,6 @@ typedef struct {
 		for (char **iterator = (char*[]){__VA_ARGS__, NULL}; *iterator; iterator++) { \
 		  add_replace_ending(word, *iterator, strlen(ending));			      \
 		}									      \
-		return 1;								      \
 	}
 
 #define equals(us, string)                     \
@@ -27,19 +26,19 @@ typedef struct {
 #define IF_EQUALS_ADD(str, wordtoadd)           \
 	if (equals(word, str))                  \
 	{                                       \
-		return add_str(wordtoadd);      \
+		add_str(wordtoadd);      \
 	}
 
 #define IF_ENDSWITH_CONVERT_ITOU(ending)                       	      \
 	if (endswith(word, ending))                                   \
 	{                                                             \
-		return itou_form(word, strlen(ending));    \
+		itou_form(word, strlen(ending));    \
 	}
 
 #define IF_ENDSWITH_CONVERT_ATOU(ending)                       	      \
 	if (endswith(word, ending))                                   \
 	{                                                             \
-		return atou_form(word, strlen(ending));    \
+		atou_form(word, strlen(ending));    \
 	}
 
 unistr* unistr_new(const char *str);

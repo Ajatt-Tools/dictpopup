@@ -1,18 +1,35 @@
 # dictpopup
 
-This is a lightweight program for Linux showing a popup with the translation of the selected (japanese) text with support for creating Anki cards. 
-It uses [sdcv](https://github.com/Dushistov/sdcv) for the dictionary lookup and gtk3 for displaying the popup.
-Hence the look will depend on your gtk3 theme settings.
-Furthermore it uses multithreading to achieve minimal startup time.
+This is a lightweight popup for searching selected text in your yomichan dictionaries with support for creating Anki cards.
+The look of the popup will depend on your gtk3 settings.
 
 https://github.com/GenjiFujimoto/dictpopup/assets/50422430/4d22d4a2-e138-4bee-bc98-df93ce650e28
 
-## Dependencies
-sdcv, gtk3, glib, x11
+## Current state
+This is still very much a work in progress.
+*It only works on Linux* right now and the parser for the Yomichan dictionaries isn't fully implemented yet (especially dictionaries with structured content).
+See `TODO.txt` for more.
 
-## Setup
-First setup [sdcv](https://github.com/Dushistov/sdcv) according to their github page. Copy `config.def.h` to `config.h` and change the configuration according to your setup.
-Then install by running `./install.sh`. You can uninstall with `sudo make uninstall`.
+## List of features
+ * Fast startup time
+ * Very low memory footprint / CPU usage
+ * Deinflect
+ * Kanjify e.g. お前 -> 御前
+ * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
+ * Try a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
+ * Play a pronunciation on lookup / button press (requires setup as for now)
+ * Add word with selected definition to Anki
+ * Indicator showing if a word already exists in your Anki deck / collection. Orange if the only existing cards are suspended
+ * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain the book title)
+
+## Dependencies
+gtk3, glib, x11
+
+## Installation
+First install by running `./install.sh`. (You can uninstall with `sudo make uninstall`)\
+
+Then you need to create the database where the entries are read from.
+This is done via `dictpopup_create` which takes all Yomichan dictionaries in the current directory and puts them into the database.
 
 ## Configuration
 Copy the example below into `~/.config/dictpopup/config.ini` and configure it according to your setup. 
@@ -43,6 +60,10 @@ Width = 500
 Height = 350
 Margin = 5
 
+[Database]
+# You can set an alternative path. The default is ~/.local/share/dictpopup
+# Path = 
+
 [Behaviour]
 AnkiSupport = true
 CheckIfExists = true
@@ -62,9 +83,6 @@ The "+" sign (or Ctrl+s) adds the currently shown definition to Anki after promp
 If there is a selection, it will be used instead as a definition.
 
 The green/red dot indicates wether the word is already present in your Anki collection.
+It displays an orange dot if there exist cards, but which are all suspended.
 
 The sound symbol plays a pronunciation from a local database using [jppron](https://github.com/GenjiFujimoto/jppron).
-
-## Problems / Limitations
-* There is currently only support for GNU/Linux with x11. Extending support should be easy however, since the only platform dependent code is for retrieving the selection. PRs welcome.
-* See TODO.txt file

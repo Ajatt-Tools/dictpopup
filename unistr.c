@@ -11,26 +11,16 @@
 unistr*
 unistr_new(const char *str)
 {
-	unistr *us = malloc(sizeof(unistr));
+	unistr* us = g_new(unistr, 1);
 
-	// TODO: Check necessity of commented code
-	/* GError *e = NULL; */
-	/* setlocale(LC_ALL, ""); */
-	/* char *str_utf8 = g_locale_to_utf8(str, -1, NULL, NULL, &e); */
-
-	/* if (!g_utf8_validate(str_utf8, -1, NULL)) */
-	/* 	g_warning("Could not convert word to a valid UTF-8 string."); */
-
-	*us = (unistr) { .str=str, .len=strlen(str) };
-
+	*us = (unistr) { .str = str, .len = strlen(str) };
 	return us;
 }
 
 void
 unistr_free(unistr *us)
 {
-	/* g_free(us->str); */
-	free(us);
+	g_free(us);
 }
 
 /**
@@ -46,9 +36,10 @@ unistr_free(unistr *us)
 char *
 unistr_replace_ending(const unistr* word, const char *replacement, size_t len_ending)
 {
-	char *retstr = malloc(word->len - len_ending + strlen(replacement) + 1);
-	char *end = mempcpy(retstr, word->str, word->len - len_ending);
-	strcpy(end, replacement);
+	char* retstr = g_malloc(word->len - len_ending + strlen(replacement) + 1);
+
+	memcpy(retstr, word->str, word->len - len_ending);
+	strcpy(retstr + word->len - len_ending, replacement);
 
 	return retstr;
 }

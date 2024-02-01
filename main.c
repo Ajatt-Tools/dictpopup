@@ -3,6 +3,8 @@
 #include <stdio.h>
 
 #include <glib.h>
+#include <gio/gio.h>
+
 #include <ankiconnectc.h>
 #include <pthread.h>
 
@@ -80,10 +82,8 @@ boldWord(char *sent, char *word)
 char *
 create_furigana(char *kanji, char* reading)
 {
-	// Broken if kanji contains hiragana
-	char *furigana;
-	asprintf(&furigana, "%s[%s]", kanji, reading);
-	return furigana;
+	// TODO: The following is obviously not enough if kanji contains hiragana
+	return strcmp(kanji, reading) == 0 ? g_strdup(kanji) : g_strdup_printf("%s[%s]", kanji, reading);
 }
 
 void
@@ -91,7 +91,7 @@ populate_entries(char *pe[], dictentry* de)
 {
 	if (cfg.copysentence)
 	{
-		notify(0, "Please select the sentence.");
+		notify(0, "Please select the context.");
 		clipnotify();
 		pe[CopiedSentence] = sselp();
 		if (cfg.nukewhitespace)
@@ -100,13 +100,11 @@ populate_entries(char *pe[], dictentry* de)
 
 	pe[BoldSentence] = boldWord(pe[CopiedSentence], pe[LookedUpString]);
 
-	pe[DeinflectedLookup] = strdup(de->lookup);
+	pe[DictionaryReading] = g_strdup(de->reading);
 
-	pe[DictionaryReading] = extract_reading(de->word);
+	pe[DictionaryKanji] = g_strdup(de->kanji ? de->kanji : de->reading);
 
-	pe[DictionaryKanji] = extract_kanji(de->word);
-
-	pe[DeinflectedFurigana] = create_furigana(pe[DeinflectedLookup], pe[DictionaryReading]);
+	pe[DeinflectedFurigana] = create_furigana(pe[DictionaryKanji], pe[DictionaryReading]);
 }
 
 void
@@ -118,37 +116,36 @@ check_addNote_response(const char *err)
 		notify(0, "Sucessfully added card.");
 }
 
-const char*
+void
 send_ankicard(char **pe)
 {
-	ankicard *ac = ankicard_new();
-	*ac = (ankicard) {
+	ankicard ac = (ankicard) {
 		.deck = cfg.deck,
 		.notetype = cfg.notetype,
 		.num_fields = cfg.num_fields,
 		.fieldnames = cfg.fieldnames,
-		.fieldentries = calloc(cfg.num_fields, sizeof(char *))
+		.fieldentries = g_new(char*, cfg.num_fields)
 	};
 
-	for (int i = 0; i < ac->num_fields; i++)
-		ac->fieldentries[i] = pe[cfg.fieldmapping[i]];
+	for (int i = 0; i < ac.num_fields; i++)
+		ac.fieldentries[i] = pe[cfg.fieldmapping[i]];
 
-	const char *err = ac_addNote(ac, check_addNote_response);
+	const char *err = ac_addNote(&ac, check_addNote_response);
+	if (err)
+		notify(1, "%s", err);
 
-	free(ac->fieldentries);
-	free(ac);
-	return err;
+	g_free(ac.fieldentries);
 }
 
 void
 p_free(char **p)
 {
 	for (int i = 0; i < NUMBER_POSS_ENTRIES; i++)
-		free(p[i]);
+		g_free(p[i]);
 }
 
 void*
-lookup_and_create_dictionary(void *voidin)
+create_dictionary(void *voidin)
 {
 	SharedData *in = voidin;
 	char **p = in->p;
@@ -156,14 +153,32 @@ lookup_and_create_dictionary(void *voidin)
 
 	p[FocusedWindowName] = getwindowname();
 
-	fill_dictionary_with(dict, p[LookedUpString]);
+	clock_t begin = clock();
+	open_database();
 
-	if (dict->len == 0)
-	{   // Try hiragana conversion as a last resort. Meant for lookups like 思いつく
-	    char *hira = kanji2hira(p[LookedUpString]);
-	    fill_dictionary_with(dict, hira);
-	    free(hira);
+	fill_dictionary_with(dict, p[LookedUpString]);
+	if (dict->len == 0 && cfg.mecabconversion)
+	{
+		char *hira = kanji2hira(p[LookedUpString]);
+		fill_dictionary_with(dict, hira);
+		free(hira);
 	}
+	if (dict->len == 0 && cfg.substringsearch)
+	{
+		/* size_t longest_entry_len = get_longest_entry_len(); */
+		int lookup_strlen = strlen(p[LookedUpString]);
+		/* if (lookup_strlen > longest_entry_len) */
+		/*   remove_last_unichar(p[LookedUpString], longest_entry_len + 1); */
+		while (dict->len == 0 && lookup_strlen > 3) //FIXME: magic number
+		{
+			remove_last_unichar(p[LookedUpString], &lookup_strlen);
+			fill_dictionary_with(dict, p[LookedUpString]);
+		}
+	}
+
+	close_database();
+	clock_t end = clock();
+	printf("Time taken for lookup: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
 	Stopif(dict->len == 0, p_free(p); dictionary_free(dict); exit(1), "No dictionary entry found.");
 
@@ -184,9 +199,7 @@ display_popup(void *voidin)
 		dictentry *chosen_dict = dictentry_at_index(dict, de_num);
 		populate_entries(p, chosen_dict);
 
-		const char *err = send_ankicard(p);
-		if (err)
-			notify(1, "%s", err);
+		send_ankicard(p);
 	}
 
 	return NULL;
@@ -195,17 +208,20 @@ display_popup(void *voidin)
 int
 main(int argc, char**argv)
 {
+	clock_t begin = clock();
 	read_user_settings();
+	clock_t end = clock();
+	printf("Time taken to read user settings: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
 	SharedData data = (SharedData) { .dict = dictionary_new(), .p = { 0 } };
+	data.p[LookedUpString] = argc > 1 ? g_strdup(argv[1]) : sselp();
 
-	data.p[LookedUpString] = argc > 1 ? g_strdup(argv[1]) : sselp(); //strdup, so can be freed afterwards
 	Stopif(!data.p[LookedUpString] || !*data.p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
 	if (cfg.nukewhitespace)
 		nuke_whitespace(data.p[LookedUpString]);
 
 	pthread_t threads[2];
-	pthread_create(&threads[0], NULL, lookup_and_create_dictionary, &data);
+	pthread_create(&threads[0], NULL, create_dictionary, &data);
 	pthread_create(&threads[1], NULL, display_popup, &data);
 	for (int i = 0; i < 2; i++)
 		pthread_join(threads[i], NULL);
