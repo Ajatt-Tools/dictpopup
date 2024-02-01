@@ -9,6 +9,8 @@
 #include <X11/Xutil.h>
 #include <X11/extensions/Xfixes.h>
 
+#include <glib.h>
+
 #include "util.h"
 
 int
@@ -83,13 +85,9 @@ sselp()
 		XCloseDisplay(dpy);
 		return NULL;
 	}
-
 	XCloseDisplay(dpy);
 
-	/* char *data2 = (char *)data; */
-	/* printf("data: %s, strlen: %li, len: %li", data2, strlen(data2), len); */
-
-	char *selection = !data ? NULL : strdup((char *)data);
+	char* selection = !data ? NULL : g_strdup((char *)data);
 	XFree(data);
 	return selection;
 }
@@ -118,7 +116,7 @@ getwindowname()
 		return NULL;
 	}
 
-	char *wname = strdup((char *)text_prop.value);
+	char *wname = g_strdup((char *)text_prop.value);
 	XFree(text_prop.value);
 	XCloseDisplay(dpy);
 	return wname;

@@ -9,18 +9,15 @@ PKGCONFIG = $(shell which pkg-config)
 GTK3CFLAGS = $(shell $(PKGCONFIG) --cflags gtk+-3.0)
 GTK3LIBS = $(shell $(PKGCONFIG) --libs gtk+-3.0)
 
-NOTIFYCFLAGS = $(shell $(PKGCONFIG) --cflags libnotify)
-NOTIFYLIBS = $(shell $(PKGCONFIG) --libs libnotify)
-
 # includes and libs
 INCS = -I$(X11INC)
-LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes -lankiconnectc $(GTK3LIBS) $(NOTIFYLIBS) -lmecab
+LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes -lankiconnectc $(GTK3LIBS) -lmecab
 # LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) $(NOTIFYLIBS)
 
 # flags
-# CPPFLAGS = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\"
-CFLAGS   = -std=gnu11 -O3 -g -pedantic -Wall $(INCS) $(CPPFLAGS) $(GTK3CFLAGS) $(NOTIFYCFLAGS) -pthread
-LDFLAGS  = $(LIBS) -g -lpthread
+# CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -Werror -fanalyzer $(INCS) $(CPPFLAGS) $(GTK3CFLAGS) $(NOTIFYCFLAGS) -pthread -lcdb
+CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -Werror $(INCS) $(CPPFLAGS) $(GTK3CFLAGS) $(NOTIFYCFLAGS) -pthread
+LDFLAGS  = $(LIBS) -g -lpthread -lcdb -llmdb
 
 # compiler and linker
 CC = cc
