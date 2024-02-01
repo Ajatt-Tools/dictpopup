@@ -258,7 +258,7 @@ popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 	cur_entry_num = passed_curde;
 	*cur_entry_num = 0;
 
-	gtk_init(NULL, NULL);
+	/* gtk_init(NULL, NULL); */
 
 	g_mutex_lock(&vars_mutex);
 	/* ------------ WINDOW ------------ */

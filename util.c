@@ -10,6 +10,14 @@
 
 #include "util.h"
 
+#include <gtk/gtk.h>
+char*
+sselp()
+{
+	GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY); 
+	return gtk_clipboard_wait_for_text(clipboard);
+}
+
 void
 notify(bool urgent, char const *fmt, ...)
 {
@@ -18,16 +26,17 @@ notify(bool urgent, char const *fmt, ...)
 	g_autofree char* msg = g_strdup_vprintf(fmt, argp);
 	va_end(argp);
 
-	// This is wack
-	g_autoptr(GApplication) app = g_application_new("org.example.notification", G_APPLICATION_NON_UNIQUE);
-	g_application_register(app, NULL, NULL);
-	//
-
 	GNotification *notification = g_notification_new("dictpopup");
 	g_notification_set_body(notification, msg);
 	if (urgent)
 		g_notification_set_priority(notification, G_NOTIFICATION_PRIORITY_URGENT);
+
+	// This is wack
+	g_autoptr(GApplication) app = g_application_new("org.gtk.example", G_APPLICATION_NON_UNIQUE);
+	g_application_register(app, NULL, NULL);
+	//
 	g_application_send_notification(app, NULL, notification);
+	/* g_application_send_notification(g_application_get_default(), NULL, notification); */
 
 	/* NotifyNotification *n; */
 	/* notify_init("Basics"); */

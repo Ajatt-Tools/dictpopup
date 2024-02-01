@@ -4,6 +4,7 @@
 
 #include <glib.h>
 #include <gio/gio.h>
+#include <gtk/gtk.h>
 
 #include <ankiconnectc.h>
 #include <pthread.h>
@@ -82,6 +83,11 @@ boldWord(char *sent, char *word)
 char *
 create_furigana(char *kanji, char* reading)
 {
+	if (!kanji)
+		return g_strdup(reading);
+	else if (!reading)
+		return g_strdup(kanji);
+
 	// TODO: The following is obviously not enough if kanji contains hiragana
 	return strcmp(kanji, reading) == 0 ? g_strdup(kanji) : g_strdup_printf("%s[%s]", kanji, reading);
 }
@@ -100,7 +106,7 @@ populate_entries(char *pe[], dictentry* de)
 
 	pe[BoldSentence] = boldWord(pe[CopiedSentence], pe[LookedUpString]);
 
-	pe[DictionaryReading] = g_strdup(de->reading);
+	pe[DictionaryReading] = g_strdup(de->reading ? de->reading: de->kanji);
 
 	pe[DictionaryKanji] = g_strdup(de->kanji ? de->kanji : de->reading);
 
@@ -208,13 +214,16 @@ display_popup(void *voidin)
 int
 main(int argc, char**argv)
 {
+	gtk_init(&argc,&argv);
+
 	clock_t begin = clock();
 	read_user_settings();
 	clock_t end = clock();
 	printf("Time taken to read user settings: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
 	SharedData data = (SharedData) { .dict = dictionary_new(), .p = { 0 } };
-	data.p[LookedUpString] = argc > 1 ? g_strdup(argv[1]) : sselp();
+	data.p[LookedUpString] = sselp();
+	/* data.p[LookedUpString] = argc > 1 ? g_strdup(argv[1]) : sselp(); */
 
 	Stopif(!data.p[LookedUpString] || !*data.p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
 	if (cfg.nukewhitespace)

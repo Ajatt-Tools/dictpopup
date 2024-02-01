@@ -137,8 +137,8 @@ write_json(char* dictname, char* json_file_path)
 	char *dictentries[3];
 	for (int i = 0; i < 3; i++)
 	{
-		dictentries[i] = malloc(20000); //FIXME: ridiculous of course
-		*dictentries[i] = '\0';
+		dictentries[i] = g_malloc(20000); //FIXME: ridiculous of course
+		dictentries[i][0] = '\0';
 	}
 
 	char prev_c = 0, c = 0;

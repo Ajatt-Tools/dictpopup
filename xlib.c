@@ -25,7 +25,7 @@ clipnotify()
 	disp = XOpenDisplay(NULL);
 	if (!disp)
 	{
-		fprintf(stderr, "ERROR: Can't open X display for clipnotify. Are you on X11?");
+		fprintf(stderr, "ERROR: Can't open X display for clipnotify. Are you using Linux with X11?");
 		return 1;
 	}
 
@@ -44,55 +44,6 @@ clipnotify()
 }
 
 char*
-sselp()
-{
-	/* Returns a string with the currently selected text */
-	/* Return string needs to be freed with free */
-	Atom clip, utf8, type;
-	Display *dpy;
-	Window win;
-	XEvent ev;
-	int fmt;
-	long off = 0;
-	unsigned char *data;
-	unsigned long len, more;
-
-	if (!(dpy = XOpenDisplay(NULL)))
-	{
-		fprintf(stderr, "ERROR: Could not open display for the selection. Are you on X11?\n");
-		return NULL;
-	}
-
-	utf8 = XInternAtom(dpy, "UTF8_STRING", False);
-	clip = XInternAtom(dpy, "_SSELP_STRING", False);
-	win = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, 0, 1, 1, 0,
-				  CopyFromParent, CopyFromParent);
-	if (!XConvertSelection(dpy, XA_PRIMARY, utf8, clip, win, CurrentTime))
-	{
-		fprintf(stderr, "ERROR: Could not convert selection.\n");
-		XCloseDisplay(dpy);
-		return NULL;
-	}
-
-	XNextEvent(dpy, &ev);
-	if (ev.type == SelectionNotify && ev.xselection.property != None)
-	{
-		XGetWindowProperty(dpy, win, ev.xselection.property, off, BUFSIZ,
-				   False, utf8, &type, &fmt, &len, &more, &data);
-	}
-	else
-	{
-		XCloseDisplay(dpy);
-		return NULL;
-	}
-	XCloseDisplay(dpy);
-
-	char* selection = !data ? NULL : g_strdup((char *)data);
-	XFree(data);
-	return selection;
-}
-
-char*
 getwindowname()
 {
 	/* Returns the window title of the currently active window */
@@ -104,7 +55,7 @@ getwindowname()
 
 	if (!(dpy = XOpenDisplay(NULL)))
 	{
-		fprintf(stderr, "ERROR: Could not open display for the window name. Are you on X11?\n");
+		fprintf(stderr, "ERROR: Can't open X display for retrieving the window title. Are you using Linux with X11?");
 		return NULL;
 	}
 

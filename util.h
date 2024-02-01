@@ -13,6 +13,8 @@
  */
 void notify(bool error, char const *fmt, ...);
 
+char* sselp();
+
 void remove_last_unichar(char *str, int *len);
 
 /*

@@ -15,8 +15,8 @@ LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes -lankiconnectc $(GTK3LI
 # LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) $(NOTIFYLIBS)
 
 # flags
-# CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -Werror -fanalyzer $(INCS) $(CPPFLAGS) $(GTK3CFLAGS) $(NOTIFYCFLAGS) -pthread -lcdb
-CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -Werror $(INCS) $(CPPFLAGS) $(GTK3CFLAGS) $(NOTIFYCFLAGS) -pthread
+# CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -fanalyzer $(INCS) $(GTK3CFLAGS) -pthread
+CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -Werror $(INCS) $(GTK3CFLAGS) -pthread
 LDFLAGS  = $(LIBS) -g -lpthread -lcdb -llmdb
 
 # compiler and linker

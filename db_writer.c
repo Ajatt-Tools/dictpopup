@@ -5,10 +5,6 @@
 #include <lmdb.h>
 
 int rc;
-#define E(expr) CHECK((rc = (expr)) == MDB_SUCCESS, #expr)
-#define RES(err, expr) ((rc = expr) == (err) || (CHECK(!rc, #expr), 0))
-#define CHECK(test, msg) ((test) ? (void)0 : ((void)fprintf(stderr, \
-							    "%s:%d: %s: %s\n", __FILE__, __LINE__, msg, mdb_strerror(rc)), abort()))
 #define MDB_CHECK(call) \
 	if ((rc = call) != MDB_SUCCESS) { \
 		printf("Error: %s\n", mdb_strerror(rc)); \
@@ -52,10 +48,7 @@ open_db(const char* path)
 void
 close_db()
 {
-	/* mdb_drop(txn2, dbi3, 0); */
-	/* mdb_drop(txn2, dbi3, 1); */
-	/* E(mdb_txn_commit(txn2)); */
-	E(mdb_txn_commit(txn));
+	MDB_CHECK(mdb_txn_commit(txn));
 	mdb_dbi_close(env, dbi1);
 	mdb_dbi_close(env, dbi2);
 	mdb_dbi_close(env, dbi_tmp);

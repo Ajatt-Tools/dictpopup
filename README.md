@@ -7,7 +7,7 @@ https://github.com/GenjiFujimoto/dictpopup/assets/50422430/4d22d4a2-e138-4bee-bc
 
 ## Current state
 This is still very much a work in progress.
-*It only works on Linux* right now and the parser for the Yomichan dictionaries isn't fully implemented yet (especially dictionaries with structured content).
+**It only works on Linux** right now and the parser for the Yomichan dictionaries isn't fully implemented yet (for dictionaries with structured content).
 See `TODO.txt` for more.
 
 ## List of features
@@ -26,7 +26,7 @@ See `TODO.txt` for more.
 gtk3, glib, x11
 
 ## Installation
-First install by running `./install.sh`. (You can uninstall with `sudo make uninstall`)\
+First install by running `./install.sh`. (You can uninstall with `sudo make uninstall`)
 
 Then you need to create the database where the entries are read from.
 This is done via `dictpopup_create` which takes all Yomichan dictionaries in the current directory and puts them into the database.
