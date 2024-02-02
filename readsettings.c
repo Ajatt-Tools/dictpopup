@@ -194,9 +194,11 @@ read_user_settings()
 
 	// Database
 	cfg.db_path = g_key_file_get_string(kf, "Database", "Path", &error);
-	if (error)
+	if (!cfg.db_path || !*cfg.db_path)
 	{
-	  //TODO: Implement
+		// silently use the default path
+		const char* data_dir = g_get_user_data_dir();
+		cfg.db_path = g_build_filename(data_dir, "dictpopup", NULL);
 	}
 
 	// Popup
