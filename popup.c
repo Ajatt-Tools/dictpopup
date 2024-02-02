@@ -309,10 +309,10 @@ popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 	gtk_widget_set_size_request(bottom_bar, -1, 5);
 	gtk_box_pack_start(GTK_BOX(main_vbox), bottom_bar, 0, 0, 0);
 
-	GtkWidget* btn_l = gtk_button_new_with_label("<");
-	GtkWidget* btn_r = gtk_button_new_with_label(">");
+	GtkWidget* btn_l = gtk_button_new_from_icon_name("go-previous", 2);
+	GtkWidget* btn_r = gtk_button_new_from_icon_name("go-next", 2);
 	GtkWidget* btn_pron = gtk_button_new_from_icon_name("audio-volume-high", 2);
-	GtkWidget *add_anki_btn = gtk_button_new_with_label("+");
+	GtkWidget *add_anki_btn = gtk_button_new_from_icon_name("list-add", 2);
 	g_signal_connect(btn_l, "clicked", G_CALLBACK(change_de_down), NULL);
 	g_signal_connect(btn_r, "clicked", G_CALLBACK(change_de_up), NULL);
 	g_signal_connect(btn_pron, "clicked", G_CALLBACK(play_pronunciation), NULL);
