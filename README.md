@@ -32,45 +32,9 @@ Then you need to create the database where the entries are read from.
 This is done via `dictpopup_create` which takes all Yomichan dictionaries in the current directory and puts them into the database.
 
 ## Configuration
-Copy the example below into `~/.config/dictpopup/config.ini` and configure it according to your setup. 
+Copy the example config `config.ini` of the repo to `~/.config/dictpopup/config.ini` and configure it according to your setup. 
 The syntax follows the [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec).
-```
-[Anki]
-Deck = Japanese
-NoteType = Japanese sentences
-# Available entries for the field mapping:
-#
-# 0	Empty			 An empty string.
-# 1	LookedUpString		 The selected word or the argument dictpopup was called with
-# 2	DeinflectedLookup	 The deinflected version of the lookup string
-# 3	CopiedSentence		 The copied sentence
-# 4	BoldSentence		 The copied sentence with the looked up string in bold
-# 5	DictionaryKanji		 All kanji writings from the chosen dictionary entry, e.g. 嚙む・嚼む・咬む
-# 6	DictionaryReading	 The hiragana reading form the dictionary entry
-# 7	DictionaryDefinition	 The chosen dictionary definition
-# 8	DeinflectedFurigana	 Currently the string: [DeinflectedLookup][DictionaryReading]
-# 9	FocusedWindowName	 The name of the focused window at lookup time
-#
-FieldNames = SentKanji;VocabKanji;VocabFurigana;VocabDef;Notes;
-FieldMapping = 4;2;8;7;9;
-SearchField = VocabKanji
 
-[Popup]
-Width = 500
-Height = 350
-Margin = 5
-
-[Database]
-# You can set an alternative path. The default is ~/.local/share/dictpopup
-# Path = 
-
-[Behaviour]
-AnkiSupport = true
-CheckIfExists = true
-CopySentence = true
-NukeWhitespace = true
-PronunciationButton = true
-```
 Be careful to not include trailing spaces after your variables (for now).
 
 ## Usage

@@ -1,23 +1,25 @@
 High priority
-- integrate database builder into this git repo
+- Implement remove_last_unichar()
 - create man page
 - Import ankiconnectC as a git submodule
-- Check error handling for missing config
+- Error handling for missing config file
 - Search for card in anki gui by clicking on the dot. Auto open first result
 - publish on AUR
 - package with autotools
 
 Mid priority
-- Implement some error checking macros. Especially for malloc
-- Properly use gapplication (as in sending notifications right now)
-- Consider using GTask for loading dictionary information in the backround and running the popup in the main thread
-- Leave "SearchField" option empty to search in whole collection
+- Implement better error checking macros.
+- Make proper use of gapplication (for sending notifications)
+- Consider using GTask for loading dictionary information in the background while running the popup in the main thread (instead of two threads)
+- Leave "SearchField" option empty to search in entire collection
 - Convert selected word and sentence to UTF-8 (for Windows support)
 - Improve deinflection
 - Kanjify the word in the copied sentence according to the dictionary entry
 - Remove trailing spaces from user settings
 
 Low priority
+- Port file reading in dictpopup_create to gio (if there exists equivalent functionality)
+- Implement freeing user settings
 - Refactor popup.c
 - merge unistr and deinflector into 1 file
 - replace unistr with GString
@@ -31,15 +33,24 @@ Low priority
   - Choose dictionary sort order
   - build database
   - change general config
+- Enable mapping source dictionary name
+
+Known problems:
+- There might be "duplicate" entries when looking up hiragana strings, since the dictionary entry might be the same 
+  but the corresponding kanji writings are different. This is also unnecessary duplication in the database.
+  The only way of knowing under which kanji writing the entry is added, is currently the title bar.
 
 Possible ideas:
+- Support links?
+  - Most "suckless" way would probably be to just open a new window with that definition
 - "Add this entry"-button before every entry
 - Save ankicard as csv if push to ankiconnect failed
 - Write a browser addon which enables using dictpopup just by pressing Shift (like yomichan)
+- Maybe pass the dictionary over dictionary_data_done() to enable updating the window with a new dictionary
+  - I don't think it's necessary though, just open a new window
 
 To check:
-- definflector assumes that constant strings given in the code are utf8 encoded. This might be wrong if compiled on windows for example.
+- definflector assumes that constant strings given in the code are utf8 encoded. This might be wrong if compiled on Windows for example.
 
 database related:
-- Put length of longest entry into database under LENGTH_OF_LONGEST_ENTRY
-- Try: One LMDB database for keys -> ids mapping (dup entries) + 1 LMDB DB for id -> dictentry mapping
+- Put length of longest entry into the database under LENGTH_OF_LONGEST_ENTRY

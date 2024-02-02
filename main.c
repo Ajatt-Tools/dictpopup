@@ -19,16 +19,15 @@
 #include "kanaconv.h"
 
 enum PossibleEntries {
-	Empty,                  /* An empty string. */
-	LookedUpString,         /* The word this program was called with */
-	DeinflectedLookup,      /* The deinflected version of the lookup string */
-	CopiedSentence,         /* The copied sentence */
-	BoldSentence,           /* The copied sentence with lookup string in bold */
-	DictionaryKanji,        /* All kanji writings from dictionary entry */
-	DictionaryReading,      /* The hiragana reading form the dictionary entry */
-	DictionaryDefinition,   /* The chosen dictionary definition */
-	DeinflectedFurigana,    /* The string: [DeinflectedLookup][DictionaryReading] */
-	FocusedWindowName       /* The name of the focused window at lookup time */
+	Empty,
+	LookedUpString,
+	CopiedSentence,
+	BoldSentence,
+	DictionaryKanji,
+	DictionaryReading,
+	DictionaryDefinition,
+	DeinflectedFurigana,
+	FocusedWindowName
 };
 
 //Might be better to switch to a struct:
@@ -184,7 +183,7 @@ create_dictionary(void *voidin)
 
 	close_database();
 	clock_t end = clock();
-	printf("Time taken for lookup: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
+	printf("Time taken for lookup: %f sec\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
 	Stopif(dict->len == 0, p_free(p); dictionary_free(dict); exit(1), "No dictionary entry found.");
 
@@ -219,11 +218,10 @@ main(int argc, char**argv)
 	clock_t begin = clock();
 	read_user_settings();
 	clock_t end = clock();
-	printf("Time taken to read user settings: %f\n", (double)(end - begin) / CLOCKS_PER_SEC);
+	printf("Time taken to read user settings: %f sec\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
 	SharedData data = (SharedData) { .dict = dictionary_new(), .p = { 0 } };
-	data.p[LookedUpString] = sselp();
-	/* data.p[LookedUpString] = argc > 1 ? g_strdup(argv[1]) : sselp(); */
+	data.p[LookedUpString] = argc > 1 ? g_strdup(argv[1]) : sselp();
 
 	Stopif(!data.p[LookedUpString] || !*data.p[LookedUpString], exit(1), "No selection and no argument provided. Exiting.");
 	if (cfg.nukewhitespace)
