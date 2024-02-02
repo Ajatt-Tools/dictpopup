@@ -56,7 +56,7 @@ close_db()
 	mdb_env_close(env);
 	mdb_env_close(env_tmp);
 
-	printf("Number of different entries: %i\n", entry_number);
+	printf("Number of distinct entries: %i\n", entry_number);
 }
 
 void add_to_db(char* key_str, unsigned int keylen, char* value_str, unsigned int vallen)

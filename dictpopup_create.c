@@ -46,17 +46,14 @@ compress_entries(dictentry de, char** compressed_entry, size_t *compressed_len)
 void
 write_entries(char *dictname, char **entries)
 {
-	/* for (int i = 0; i < 3; i++) */
-	/* 	printf("[%i]: %s\n", i, entries[i]); */
-	/* printf("\n"); */
-	/* exit(0); */
-	/* printf("kanji: %s\nreading: %s\ndefinition: %s\n\n", entries[0], entries[1], entries[2]); */
+	str_repl_by_char(entries[2], "\\n", '\n');
+	g_strchomp(entries[2]); // remove trailing whitespace. FIXME: Maybe don't include it そもそも
 
 	dictentry de = (dictentry) {
 		.dictname = dictname,
 		.kanji = entries[0],
 		.reading = entries[1],
-		.definition = str_repl_by_char(entries[2], "\\n", '\n')
+		.definition = entries[2]
 	};
 
 
@@ -123,6 +120,30 @@ skip_whitespace(FILE* fp)
 	ungetc(c, fp);
 }
 
+/*
+ * Returns: true if next entry is a string, false otherwise or on parsing error
+ */
+bool
+skip_to_next_string(FILE* fp)
+{
+	char c;
+
+	skip_whitespace(fp);
+	if ((c = fgetc(fp)) != ':')
+	{
+		ungetc(c, fp);
+		return false;
+	}
+	skip_whitespace(fp);
+	if ((c = fgetc(fp)) != '"')
+	{
+		ungetc(c, fp);
+		return false;
+	}
+
+	return true;
+}
+
 
 void
 write_json(char* dictname, char* json_file_path)
@@ -148,6 +169,10 @@ write_json(char* dictname, char* json_file_path)
 
 	unsigned int entry_nr = 0;
 	char *str_ptr = dictentries[0];
+
+	/* enum { LIST_NONE, LIST_STYLE_CIRCLE, LIST_STYLE_NUMBER }; */
+	/* unsigned int list_style = LIST_NONE; */
+	/* unsigned int list_number = 0; */
 
 	while ((c = fgetc(fp)) != EOF)
 	{
@@ -178,23 +203,15 @@ write_json(char* dictname, char* json_file_path)
 				read_string(fp, buffer, sizeof(buffer));
 
 				// Only read in strings coming directly after "content"
-				if (strcmp(buffer, "content") == 0)
-				{       // TODO: Check for EOF (for broken input)
-					skip_whitespace(fp);
+				if (strcmp(buffer, "content") == 0 && skip_to_next_string(fp))
+					in_string = true;
+				/* else if (strcmp(buffer, listStyleType) == 0) */
+				/* { */
+				/* 	if (!skip_to_next_string()) */
+				/* 		continue; */
 
-					c = fgetc(fp);
-					if (c != ':')
-					{
-						ungetc(c, fp);
-						continue;
-					}
-
-					skip_whitespace(fp);
-					if ((c = fgetc(fp)) == '"')
-						in_string = true;
-					else
-						ungetc(c, fp);
-				}
+				/* 	read_string(fp, buffer, sizeof(buffer)); */
+				/* } */
 			}
 
 			continue;
@@ -214,9 +231,7 @@ write_json(char* dictname, char* json_file_path)
 				sbracket_lvl--;
 				/* printf("prev: %c, sbracket_lvl: %i\n", prev_c, sbracket_lvl); */
 
-				if (sbracket_lvl == 4)
-					*str_ptr++ = '\n';
-				else if (sbracket_lvl == 2)
+				if (sbracket_lvl == 2)
 				{
 					*str_ptr = '\0';
 					entry_nr++;
@@ -242,7 +257,9 @@ write_json(char* dictname, char* json_file_path)
 			{
 				cbracket_lvl--;
 
-				if (cbracket_lvl == 0)
+				if (cbracket_lvl == 1)
+					*str_ptr++ = '\n';
+				else if (cbracket_lvl == 0)
 					in_structured_content = false;
 			}
 		}
