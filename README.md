@@ -23,7 +23,7 @@ See `TODO.txt` for more.
  * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain the book title)
 
 ## Dependencies
-gtk3, glib, x11
+x11, gtk3, [lmdb](https://www.symas.com/lmdb) (Arch package `lmdb`)
 
 ## Installation
 First install by running `./install.sh`. (You can uninstall with `sudo make uninstall`)
