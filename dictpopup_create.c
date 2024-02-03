@@ -52,7 +52,7 @@ void
 write_entries(char *dictname, char **entries)
 {
 	str_repl_by_char(entries[2], "\\n", '\n');
-	g_strchomp(entries[2]); // remove trailing whitespace. FIXME: Maybe don't include it そもそも
+	g_strchomp(entries[2]); // Remove trailing whitespace. Maybe don't include it そもそも?
 
 	dictentry de = (dictentry) {
 		.dictname = dictname,
@@ -61,10 +61,9 @@ write_entries(char *dictname, char **entries)
 		.definition = entries[2]
 	};
 
-
-	/* if (!*de.definition) */
-	/* 	fprintf(stderr, "Error parsing entry with kanji: %s and reading: %s.\n", entries[0], entries[1]); */
-	/* else */
+	if (!*de.definition)
+		fprintf(stderr, "Error parsing entry with kanji: %s and reading: %s. In dictionary: %s\n", de.kanji, de.reading, de.dictname);
+	else
 	if (*de.definition)
 	{
 		char* compressed_entry;
@@ -128,26 +127,26 @@ skip_whitespace(FILE* fp)
 /*
  * Returns: true if next entry is a string, false otherwise or on parsing error
  */
-bool
-skip_to_next_string(FILE* fp)
-{
-	char c;
+/* bool */
+/* skip_to_next_string(FILE* fp) */
+/* { */
+/* 	char c; */
 
-	skip_whitespace(fp);
-	if ((c = fgetc(fp)) != ':')
-	{
-		ungetc(c, fp);
-		return false;
-	}
-	skip_whitespace(fp);
-	if ((c = fgetc(fp)) != '"')
-	{
-		ungetc(c, fp);
-		return false;
-	}
+/* 	skip_whitespace(fp); */
+/* 	if ((c = fgetc(fp)) != ':') */
+/* 	{ */
+/* 		ungetc(c, fp); */
+/* 		return false; */
+/* 	} */
+/* 	skip_whitespace(fp); */
+/* 	if ((c = fgetc(fp)) != '"') */
+/* 	{ */
+/* 		ungetc(c, fp); */
+/* 		return false; */
+/* 	} */
 
-	return true;
-}
+/* 	return true; */
+/* } */
 
 
 void
@@ -169,25 +168,24 @@ write_json(char* dictname, char* json_file_path)
 
 	char prev_c = 0, c = 0;
 
-	bool in_string = false, in_structured_content = false;
+	bool in_string = false, block_reading = false;
 	unsigned int sbracket_lvl = 0, cbracket_lvl = 0;
-
 	unsigned int entry_nr = 0;
 	char *str_ptr = dictentries[0];
 
-	/* enum { LIST_NONE, LIST_STYLE_CIRCLE, LIST_STYLE_NUMBER }; */
-	/* unsigned int list_style = LIST_NONE; */
-	/* unsigned int list_number = 0; */
-
+	bool escaped_slash = false;
 	while ((c = fgetc(fp)) != EOF)
 	{
-		if (c == '"' && prev_c != '\\')
+		if (c == '\\')
+		    escaped_slash = (prev_c == '\\' && !escaped_slash) ? true : false;
+
+		if (c == '"' && (prev_c != '\\' || escaped_slash))
 		{
 			if (
 				(entry_nr == 2 && sbracket_lvl < 3) // Don't read anything in between reading and content
 				||
 				entry_nr >= 3 // Don't read anything after content
-				)
+			   )
 				continue;
 
 
@@ -200,29 +198,21 @@ write_json(char* dictname, char* json_file_path)
 				str_ptr = dictentries[entry_nr];
 			}
 
-			if (in_string && in_structured_content)
+			if (in_string && block_reading)// && in_structured_content)
 			{
+				// parse structured content
+				char buffer[20000]; // FIXME FIXME: dynamic implementation
+				read_string(fp, buffer, sizeof(buffer));
 				in_string = false;
 
-				char buffer[20000]; // Can (falsely) contain dict entries
-				read_string(fp, buffer, sizeof(buffer));
-
-				// Only read in strings coming directly after "content"
-				if (strcmp(buffer, "content") == 0 && skip_to_next_string(fp))
-					in_string = true;
-				/* else if (strcmp(buffer, listStyleType) == 0) */
-				/* { */
-				/* 	if (!skip_to_next_string()) */
-				/* 		continue; */
-
-				/* 	read_string(fp, buffer, sizeof(buffer)); */
-				/* } */
+				if (strcmp(buffer, "content") == 0)
+					block_reading = false;
 			}
 
 			continue;
 		}
 
-		if (in_string)
+		if (in_string && !block_reading)
 			*str_ptr++ = c;
 		else
 		{
@@ -255,17 +245,19 @@ write_json(char* dictname, char* json_file_path)
 			else if (c == '{')
 			{
 				cbracket_lvl++;
-
-				in_structured_content = true;
+				block_reading = true;
 			}
 			else if (c == '}')
 			{
 				cbracket_lvl--;
 
+				if (cbracket_lvl > 0)
+					block_reading = true;
+				else
+					block_reading = false;
+
 				if (cbracket_lvl == 1)
 					*str_ptr++ = '\n';
-				else if (cbracket_lvl == 0)
-					in_structured_content = false;
 			}
 		}
 
@@ -275,7 +267,7 @@ write_json(char* dictname, char* json_file_path)
 
 
 	for (int i = 0; i < 3; i++)
-		free(dictentries[i]);
+		g_free(dictentries[i]);
 	fclose(fp);
 }
 

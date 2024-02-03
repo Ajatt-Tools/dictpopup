@@ -1,4 +1,5 @@
 High priority
+- fix duplicate entries
 - create man page
 - Import ankiconnectC as a git submodule
 - Error handling for missing config file
@@ -34,10 +35,13 @@ Low priority
   - change general config
 - Enable mapping source dictionary name
 
-Known problems:
+## Known problems:
 - There might be "duplicate" entries when looking up hiragana strings, since the dictionary entry might be the same 
   but the corresponding kanji writings are different. This is also unnecessary duplication in the database.
   The only way of knowing under which kanji writing the entry is added, is currently the title bar.
+### dictionary parser
+- Escap sequences aren't handled
+
 
 Possible ideas:
 - Support links?

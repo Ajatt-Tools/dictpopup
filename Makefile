@@ -18,7 +18,7 @@ options:
 $(P): ${OBJ}
 	$(CC) ${OBJ} ${LDFLAGS} -o $@ 
 
-dictpopup_create: dictpopup_create.o unishox2.o util.o db_writer.o
+dictpopup_create: dictpopup_create.o unishox2.o util.o db_writer.o dictionary.o
 	$(CC) $^ ${LDFLAGS} -o $@
 
 clean:

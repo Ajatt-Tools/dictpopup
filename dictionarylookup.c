@@ -55,11 +55,13 @@ print_entry(char *entry, size_t entry_len)
 	printf("\n\n");
 }
 
-char*
+void
 add_de_from_db_lookup(dictionary *dict, char *db_lookup)
 {
-	char *ptr_buffer[4];
+	if (!db_lookup)
+	  return;
 
+	char *ptr_buffer[4];
 	int len = 0;
 	for (int i = 0; i < 4; i++)
 	{
@@ -69,7 +71,6 @@ add_de_from_db_lookup(dictionary *dict, char *db_lookup)
 	}
 
 	dictionary_copy_add(dict, (const dictentry) { .dictname = ptr_buffer[0], .kanji = ptr_buffer[1], .reading = ptr_buffer[2], .definition = ptr_buffer[3] });
-	return db_lookup;
 }
 
 /*

@@ -50,6 +50,7 @@ void dictionary_free(dictionary* dict);
  */
 dictentry* dictentry_at_index(dictionary* dict, size_t index);
 
+void dictentry_print(dictentry *de);
 void dictionary_print(dictionary *dict);
 
 #endif /* DICTIONARY_H */

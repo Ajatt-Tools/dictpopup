@@ -23,14 +23,14 @@
 void
 dictentry_print(dictentry *de)
 {
-    printf("dictname: %s\nkanji: %s\nreading: %s\ndefinition: %s\n", de->dictname, de->kanji, de->reading, de->definition);
+	printf("dictname: %s\nkanji: %s\nreading: %s\ndefinition: %s\n", de->dictname, de->kanji, de->reading, de->definition);
 }
 
 void
 dictionary_print(dictionary* dict)
 {
-  for (int i = 0; i < dict->len; i++)
-	dictentry_print(dictentry_at_index(dict, i));
+	for (int i = 0; i < dict->len; i++)
+		dictentry_print(dictentry_at_index(dict, i));
 }
 
 void
@@ -55,7 +55,7 @@ dictionary_copy_add(dictionary* dict, dictentry de)
 {
 	dictentry *de_copy = g_new(dictentry, 1);
 
-	*de_copy = (dictentry) { 
+	*de_copy = (dictentry) {
 		.dictname = g_strdup(de.dictname),
 		.kanji = g_strdup(de.kanji),
 		.reading = g_strdup(de.reading),

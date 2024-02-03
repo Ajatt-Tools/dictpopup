@@ -19,7 +19,7 @@ See `TODO.txt` for more.
  * Try a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
  * Play a pronunciation on lookup / button press (requires setup as for now)
  * Add word with selected definition to Anki
- * Indicator showing if a word already exists in your Anki deck / collection. Orange if the only existing cards are suspended
+ * Indicator showing if a word already exists in your Anki deck / collection. Orange if existing cards are suspended. Anki browser search on press.
  * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain the book title)
 
 ## Dependencies
