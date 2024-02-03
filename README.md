@@ -49,4 +49,4 @@ If there is a selection, it will be used instead as a definition.
 The green/red dot indicates wether the word is already present in your Anki collection.
 It displays an orange dot if there exist cards, but which are all suspended.
 
-The sound symbol plays a pronunciation from a local database using [jppron](https://github.com/GenjiFujimoto/jppron).
+The sound symbol plays a pronunciation from a local database by calling [jppron](https://github.com/GenjiFujimoto/jppron).

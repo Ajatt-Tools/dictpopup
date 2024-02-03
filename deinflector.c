@@ -94,7 +94,7 @@ int
 kanjify(unistr* word)
 {
 	if (startswith(word, "ご") || startswith(word, "お"))
-	{	// FIXME: Cleaner implementation
+	{       // FIXME: Cleaner implementation
 		g_autofree gchar* word_copy = g_strdup(word->str);
 		memcpy(word_copy, "御", strlen("ご"));
 		add_str(word_copy);
@@ -269,16 +269,13 @@ deinflect(const char *word)
 {
 	deinfs = g_ptr_array_new_with_free_func(g_free);
 
-	// FIXME:
+	deinflect_one_iter(word);
+	for (int i = 0; i < deinfs->len; i++)
+		deinflect_one_iter(g_ptr_array_index(deinfs, i));
+
 	unistr *uword = unistr_new(word);
 	itou_form(uword, 0);
 	unistr_free(uword);
-	//
-
-	deinflect_one_iter(word);
-
-	for (int i = 0; i < deinfs->len; i++)
-		deinflect_one_iter(g_ptr_array_index(deinfs, i));
 
 	g_ptr_array_add(deinfs, NULL);  /* Add NULL terminator */
 	return (char**)g_ptr_array_steal(deinfs, NULL);

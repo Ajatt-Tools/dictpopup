@@ -135,8 +135,6 @@ update_dictnum_info()
 void
 update_dictname_info()
 {
-	/* g_autofree char* txt = g_strdup_printf("%s  -  %li/%i", cur_entry->dictname, *cur_entry_num + 1, dict->len); */
-	/* gtk_label_set_text(GTK_LABEL(lbl_dictname), txt); */
 	gtk_label_set_text(GTK_LABEL(lbl_dictname), cur_entry->dictname);
 }
 
