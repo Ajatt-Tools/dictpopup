@@ -13,7 +13,7 @@
 #include "dictionary.h"
 
 void
-compress_entries(dictentry de, char** compressed_entry, size_t *compressed_len)
+compress_entries(dictentry de, char** compressed, size_t *clen)
 {
 	unsigned int dictname_len = strlen(de.dictname);
 	unsigned int kanji_len = strlen(de.kanji);
@@ -38,9 +38,14 @@ compress_entries(dictentry de, char** compressed_entry, size_t *compressed_len)
 
 	memcpy(data_ptr, de.definition, definition_len);
 
-	// TODO: Use string array compression from unishox2
-	*compressed_entry = malloc(data_str_len + 5);
-	*compressed_len = unishox2_compress_simple(data_str, data_str_len, *compressed_entry);
+	// TODO: Use string array compression from unishox2 instead
+	unsigned int csize = data_str_len;
+	*compressed = malloc(data_str_len + 5);
+	do{
+		csize += 10;
+		*compressed = realloc(*compressed, csize);
+		*clen = unishox2_compress(data_str, data_str_len, UNISHOX_API_OUT_AND_LEN(*compressed, csize), USX_PSET_FAVOR_SYM);
+	} while (*clen > csize);
 }
 
 void

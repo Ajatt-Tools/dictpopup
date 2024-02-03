@@ -45,7 +45,7 @@
  * The simple api, i.e. unishox2_(de)compress_simple will always omit the buffer length
  */
 #ifndef UNISHOX_API_WITH_OUTPUT_LEN
-#  define UNISHOX_API_WITH_OUTPUT_LEN 0
+#  define UNISHOX_API_WITH_OUTPUT_LEN 1
 #endif
 
 /// Upto 8 bits of initial magic bit sequence can be included. Bit count can be specified with UNISHOX_MAGIC_BIT_LEN
