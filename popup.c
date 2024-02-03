@@ -22,8 +22,8 @@ char **def;
 GtkWidget *window = NULL;
 GtkWidget *dict_tw;
 GtkTextBuffer *dict_tw_buffer;
-GtkWidget *dictnum_lbl;
-GtkWidget *dictname_lbl;
+GtkWidget *lbl_dictnum;
+GtkWidget *lbl_dictname;
 GtkWidget *exists_dot;
 
 int word_exists_in_db = 0;
@@ -129,13 +129,15 @@ void
 update_dictnum_info()
 {
 	g_autofree char* info_txt = g_strdup_printf("%li/%i", *cur_entry_num + 1, dict->len);
-	gtk_label_set_text(GTK_LABEL(dictnum_lbl), info_txt);
+	gtk_label_set_text(GTK_LABEL(lbl_dictnum), info_txt);
 }
 
 void
 update_dictname_info()
 {
-	gtk_label_set_text(GTK_LABEL(dictname_lbl), cur_entry->dictname);
+	/* g_autofree char* txt = g_strdup_printf("%s  -  %li/%i", cur_entry->dictname, *cur_entry_num + 1, dict->len); */
+	/* gtk_label_set_text(GTK_LABEL(lbl_dictname), txt); */
+	gtk_label_set_text(GTK_LABEL(lbl_dictname), cur_entry->dictname);
 }
 
 void
@@ -244,10 +246,7 @@ move_win_to_mouse_ptr()
 void
 search_in_anki_browser()
 {
-	//TODO: Search for all kanji writings?
-	const char *err = ac_gui_search(cfg.deck, cfg.searchfield, cur_entry->kanji);
-	if (err)
-		notify(1, "%s", err);
+	E(ac_gui_search(cfg.deck, cfg.searchfield, cur_entry->kanji));
 }
 
 int
@@ -280,8 +279,49 @@ popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 	gtk_container_add(GTK_CONTAINER(window), main_vbox);
 
 	/* ------------ TOP BAR ------------ */
-	dictname_lbl = gtk_label_new(NULL);
-	gtk_box_pack_start(GTK_BOX(main_vbox), dictname_lbl, 0, 0, 0);
+	int spacing_between_widgets = 0;
+	GtkWidget *top_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, spacing_between_widgets);
+	gtk_box_pack_start(GTK_BOX(main_vbox), top_bar, 0, 0, 0);
+
+
+	GtkWidget* btn_l = gtk_button_new_from_icon_name("go-previous", 2);
+	g_signal_connect(btn_l, "clicked", G_CALLBACK(change_de_down), NULL);
+	gtk_box_pack_start(GTK_BOX(top_bar), btn_l, FALSE, FALSE, 0);
+
+	if (cfg.ankisupport)
+	{
+		GtkWidget* btn_add_anki = gtk_button_new_from_icon_name("list-add", 2);
+		g_signal_connect(btn_add_anki, "clicked", G_CALLBACK(add_anki), dict_tw);
+		gtk_box_pack_start(GTK_BOX(top_bar), btn_add_anki, FALSE, FALSE, 0);
+	}
+
+
+	if (cfg.ankisupport && cfg.checkexisting)
+	{
+		exists_dot = gtk_drawing_area_new();
+		gtk_widget_set_size_request(exists_dot, 10, 10);
+		gtk_widget_set_valign(exists_dot, GTK_ALIGN_CENTER);
+		g_signal_connect(G_OBJECT(exists_dot), "draw", G_CALLBACK(on_draw_event), NULL);
+		gtk_box_pack_start(GTK_BOX(top_bar), GTK_WIDGET(exists_dot), FALSE, FALSE, 10);
+	}
+
+	lbl_dictname = gtk_label_new(NULL);
+	gtk_box_set_center_widget(GTK_BOX(top_bar), lbl_dictname);
+
+
+	GtkWidget* btn_r = gtk_button_new_from_icon_name("go-next", 2);
+	g_signal_connect(btn_r, "clicked", G_CALLBACK(change_de_up), NULL);
+	gtk_box_pack_end(GTK_BOX(top_bar), btn_r, FALSE, FALSE, 0);
+
+	if (cfg.pronunciationbutton)
+	{
+		GtkWidget* btn_pron = gtk_button_new_from_icon_name("audio-volume-high", 2);
+		g_signal_connect(btn_pron, "clicked", G_CALLBACK(play_pronunciation), NULL);
+		gtk_box_pack_end(GTK_BOX(top_bar), btn_pron, FALSE, FALSE, 0);
+	}
+
+	lbl_dictnum = gtk_label_new(NULL);
+	gtk_box_pack_end(GTK_BOX(top_bar), lbl_dictnum, FALSE, FALSE, 5);
 	/* --------------------------------- */
 
 
@@ -302,39 +342,6 @@ popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 
 	set_margins();
 	/* ------------------------------------- */
-
-
-	/* ------------ BOTTOM BAR ------------ */
-	GtkWidget *bottom_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-	gtk_widget_set_size_request(bottom_bar, -1, 5);
-	gtk_box_pack_start(GTK_BOX(main_vbox), bottom_bar, 0, 0, 0);
-
-	GtkWidget* btn_l = gtk_button_new_from_icon_name("go-previous", 2);
-	GtkWidget* btn_r = gtk_button_new_from_icon_name("go-next", 2);
-	GtkWidget* btn_pron = gtk_button_new_from_icon_name("audio-volume-high", 2);
-	GtkWidget *add_anki_btn = gtk_button_new_from_icon_name("list-add", 2);
-	g_signal_connect(btn_l, "clicked", G_CALLBACK(change_de_down), NULL);
-	g_signal_connect(btn_r, "clicked", G_CALLBACK(change_de_up), NULL);
-	g_signal_connect(btn_pron, "clicked", G_CALLBACK(play_pronunciation), NULL);
-	g_signal_connect(add_anki_btn, "clicked", G_CALLBACK(add_anki), dict_tw);
-
-	dictnum_lbl = gtk_label_new(NULL);
-
-	exists_dot = gtk_drawing_area_new();
-	gtk_widget_set_size_request(exists_dot, 10, 10);
-	gtk_widget_set_valign(exists_dot, GTK_ALIGN_CENTER);
-	/* g_signal_connect(exists_dot, "clicked", G_CALLBACK(search_in_anki_browser), NULL); */
-
-	gtk_box_pack_start(GTK_BOX(bottom_bar), btn_l, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(bottom_bar), add_anki_btn, FALSE, FALSE, 0);
-	if (cfg.checkexisting && cfg.ankisupport)
-		gtk_box_pack_start(GTK_BOX(bottom_bar), GTK_WIDGET(exists_dot), FALSE, FALSE, 0);
-	gtk_box_set_center_widget(GTK_BOX(bottom_bar), dictnum_lbl);
-	gtk_box_pack_end(GTK_BOX(bottom_bar), btn_r, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(bottom_bar), btn_pron, FALSE, FALSE, 0);
-
-	g_signal_connect(G_OBJECT(exists_dot), "draw", G_CALLBACK(on_draw_event), NULL);
-	/* ------------------------------------ */
 
 	gtk_vars_set = TRUE;
 	g_cond_signal(&vars_set_condition);
