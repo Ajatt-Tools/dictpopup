@@ -508,7 +508,8 @@ int unishox2_compress_lines(const char *in, int len, UNISHOX_API_OUT_AND_LEN(cha
   char c_in, c_next;
   int prev_uni;
   uint8_t is_upper, is_all_upper;
-#if (UNISHOX_API_OUT_AND_LEN(0,1)) == 0
+/* #if (UNISHOX_API_OUT_AND_LEN(0,1)) == 0 */
+#if !defined(UNISHOX_API_WITH_OUTPUT_LEN) || UNISHOX_API_WITH_OUTPUT_LEN == 0
   const int olen = INT_MAX - 1;
   const int rawolen = olen;
   const uint8_t need_full_term_codes = 0;
@@ -1089,7 +1090,8 @@ int unishox2_decompress_lines(const char *in, int len, UNISHOX_API_OUT_AND_LEN(c
   int bit_no;
   int h, v;
   uint8_t is_all_upper;
-#if (UNISHOX_API_OUT_AND_LEN(0,1)) == 0
+/* #if (UNISHOX_API_OUT_AND_LEN(0,1)) == 0 */
+#if !defined(UNISHOX_API_WITH_OUTPUT_LEN) || UNISHOX_API_WITH_OUTPUT_LEN == 0
   const int olen = INT_MAX - 1;
 #endif
 
