@@ -96,7 +96,7 @@ draw_dot(GtkWidget *widget, cairo_t *cr)
 	else
 		cairo_set_source_rgb(cr, 1, 0, 0); // red
 
-	cairo_arc(cr, 5, 5, 5, 0, 2 * G_PI);
+	cairo_arc(cr, 6, 6, 6, 0, 2 * G_PI);
 
 	cairo_fill(cr);
 }
@@ -247,6 +247,13 @@ search_in_anki_browser()
 	E(ac_gui_search(cfg.deck, cfg.searchfield, cur_entry->kanji));
 }
 
+void
+button_press(GtkWidget *widget, GdkEventButton *event)
+{
+	if (event->type == GDK_BUTTON_PRESS)
+		search_in_anki_browser();
+}
+
 int
 popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 {
@@ -297,9 +304,13 @@ popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 	if (cfg.ankisupport && cfg.checkexisting)
 	{
 		exists_dot = gtk_drawing_area_new();
-		gtk_widget_set_size_request(exists_dot, 10, 10);
+		gtk_widget_set_size_request(exists_dot, 12, 12);
 		gtk_widget_set_valign(exists_dot, GTK_ALIGN_CENTER);
 		g_signal_connect(G_OBJECT(exists_dot), "draw", G_CALLBACK(on_draw_event), NULL);
+
+		gtk_widget_add_events(exists_dot, GDK_BUTTON_PRESS_MASK);
+		g_signal_connect(exists_dot, "button-press-event", G_CALLBACK(button_press), NULL);
+
 		gtk_box_pack_start(GTK_BOX(top_bar), GTK_WIDGET(exists_dot), FALSE, FALSE, 10);
 	}
 
