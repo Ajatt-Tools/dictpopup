@@ -14,7 +14,7 @@
 char*
 sselp()
 {
-	GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY); 
+	GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
 	return gtk_clipboard_wait_for_text(clipboard);
 }
 
@@ -56,9 +56,13 @@ notify(bool urgent, char const *fmt, ...)
 void
 remove_last_unichar(char* str, int* len)
 {
-	// TODO: Implement this properly
-	str[*len - 3] = '\0';
-	*len -= 3;
+	if (*len <= 0)
+		return;
+
+	--(*len);
+	while (*len > 0 && (str[*len] & 0x80) != 0x00 && (str[*len] & 0xC0) != 0xC0)
+		--(*len);
+	str[*len] = '\0';
 }
 
 char**

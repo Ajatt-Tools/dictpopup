@@ -1,5 +1,4 @@
 High priority
-- Implement remove_last_unichar()
 - create man page
 - Import ankiconnectC as a git submodule
 - Error handling for missing config file
@@ -10,7 +9,7 @@ High priority
 Mid priority
 - Implement better error checking macros.
 - Make proper use of gapplication (for sending notifications)
-- Consider using GTask for loading dictionary information in the background while running the popup in the main thread (instead of two threads)
+- Consider using gio's g_task_run_in_thread() instead of having two threads
 - Leave "SearchField" option empty to search in entire collection
 - Convert selected word and sentence to UTF-8 (for Windows support)
 - Improve deinflection
