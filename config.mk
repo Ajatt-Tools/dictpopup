@@ -11,7 +11,7 @@ GTK3LIBS = $(shell $(PKGCONFIG) --libs gtk+-3.0)
 
 # includes and libs
 INCS = -I$(X11INC)
-LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes -lankiconnectc $(GTK3LIBS) -lmecab
+LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) -lmecab
 # LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) $(NOTIFYLIBS)
 
 # flags

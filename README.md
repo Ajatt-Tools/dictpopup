@@ -23,13 +23,14 @@ See `TODO.txt` for more.
  * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain the book title)
 
 ## Dependencies
-x11, gtk3, [lmdb](https://www.symas.com/lmdb) (Arch package `lmdb`)
+x11, gtk3, [lmdb](https://www.symas.com/lmdb) (Arch package `lmdb`), mecab
 
 ## Installation
-First install by running `./install.sh`. (You can uninstall with `sudo make uninstall`)
+Download the repository with `git clone "https://github.com/GenjiFujimoto/dictpopup.git"`, change directory `cd dictpopup` and then install with `sudo make install`.
 
-Then you need to create the database where the entries are read from.
-This is done via `dictpopup_create` which takes all Yomichan dictionaries in the current directory and puts them into the database.
+After the program installation you need to create a database where the dictionary entries are read from.
+This is done via `dictpopup_create` which takes all Yomichan dictionaries in the current directory and puts them into a database.
+Without arguments it stores the database in the default location `~/.local/share/dictpopup`.
 
 ## Configuration
 Copy the example config `config.ini` of the repo to `~/.config/dictpopup/config.ini` and configure it according to your setup. 

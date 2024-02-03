@@ -1,10 +1,10 @@
 #include <gtk/gtk.h>
-#include <ankiconnectc.h>
 #include <stdbool.h>
 
 #include "util.h"
 #include "dictionary.h"
 #include "readsettings.h"
+#include "ankiconnectc.h"
 
 const char* error;
 #define E(expr) if ((error = expr)) { notify(1, "%s", error); return; }

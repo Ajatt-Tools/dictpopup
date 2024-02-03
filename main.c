@@ -6,7 +6,6 @@
 #include <gio/gio.h>
 #include <gtk/gtk.h>
 
-#include <ankiconnectc.h>
 #include <pthread.h>
 
 #include "xlib.h"
@@ -17,6 +16,7 @@
 #include "dictionary.h"
 #include "dictionarylookup.h"
 #include "kanaconv.h"
+#include "ankiconnectc.h"
 
 enum PossibleEntries {
 	Empty,
