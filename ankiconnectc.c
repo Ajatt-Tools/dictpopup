@@ -10,12 +10,14 @@
 #define AC_API_URL_EVAR "ANKICONNECT_API_URL"
 #define DEFAULT_AC_API_URL "http://localhost:8765"
 
-typedef size_t (*InternalResponseFunction)(char *ptr, size_t size, size_t nmemb, void *userdata);
+#define assert(c)  while (!(c)) __builtin_unreachable()
+
+typedef size_t (*ResponseFunc)(char *ptr, size_t size, size_t nmemb, void *userdata);
 
 ankicard*
 ankicard_new()
 {
-	ankicard *ac = malloc(sizeof(ankicard));
+	ankicard *ac = g_new(ankicard, 1);
 	*ac = (ankicard) { .num_fields=-1 };
 	return ac;
 }
@@ -23,7 +25,17 @@ ankicard_new()
 void
 ankicard_free(ankicard* ac, bool free_contents)
 {
-	free(ac);
+	if (free_contents)
+	{
+	      g_free(ac->deck);
+	      g_free(ac->notetype);
+
+	      g_strfreev(ac->fieldnames);
+	      g_strfreev(ac->fieldentries);
+	      g_strfreev(ac->tags);
+	}
+
+	g_free(ac);
 }
 
 void
@@ -35,38 +47,33 @@ ac_print_ankicard(ankicard *ac)
 		printf("%s: %s\n", ac->fieldnames[i], ac->fieldentries[i] == NULL ? "" : ac->fieldentries[i]);
 }
 
-char**
+retval_s
 ac_get_notetypes()
 {
-  //TODO: Implement
-  return NULL;
+      //TODO: Implement
+      return (retval_s) {0};
 }
 
-size_t
+static size_t
 check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-	AddResponseFunction *user_function = userdata;
-	if (!user_function)
-		return nmemb;
-
-	const char *err_str = "\"error\": ";
-	char *err_start = strstr(ptr, err_str);
-	err_start = err_start ? err_start + strlen(err_str) : NULL;
+	assert(userdata);
+	retval_s* ret = userdata;
 
 	if (strstr(ptr, "\"error\": null"))
-		(*user_function)(NULL);
+		*ret = (retval_s) { .ok = true };
 	else
-		(*user_function)(ptr);
+		*ret = (retval_s) { .data.string = ptr, .ok = false };
 
 	return nmemb;
 }
 
-const char *
-sendRequest(char *request, InternalResponseFunction internal_respfunc, void* user_func)
+static retval_s
+sendRequest(char *request, ResponseFunc response_checker)
 {
 	CURL *curl = curl_easy_init();
 	if (!curl)
-		return "Error initialiting cURL";
+	      return (retval_s) { .data.string = "Error initializing cURL", .ok = false };
 
 	struct curl_slist *headers = NULL;
 	headers = curl_slist_append(headers, "Accept: application/json");
@@ -81,80 +88,32 @@ sendRequest(char *request, InternalResponseFunction internal_respfunc, void* use
 	curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request);
-	if (internal_respfunc)
+	
+	retval_s ret = { .ok = true }; // Maybe add a generic checker instead of defaulting to true
+	if (response_checker)
 	{
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, internal_respfunc);
-		if (user_func)
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, user_func);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_checker);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
 	}
 
 	CURLcode res = curl_easy_perform(curl);
 	if (res != CURLE_OK)
-		return "Couldn't connect to AnkiConnect. Is Anki running?";
+	      return (retval_s) { .data.string = "Could not connect to AnkiConnect. Is Anki running?", .ok = false };
 
 	curl_easy_cleanup(curl);
-	return NULL;
+	return ret;
 }
 
-size_t
-get_decks_response_function(char *input, size_t size, size_t nmemb, void *userdata)
+static size_t
+search_checker(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-	char ***ret_stringv_ptr = (char ***) userdata;
+	assert(userdata);
+	retval_s* ret = userdata;
 
-	g_autoptr(GStrvBuilder) builder = g_strv_builder_new ();
-
-	/* -------- Fixme ------------ */
-	char *ptr = strstr(input, "\"result\":");
-	ptr += strlen("\"result\":");
-
-	char *start;
-	bool in = false;
-	while (*ptr++ != ']')
-	{
-	    if (*ptr == '"')
-	    {
-		  if (!in)
-		  {
-			start = ptr + 1;
-			in = !in;
-		  }
-		  else
-		  {
-			in = !in;
-			*ptr = '\0';
-			g_strv_builder_add (builder, start);
-		  }
-
-	    }
-	}
-	/* --------------------------- */
-
-	*ret_stringv_ptr = g_strv_builder_end (builder);
-
-	return nmemb;
-}
-
-char**
-ac_get_decks()
-{
-	char *request = "{ \"action\": \"deckNames\", \"version\": 6 }";
-	char **ret_stringv = NULL;
-
-	sendRequest(request, get_decks_response_function, &ret_stringv);
-	return ret_stringv;
-}
-
-
-
-size_t
-search_check_function(char *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	SearchResponseFunction *user_func = userdata;
-	if (!user_func)
-		return nmemb;
-
-	int result = (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0);
-	(*user_func)(result); // Fork this maybe? Might be bad if function doesn't quit.
+	*ret = (retval_s) {
+	      .data.boolean = (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0),
+	      .ok = true
+	};
 
 	return nmemb;
 }
@@ -166,38 +125,38 @@ search_check_function(char *ptr, size_t size, size_t nmemb, void *userdata)
  *
  * Returns: Error msg on error, null otherwise
  */
-const char*
-ac_search(bool include_suspended, const char* deck, const char* field, const char* entry, SearchResponseFunction user_function)
+retval_s
+ac_search(bool include_suspended, const char* deck, const char* field, const char* entry)
 {
 	g_autofree char *request = g_strdup_printf(
 	    "{ \"action\": \"findCards\", \"version\": 6, \"params\": { \"query\" : \"\\\"%s%s\\\" \\\"%s:%s\\\" %s\" } }",
 		 deck ? "deck:" : "", deck ? deck : "", field, entry, include_suspended ? "" : "-is:suspended");
 
-	return sendRequest(request, search_check_function, &user_function);
+	return sendRequest(request, search_checker);
 }
 
-const char *
+retval_s
 ac_gui_search(const char* deck, const char* field, const char* entry)
 {
 	g_autofree char *request = g_strdup_printf(
 	    "{ \"action\": \"guiBrowse\", \"version\": 6, \"params\": { \"query\" : \"\\\"%s%s\\\" \\\"%s:%s\\\"\" } }",
 		 deck ? "deck:" : "", deck ? deck : "", field, entry);
 
-	return sendRequest(request, NULL, NULL);
+	return sendRequest(request, NULL);
 }
 
 /*
  * Stores the file at @path in the Anki media collection under the name @filename.
  * Doesn't overwrite existing files.
  */
-const char*
-ac_store_file(const char* filename, const char* path)
+retval_s
+ac_store_file(char const* filename, char const* path)
 {
 	g_autofree char *request = g_strdup_printf(
 	    "{ \"action\": \"storeMediaFile\", \"version\": 6, \"params\": { \"filename\" : \"%s\", \"path\": \"%s\", \"deleteExisting\": false } }",
 		 filename, path);
 
-	return sendRequest(request, NULL, NULL);
+	return sendRequest(request, NULL); // TODO: Error response cheking
 }
 
 /*
@@ -243,34 +202,48 @@ json_escape_str(const char *str)
 	return g_string_free_and_steal(gstr);
 }
 
+// Non-macro version:
+/* int */
+/* get_array_len(void* array[]) */
+/* { */
+/*       if (!array) */
+/* 	    return -1; */
 
-size_t
-get_array_len(void *array[])
-{
-      size_t len = 0;
-      while (*array++)
-	len++;
+/*       int n = 0; */
+/*       while (*array++) */
+/* 	    n++; */
+/*       return n; */
+/* } */
 
-      return len;
-}
+// Expects array to be non-null
+#define get_array_len(len, array) \
+      {				  \
+	    len = 0;		  \
+      	    while(array[len++])	  \
+		    ;		  \
+      }
 
 /*
  * @array: An array of strings to be json escaped
- * @len: number of elements in array or -1 if @array is null terminated.
+ * @n: number of elements in array or -1 if @array is null terminated.
  *
  * Returns: A null terminated copy of @array with every string json escaped.
  */
 char**
-json_escape_str_array(char *array[], int len)
+json_escape_str_array(int n, char** array)
 {
-    if (len < 0)
-      len = get_array_len((void **)array);
-
-    char **output = calloc(len + 1, sizeof(char*));
-    for (int i = 0; i < len; i++)
+    if (n < 0)
+	  get_array_len(n, array); // Not handling null case return as declaring to expect non-null
+    char **output = g_new(char*, n + 1);
+    
+    for (int i = 0; i < n; i++)
 	  output[i] = json_escape_str(array[i]);
-    output[len] = NULL;
-
+    output[n] = NULL;
+    
+    // If one can expect array to be NULL-terminated:
+    /* char* out_ptr = output; */
+    /* while ((*out_ptr++ = json_escape_str(*array++))) */
+    /*   ; */
     return output;
 }
 
@@ -278,17 +251,19 @@ json_escape_str_array(char *array[], int len)
  * Creates a json escaped and \n -> <br> converted copy of the anki card.
  */
 ankicard*
-json_escaped_ankicard_new(ankicard* ac)
+ankicard_json_escape_dup(ankicard const ac)
 {
-	size_t num_fields = ac->num_fields;
+	signed int num_fields = ac.num_fields;
+	if (num_fields < 0)
+	      get_array_len(num_fields, ac.fieldnames);
 
 	ankicard *je_ac = ankicard_new();
 	*je_ac = (ankicard) {
-	      .deck = json_escape_str(ac->deck),
-	      .notetype = json_escape_str(ac->notetype),
-	      .fieldnames = json_escape_str_array(ac->fieldnames, num_fields),
-	      .fieldentries = json_escape_str_array(ac->fieldentries, num_fields),
-	      .tags = ac->tags ? json_escape_str_array(ac->tags, -1) : NULL
+	      .deck = json_escape_str(ac.deck),
+	      .notetype = json_escape_str(ac.notetype),
+	      .fieldnames = json_escape_str_array(num_fields, ac.fieldnames),
+	      .fieldentries = json_escape_str_array(num_fields, ac.fieldentries),
+	      .tags = ac.tags ? json_escape_str_array(-1, ac.tags) : NULL
 	};
 
 	return je_ac;
@@ -303,30 +278,29 @@ json_escaped_ankicard_free(ankicard *je_ac)
 	g_strfreev(je_ac->fieldnames);
 	g_strfreev(je_ac->fieldentries);
 	g_strfreev(je_ac->tags);
+
+	g_free(je_ac);
 }
 
-const char*
-check_card(ankicard* ac)
+char*
+check_card(ankicard const ac)
 {
-	if (ac->num_fields < 0)
-	    ac->num_fields = get_array_len((void **)ac->fieldnames);
-
-	return !ac->deck ? "No deck specified."
-	     : !ac->notetype ? "No notetype specified."
-	     : !ac->fieldnames ? "No fieldnames provided."
-	     : !ac->fieldentries ? "No fieldentries provided."
+	return !ac.deck ? "No deck specified."
+	     : !ac.notetype ? "No notetype specified."
+	     : !ac.fieldnames ? "No fieldnames provided."
+	     : !ac.fieldentries ? "No fieldentries provided."
 	     : NULL;
 }
 
-const char*
-ac_addNote(ankicard *ac, AddResponseFunction user_func)
+retval_s
+ac_addNote(ankicard const ac)
 {
-	const char *err = check_card(ac);
-	if (err) return err;
+	if(check_card(ac))
+	    return (retval_s) { .data.string = check_card(ac), .ok = false };
 
-	ankicard* ac_je = json_escaped_ankicard_new(ac);
+	ankicard* ac_je = ankicard_json_escape_dup(ac);
 
-	GString* request = g_string_sized_new(500);
+	g_autoptr(GString) request = g_string_sized_new(500);
 	g_string_printf(request,
 	  "{"
 	     "\"action\" : \"addNote\","
@@ -380,9 +354,7 @@ ac_addNote(ankicard *ac, AddResponseFunction user_func)
 	  "}"
 	);
  
-	err = sendRequest(request->str, check_add_response, &user_func);
-
-	json_escaped_ankicard_free(ac_je);
-	g_string_free(request, TRUE);
-	return err;
+	retval_s ret = sendRequest(request->str, check_add_response);
+	ankicard_free(ac_je, true);
+	return ret;
 }
