@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <lmdb.h>
 
 #include "unishox2.h"
-
 #include "dictionary.h"
 #include "readsettings.h"
 #include "util.h"
@@ -15,10 +15,10 @@
 		exit(EXIT_FAILURE); \
 	}
 
-int rc;
-MDB_env *env;
-MDB_dbi dbi1, dbi2;
-MDB_txn *txn;
+static int rc;
+static MDB_env *env;
+static MDB_dbi dbi1, dbi2;
+static MDB_txn *txn;
 
 void
 open_database()
@@ -42,27 +42,14 @@ close_database()
 	mdb_env_close(env);
 }
 
-void
-print_entry(char *entry, size_t entry_len)
-{
-	for (char *c = entry; c != entry + entry_len; c++)
-	{
-		if (*c)
-			printf("%c", *c);
-		else
-			printf("\n");
-	}
-	printf("\n\n");
-}
-
-void
+static void
 add_de_from_db_lookup(dictionary *dict, char *db_lookup)
 {
 	if (!db_lookup)
-	  return;
+		return;
 
 	char *ptr_buffer[4];
-	int len = 0;
+	size_t len = 0;
 	for (int i = 0; i < 4; i++)
 	{
 		len = strlen(db_lookup);
@@ -77,48 +64,47 @@ add_de_from_db_lookup(dictionary *dict, char *db_lookup)
  * wrapper for retarded API
  * Returns: NULL-terminated, decompressed data
  */
-char*
-decompress_data(const char* in, unsigned int in_size)
+static char*
+decompress_data(const char* in, int in_size)
 {
-	unsigned int buffer_size = 0, dlen = 0;
+	size_t buffer_size = 0, dlen = 0;
 	char* buffer = NULL;
 
 	do{
 		buffer_size += 1000;
-		buffer = realloc(buffer, buffer_size);
-
+		buffer = g_realloc(buffer, buffer_size);
 		dlen = unishox2_decompress(in, in_size, UNISHOX_API_OUT_AND_LEN(buffer, buffer_size), USX_PSET_FAVOR_SYM);
-		/* printf("buffer_size: %i\ndlen: %i\n", buffer_size, dlen); */
 	} while (dlen > buffer_size - 1);
 
 	buffer[dlen] = '\0';
 	return buffer;
 }
 
+
 void
 add_word_to_dict(dictionary *dict, char *word)
 {
-	printf("Looking up: %s\n", word);
-
+	/* printf("Looking up: %s\n", word); */
 	MDB_val key = (MDB_val) { .mv_data = word, .mv_size = strlen(word) };
-	MDB_val ids;
+	MDB_val value;
 
 	MDB_cursor *cursor;
 	MDB_CHECK(mdb_cursor_open(txn, dbi1, &cursor));
-
-	if ((rc = mdb_cursor_get(cursor, &key, &ids, MDB_SET)) == MDB_NOTFOUND)
+	if ((rc = mdb_cursor_get(cursor, &key, &value, MDB_SET)) == MDB_NOTFOUND)
 		return;
 	Stopif(rc != MDB_SUCCESS, exit(1), "Database error: %s\n", mdb_strerror(rc));
+	MDB_CHECK(mdb_cursor_get(cursor, &key, &value, MDB_GET_MULTIPLE)); // Reads up to a page, i.e. max 1024 entries
 
-	MDB_CHECK(mdb_cursor_get(cursor, &key, &ids, MDB_GET_MULTIPLE)); // Reads up to a page, i.e. max 1024 entries
-	for (int i = 0; i < ids.mv_size ; i += 4)
+	uint32_t* ids = value.mv_data;
+	for (uint32_t* id = ids; id < (uint32_t*)(value.mv_data + value.mv_size); id++)
 	{
-		MDB_val id = { .mv_data = (unsigned char*)ids.mv_data + i, .mv_size = 4 };
+		key = (MDB_val){ .mv_data = id, .mv_size = sizeof(uint32_t) };
 
 		MDB_val data;
-		MDB_CHECK(mdb_get(txn, dbi2, &id, &data));
+		MDB_CHECK(mdb_get(txn, dbi2, &key, &data));
 
 		char* decompressed = decompress_data(data.mv_data, data.mv_size);
 		add_de_from_db_lookup(dict, decompressed);
+		g_free(decompressed);
 	}
 }

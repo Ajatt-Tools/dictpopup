@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <lmdb.h>
 
@@ -19,7 +20,7 @@ MDB_env *env_tmp;
 MDB_txn *txn_tmp;
 MDB_dbi dbi_tmp;
 
-unsigned int entry_number = 0;
+uint32_t entry_number = 0;
 
 void
 open_db(const char* path)
