@@ -1,32 +1,113 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include <glib.h>
-
-#include "unistr.h"
 #include "kanaconv.h"
+#include "util.h"
 
-GPtrArray *deinfs;
+static GPtrArray *deinfs;
 
-/*
- * Replaces the last @len bytes with @c and adds it to the deinflections array.
+// The "" s "" adds compile-time checking for string literal input
+#define lengthof(s)   ((ptrdiff_t)(sizeof("" s "") / sizeof(*(s))) - 1)
+#define s8(s)     (s8){ (char*)s, lengthof(s) }
+#define s8_new(s) (s8){ (char*)s, (ptrdiff_t)(strlen(s)) }
+typedef struct {
+	char const* data;
+	ptrdiff_t len;
+} s8; // A string
+
+#define startswith(str, prefix)                                                       \
+	(str.len >= lengthof(prefix) && !strncmp(str.data, prefix, lengthof(prefix)))
+
+#define endswith(str, suffix)                                                                                      \
+	(str.len >= lengthof(suffix) && !strncmp(str.data + str.len - lengthof(suffix), suffix, lengthof(suffix)))
+
+#define IF_STARTSWITH_REPLACE(prefix, replacement)                                 \
+	if (startswith(word, prefix))                                              \
+	{                                                                          \
+		add_replace_prefix(word, s8(replacement), lengthof(replacement));  \
+	}
+
+// TODO: Would be cool if the for loop could expand at compile time, so s8(..) can be used
+#define IF_ENDSWITH_REPLACE(ending, ...)                                                      \
+	if (endswith(word, ending))                                                           \
+	{                                                                                     \
+		for (char **iterator = (char*[]){ __VA_ARGS__, NULL }; *iterator; iterator++) \
+		{                                                                             \
+			add_replace_suffix(word, s8_new(*iterator), lengthof(ending));        \
+		}                                                                             \
+	}
+
+#define IF_ENDSWITH_CONVERT_ATOU(ending)           \
+	if (endswith(word, ending))                \
+	{                                          \
+		atou_form(word, lengthof(ending)); \
+	}
+
+#define IF_ENDSWITH_CONVERT_ITOU(ending)           \
+	if (endswith(word, ending))                \
+	{                                          \
+		itou_form(word, lengthof(ending)); \
+	}
+
+#define IF_EQUALS_ADD(str, wordtoadd)       \
+	if (!strcmp(word.data, str))        \
+	{                                   \
+		add_str(wordtoadd);         \
+	}
+
+/**
+ * add_replace_ending:
+ * @word: The word whose ending should be replaced
+ * @replacement: The UTF-8 encoded string the ending should be replaced with
+ * @suffix_len: The length of the suffix (in bytes) that should be replaced
+ *
+ * Replaces the last @suffix_len bytes of @word with @replacement.
+ *
+ * Returns: The newly allocated string with replaced ending.
  */
-void
-add_replace_ending(unistr* word, const char *c, size_t len)
+static void
+add_replace_suffix(s8 word, s8 replacement, ptrdiff_t suffix_len)
 {
-	char *replaced_str = unistr_replace_ending(word, c, len);
-	g_ptr_array_add(deinfs, replaced_str);
+	assert(word.len >= suffix_len);
+
+	ptrdiff_t repl_strlen = word.len - suffix_len + replacement.len + 1;
+	char* replstr = g_malloc(repl_strlen);
+	memcpy(replstr, word.data, word.len - suffix_len);
+	memcpy(replstr + word.len - suffix_len, replacement.data, replacement.len);
+	replstr[repl_strlen - 1] = '\0';
+
+	// Alt:
+	/* char* replstr = g_strdup_printf("%.*s%.*s", word.len - suffix_len, word.data, replacement.len, replacement.data); */
+	g_ptr_array_add(deinfs, replstr);
+}
+
+static void
+add_replace_prefix(s8 word, s8 replacement, ptrdiff_t prefix_len)
+{
+	assert(word.len >= prefix_len);
+
+	ptrdiff_t repl_strlen = word.len - prefix_len + replacement.len + 1;
+	char* replstr = g_malloc(repl_strlen);
+	memcpy(replstr, replacement.data, replacement.len);
+	memcpy(replstr + replacement.len, word.data + prefix_len, word.len - prefix_len);
+	replstr[repl_strlen - 1] = '\0';
+
+	// Alt:
+	/* char* replstr = g_strdup_printf("%.*s%.*s", replacement.len, replacement.data, word.len - prefix_len, word.data + prefix_len); */
+	g_ptr_array_add(deinfs, replstr);
 }
 
 /*
  * Adds @str to the deinflections array.
  */
-int
-add_str(const char* str)
+static void
+add_str(char const* str)
 {
 	g_ptr_array_add(deinfs, g_strdup(str));
-	return 1;
 }
 
 /*
@@ -37,12 +118,12 @@ add_str(const char* str)
  *
  * Returns: TRUE if any conversion happened, FALSE otherwise
  */
-int
-atou_form(unistr* word, size_t len_ending)
+static void
+atou_form(s8 word, ptrdiff_t len_ending)
 {
-	add_replace_ending(word, "る", len_ending);
+	IF_ENDSWITH_REPLACE("", "る");
 
-	word->len -= len_ending;
+	word.len -= len_ending;
 
 	IF_ENDSWITH_REPLACE("さ", "す");
 	IF_ENDSWITH_REPLACE("か", "く");
@@ -54,9 +135,7 @@ atou_form(unistr* word, size_t len_ending)
 	IF_ENDSWITH_REPLACE("な", "ぬ");
 	IF_ENDSWITH_REPLACE("ら", "る");
 
-	word->len += len_ending;
-
-	return 0;
+	word.len += len_ending;
 }
 
 /*
@@ -67,13 +146,13 @@ atou_form(unistr* word, size_t len_ending)
  *
  * Returns: TRUE if any conversion happened, FALSE otherwise
  */
-int
-itou_form(unistr* word, size_t len_ending)
+static void
+itou_form(s8 word, ptrdiff_t len_ending)
 {
 	/* Word can alway be a る-verb, e.g. 生きます */
-	add_replace_ending(word, "る", len_ending);
+	IF_ENDSWITH_REPLACE("", "る");
 
-	word->len -= len_ending;
+	word.len -= len_ending;
 
 	IF_ENDSWITH_REPLACE("し", "す");
 	IF_ENDSWITH_REPLACE("き", "く");
@@ -85,34 +164,26 @@ itou_form(unistr* word, size_t len_ending)
 	IF_ENDSWITH_REPLACE("に", "ぬ");
 	IF_ENDSWITH_REPLACE("り", "る");
 
-	word->len += len_ending;
-
-	return 0;
+	word.len += len_ending;
 }
 
-int
-kanjify(unistr* word)
+static void
+kanjify(s8 word)
 {
-	if (startswith(word, "ご") || startswith(word, "お"))
-	{       // FIXME: Cleaner implementation
-		g_autofree gchar* word_copy = g_strdup(word->str);
-		memcpy(word_copy, "御", strlen("ご"));
-		add_str(word_copy);
-	}
+	IF_STARTSWITH_REPLACE("ご", "御");
+	IF_STARTSWITH_REPLACE("お", "御");
 
 	IF_ENDSWITH_REPLACE("ない", "無い");
 	IF_ENDSWITH_REPLACE("なし", "無し");
 	IF_ENDSWITH_REPLACE("つく", "付く");
-
-	return 0;
 }
 
-int
-check_te(unistr* word)
+static void
+check_te(s8 word)
 {
 	/* exceptions */
 	IF_EQUALS_ADD("きて", "来る");
-	IF_EQUALS_ADD("来て", "来る");
+	IF_ENDSWITH_REPLACE("来て", "来る");
 	IF_EQUALS_ADD("いって", "行く");
 	IF_ENDSWITH_REPLACE("行って", "行く");
 	/* ----------- */
@@ -123,12 +194,10 @@ check_te(unistr* word)
 	IF_ENDSWITH_REPLACE("んで", "む", "ぶ", "ぬ");
 	IF_ENDSWITH_REPLACE("って", "る", "う", "つ");
 	IF_ENDSWITH_REPLACE("て", "る");
-
-	return 0;
 }
 
-int
-check_past(unistr* word)
+static void
+check_past(s8 word)
 {
 	/* exceptions */
 	IF_EQUALS_ADD("した", "為る");
@@ -144,44 +213,36 @@ check_past(unistr* word)
 	IF_ENDSWITH_REPLACE("んだ", "む", "ぶ", "ぬ");
 	IF_ENDSWITH_REPLACE("った", "る", "う", "つ");
 	IF_ENDSWITH_REPLACE("た", "る");
-
-	return 0;
 }
 
-int
-check_masu(unistr* word)
+static void
+check_masu(s8 word)
 {
 	IF_ENDSWITH_CONVERT_ITOU("ます");
 	IF_ENDSWITH_CONVERT_ITOU("ません");
-
-	return 0;
 }
 
-int
-check_shimau(unistr* word)
+static void
+check_shimau(s8 word)
 {
 	IF_ENDSWITH_REPLACE("しまう", "");
 	IF_ENDSWITH_REPLACE("ちゃう", "る");
 	IF_ENDSWITH_REPLACE("いじゃう", "ぐ");
 	IF_ENDSWITH_REPLACE("いちゃう", "く");
 	IF_ENDSWITH_REPLACE("しちゃう", "す");
-
-	return 0;
 }
 
-int
-check_passive_causative(unistr* word)
+static void
+check_passive_causative(s8 word)
 {
 	IF_ENDSWITH_REPLACE("られる", "る");
 	IF_ENDSWITH_REPLACE("させる", "る");
 	IF_ENDSWITH_CONVERT_ATOU("れる");
 	IF_ENDSWITH_CONVERT_ATOU("せる");
-
-	return 0;
 }
 
-int
-check_adjective(unistr* word)
+static void
+check_adjective(s8 word)
 {
 	IF_ENDSWITH_REPLACE("よくて", "いい");
 	IF_ENDSWITH_REPLACE("かった", "い");
@@ -191,27 +252,23 @@ check_adjective(unistr* word)
 	IF_ENDSWITH_REPLACE("さ", "い");
 	IF_ENDSWITH_REPLACE("げ", "い");
 	IF_ENDSWITH_REPLACE("しく", "しい"); //FIXME
-
-	return 0;
 }
 
-int
-check_volitional(unistr* word)
+static void
+check_volitional(s8 word)
 {
 	IF_ENDSWITH_CONVERT_ITOU("たい");
-	return 0;
 }
 
-int
-check_negation(unistr* word)
+static void
+check_negation(s8 word)
 {
 	IF_ENDSWITH_CONVERT_ATOU("ない");
 	IF_ENDSWITH_CONVERT_ATOU("ねぇ");
-	return 0;
 }
 
-int
-check_potential(unistr* word)
+static void
+check_potential(s8 word)
 {
 	/* Exceptions */
 	IF_EQUALS_ADD("できる", "為る");
@@ -226,11 +283,10 @@ check_potential(unistr* word)
 	IF_ENDSWITH_REPLACE("れる", "る");
 	IF_ENDSWITH_REPLACE("ねる", "ぬ");
 	IF_ENDSWITH_REPLACE("える", "う");
-	return 0;
 }
 
-int
-check_conditional(unistr* word)
+static void
+check_conditional(s8 word)
 {
 	IF_ENDSWITH_REPLACE("せば", "す");
 	IF_ENDSWITH_REPLACE("けば", "く");
@@ -241,41 +297,34 @@ check_conditional(unistr* word)
 	IF_ENDSWITH_REPLACE("えば", "う");
 	IF_ENDSWITH_REPLACE("ねば", "ぬ");
 	IF_ENDSWITH_REPLACE("れば", "る");
-	return 0;
 }
 
-void
-deinflect_one_iter(const char *word)
+static void
+deinflect_one_iter(s8 word)
 {
-	unistr *uniword = unistr_new(word);
-
-	check_shimau(uniword);
-	check_adjective(uniword);
-	check_masu(uniword);
-	check_passive_causative(uniword);
-	check_volitional(uniword);
-	check_negation(uniword);
-	check_te(uniword);
-	check_past(uniword);
-	check_potential(uniword);
-	check_conditional(uniword);
-	kanjify(uniword);
-
-	unistr_free(uniword);
+	check_shimau(word);
+	check_adjective(word);
+	check_masu(word);
+	check_passive_causative(word);
+	check_volitional(word);
+	check_negation(word);
+	check_te(word);
+	check_past(word);
+	check_potential(word);
+	check_conditional(word);
+	kanjify(word);
 }
 
 char**
-deinflect(const char *word)
+deinflect(char const* word)
 {
 	deinfs = g_ptr_array_new_with_free_func(g_free);
 
-	deinflect_one_iter(word);
-	for (int i = 0; i < deinfs->len; i++)
-		deinflect_one_iter(g_ptr_array_index(deinfs, i));
+	deinflect_one_iter(s8_new(word));
+	for (unsigned int i = 0; i < deinfs->len; i++)
+		deinflect_one_iter(s8_new(g_ptr_array_index(deinfs, i)));
 
-	unistr *uword = unistr_new(word);
-	itou_form(uword, 0);
-	unistr_free(uword);
+	itou_form(s8_new(word), 0);
 
 	g_ptr_array_add(deinfs, NULL);  /* Add NULL terminator */
 	return (char**)g_ptr_array_steal(deinfs, NULL);
