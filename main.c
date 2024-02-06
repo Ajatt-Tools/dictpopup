@@ -29,6 +29,7 @@ typedef struct possible_entries_s {
 	char* dictdefinition;
 	char* furigana;
 	char* windowname;
+	char* dictname;
 } possible_entries_s;
 
 static char*
@@ -45,6 +46,7 @@ map_entry(possible_entries_s pe, int i)
 	     : i == 6 ? pe.dictdefinition
 	     : i == 7 ? pe.furigana
 	     : i == 8 ? pe.windowname
+	     : i == 9 ? pe.dictname
 	     : NULL;
 }
 
@@ -105,7 +107,7 @@ create_furigana(char *kanji, char* reading)
 }
 
 static void
-populate_entries(possible_entries_s pe[static 1], dictentry de[static 1])
+populate_entries(possible_entries_s pe[static 1], dictentry const de)
 {
 	if (cfg.copysentence)
 	{
@@ -118,10 +120,11 @@ populate_entries(possible_entries_s pe[static 1], dictentry de[static 1])
 		pe->boldsentence = boldWord(pe->copiedsentence, pe->lookup);
 	}
 
-	pe->dictdefinition = g_strdup(de->definition);
-	pe->dictkanji = g_strdup(de->kanji ? de->kanji : de->reading);
-	pe->dictreading = g_strdup(de->reading ? de->reading: de->kanji);
-	pe->furigana = create_furigana(de->kanji, de->reading);
+	pe->dictdefinition = g_strdup(de.definition);
+	pe->dictkanji = g_strdup(de.kanji ? de.kanji : de.reading);
+	pe->dictreading = g_strdup(de.reading ? de.reading: de.kanji);
+	pe->furigana = create_furigana(de.kanji, de.reading);
+	pe->dictname = de.dictname;
 }
 
 static void
@@ -198,7 +201,7 @@ main(int argc, char**argv)
 	dictentry* chosen_entry = popup();
 	if (cfg.ankisupport && chosen_entry)
 	{
-		populate_entries(&p, chosen_entry);
+		populate_entries(&p, *chosen_entry);
 		dictentry_free(chosen_entry);
 		send_ankicard(p);
 	}
