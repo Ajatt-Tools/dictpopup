@@ -7,26 +7,16 @@
 #include "readsettings.h"
 
 #define printbool(boolean) \
-	boolean ? "TRUE" : "FALSE"
+	(boolean ? "true" : "false")
 
 settings cfg = { 0 };
 
-void
-error_msg(char const *fmt, ...)
-{
-	va_list argp;
-	va_start(argp, fmt);
-	g_autofree char* msg = g_strdup_vprintf(fmt, argp);
-	va_end(argp);
-
-	notify(1, "WARNING: %s", msg);
-	g_warning(msg);
-}
 
 void
 free_user_settings()
 {
 	// TODO: Implement
+	g_free(cfg.db_path);
 }
 
 void
@@ -36,7 +26,7 @@ print_settings()
 	printf("Anki deck: \"%s\"\n", cfg.deck);
 	printf("Anki Notetype: \"%s\"\n", cfg.notetype);
 	printf("Fields: [");
-	for (int i = 0; i < cfg.num_fields; i++)
+	for (size_t i = 0; i < cfg.num_fields; i++)
 	{
 		printf("\"%s\"", cfg.fieldnames[i]);
 		if (i != cfg.num_fields - 1)
@@ -45,7 +35,7 @@ print_settings()
 			printf("]\n");
 	}
 	printf("Mappings : [");
-	for (int i = 0; i < cfg.num_fields; i++)
+	for (size_t i = 0; i < cfg.num_fields; i++)
 	{
 		printf("%i", cfg.fieldmapping[i]);
 		if (i != cfg.num_fields - 1)
@@ -61,7 +51,33 @@ print_settings()
 	printf("Nuke whitespace: %s\n", printbool(cfg.nukewhitespace));
 }
 
+// TODO: Only notification on critical warning. Not missing window size
+static void
+error_msg(char const *fmt, ...)
+{
+	va_list argp;
+	va_start(argp, fmt);
+	g_autofree char* msg = g_strdup_vprintf(fmt, argp);
+	va_end(argp);
+
+	notify(1, "WARNING: %s", msg);
+	g_warning(msg);
+}
+
 void
+check_fieldmapping(size_t num, unsigned int fieldmapping[num], unsigned int max_value)
+{
+	for (size_t i = 0; i < num; i++)
+	{
+		if (fieldmapping[i] >= max_value)
+		{
+			error_msg("Found a field mapping outside of the defined range in the config file. Setting to 0");
+			fieldmapping[i] = 0;
+		}
+	}
+}
+
+static void
 fill_anki_string(GKeyFile* kf, char **cfg_option, const char* entry)
 {
 	if (cfg.ankisupport)
@@ -83,36 +99,31 @@ fill_anki_string(GKeyFile* kf, char **cfg_option, const char* entry)
 }
 
 
-void
-fill_behaviour(GKeyFile* kf, gboolean *cfg_option, const char* entry, gboolean defaultv)
+static gboolean
+return_behaviour(GKeyFile* kf, const char* entry, gboolean defaultv)
 {
 	g_autoptr(GError) error = NULL;
 	gboolean value = g_key_file_get_boolean(kf, "Behaviour", entry, &error);
 	if (error)
 	{
-		error_msg("%s. Setting \"%s\" to %s.", error->message, entry, defaultv ? "true" : "false");
-		*cfg_option = defaultv;
+		error_msg("%s. Setting \"%s\" to \"%s\".", error->message, entry, printbool(defaultv));
+		return defaultv;
 	}
-	else
-		*cfg_option = value;
+
+	return value;
 }
 
-void
-fill_popup(GKeyFile* kf, int *cfg_option, const char* entry, int default_value)
+static unsigned int
+return_popup(GKeyFile* kf, const char* entry, int defaultv)
 {
 	g_autoptr(GError) error = NULL;
 	int value = g_key_file_get_integer(kf, "Popup", entry, &error);
-	if (error)
-	{
-		error_msg("%s. Defaulting to \"%i\".", error->message, default_value);
-		*cfg_option = default_value;
-	}
-	else
-		*cfg_option = value;
+
+	return error? defaultv : value;
 }
 
 void
-read_user_settings()
+read_user_settings(unsigned int fieldmapping_max)
 {
 	const char* config_dir = g_get_user_config_dir();
 	g_autofree gchar *config_fn = g_build_filename(config_dir, "dictpopup", "config.ini", NULL);
@@ -130,18 +141,18 @@ read_user_settings()
 		exit(1); // TODO: default config
 	}
 
-	fill_behaviour(kf, &(cfg.ankisupport), "AnkiSupport", FALSE);
-	fill_behaviour(kf, &(cfg.checkexisting), "CheckIfExists", FALSE);
-	fill_behaviour(kf, &(cfg.copysentence), "CopySentence", FALSE);
-	fill_behaviour(kf, &(cfg.nukewhitespace), "NukeWhitespace", TRUE);
-	fill_behaviour(kf, &(cfg.pronunciationbutton), "PronunciationButton", FALSE);
-	fill_behaviour(kf, &(cfg.pronounceonstart), "PronounceOnStart", FALSE);
-	fill_behaviour(kf, &(cfg.mecabconversion), "MecabConversion", FALSE);
-	fill_behaviour(kf, &(cfg.substringsearch), "SubstringSearch", TRUE);
+	cfg.ankisupport = return_behaviour(kf, "AnkiSupport", false);
+	cfg.checkexisting = return_behaviour(kf, "CheckIfExists", false);
+	cfg.copysentence = return_behaviour(kf, "CopySentence", false);
+	cfg.nukewhitespace = return_behaviour(kf, "NukeWhitespace", true);
+	cfg.pronunciationbutton = return_behaviour(kf, "PronunciationButton", false);
+	cfg.pronounceonstart = return_behaviour(kf, "PronounceOnStart", false);
+	cfg.mecabconversion = return_behaviour(kf, "MecabConversion", false);
+	cfg.substringsearch = return_behaviour(kf, "SubstringSearch", true);
 
 	fill_anki_string(kf, &(cfg.deck), "Deck");
 	fill_anki_string(kf, &(cfg.notetype), "NoteType");
-	if (cfg.checkexisting && cfg.ankisupport)
+	if (cfg.ankisupport && cfg.checkexisting)
 	{
 		char *value = g_key_file_get_string(kf, "Anki", "SearchField", &error);
 		if (value == NULL || !*value)
@@ -180,7 +191,8 @@ read_user_settings()
 	size_t num_fieldmappings = 0;
 	if (cfg.ankisupport)
 	{
-		cfg.fieldmapping = g_key_file_get_integer_list(kf, "Anki", "FieldMapping", &num_fieldmappings, &error);
+		// Negative values are changed to positive ones, but then set to 0, as they will be out of range
+		cfg.fieldmapping = (unsigned int*)g_key_file_get_integer_list(kf, "Anki", "FieldMapping", &num_fieldmappings, &error);
 		if (error)
 		{
 			error_msg("%s. Disabling Anki support.", error->message);
@@ -188,8 +200,9 @@ read_user_settings()
 			g_error_free(error);
 			error = NULL;
 		}
+		check_fieldmapping(num_fieldmappings, cfg.fieldmapping, fieldmapping_max);
 
-		Stopif(num_fieldnames != num_fieldmappings, exit(1), "Error: Number of fieldnames does not match number of fieldmappings.");
+		Stopif(num_fieldnames != num_fieldmappings, exit(1), "Error: Number of fieldnames does not match number of fieldmappings in config.");
 	}
 
 	// Database
@@ -202,7 +215,7 @@ read_user_settings()
 	}
 
 	// Popup
-	fill_popup(kf, &(cfg.win_height), "Height", 350);
-	fill_popup(kf, &(cfg.win_width), "Width", 500);
-	fill_popup(kf, &(cfg.win_margin), "Margin", 5);
+	cfg.win_height = return_popup(kf, "Height", 350);
+	cfg.win_width = return_popup(kf, "Width", 500);
+	cfg.win_margin = return_popup(kf, "Margin", 5);
 }

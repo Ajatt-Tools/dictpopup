@@ -1,4 +1,5 @@
 #include "readsettings.h"
+#include "dictionary.h"
 
 /*
  * @dictionary: The dictionary to be displayed
@@ -10,14 +11,9 @@
  * 
  * Returns: TRUE if an Anki card should be made and FALSE otherwise.
  */
-int popup(GPtrArray *dictionary, char** definition, size_t *de_num);
+dictentry* popup();
 
 /*
- * Signals that the dictionary data is currently in use.
+ * Used to pass the dictionary data once it is ready
  */
-void lock_dictionary_data();
-
-/*
- * Signals that the dictionary data is ready.
- */
-void dictionary_data_done();
+void dictionary_data_done(dictionary* passed_dict);

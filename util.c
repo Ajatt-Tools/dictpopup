@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libnotify/notify.h>
 #include <unistd.h>
 #include <glib.h>
 #include <gio/gio.h>
@@ -15,7 +14,7 @@ char*
 sselp()
 {
 	GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
-	return gtk_clipboard_wait_for_text(clipboard);
+	return gtk_clipboard_wait_for_text(clipboard); // TODO: Maybe don't wait but quit if empty?
 }
 
 void
@@ -36,28 +35,28 @@ notify(bool urgent, char const *fmt, ...)
 	g_application_register(app, NULL, NULL);
 	//
 	g_application_send_notification(app, NULL, notification);
-	/* g_application_send_notification(g_application_get_default(), NULL, notification); */
-
-	/* NotifyNotification *n; */
-	/* notify_init("Basics"); */
-
-	/* n = notify_notification_new(msg, NULL, NULL); */
-	/* notify_notification_set_app_name(n, "dictpopup");  /1* Maybe set it to argv[0] *1/ */
-	/* if (error) */
-	/* 	notify_notification_set_urgency(n, NOTIFY_URGENCY_CRITICAL); */
-
-	/* if (!notify_notification_show(n, NULL)) */
-	/* 	fprintf(stderr, "ERROR: Failed to send notification.\n"); */
-
-	/* g_object_unref(G_OBJECT(n)); */
 }
 
+// Returns false if there was an error
+bool
+check_ac_response(retval_s ac_resp)
+{
+	if (!ac_resp.ok)
+	{
+		assert(ac_resp.data.string);
+		notify(1, "%s", ac_resp.data.string);
+		fprintf(stderr, "%s", ac_resp.data.string);
+		fprintf(stderr, "\n");
+		return false;
+	}
+
+	return true;
+}
 
 void
-remove_last_unichar(char* str, int* len)
+remove_last_unichar(size_t len[static 1], char str[*len])
 {
-	if (*len <= 0)
-		return;
+	assert(*len > 0);
 
 	--(*len);
 	while (*len > 0 && (str[*len] & 0x80) != 0x00 && (str[*len] & 0xC0) != 0xC0)
@@ -65,59 +64,10 @@ remove_last_unichar(char* str, int* len)
 	str[*len] = '\0';
 }
 
-char**
-extract_kanji_array(const char *str)
-{
-	char *start = strstr(str, "【");
-	start = start ? start + strlen("【") : NULL;
-	char *end = start ? strstr(start, "】") : NULL;
-
-	g_autoptr(GStrvBuilder) builder = g_strv_builder_new();
-
-	if (!start || !end) // unknown format or no kanji.
-		g_strv_builder_add(builder, str);
-	else
-	{
-		char *delim;
-		while ((delim = strstr(start, "・")))
-		{
-			g_strv_builder_add(builder, g_strndup(start, delim - start));
-			start = delim + strlen("・");
-		}
-		g_strv_builder_add(builder, g_strndup(start, end - start));
-	}
-
-	return g_strv_builder_end(builder);
-}
-
-char *
-extract_kanji(const char *str)
-{
-	char *start = strstr(str, "【");
-	start = start ? start + strlen("【") : NULL;
-	char *end = start ? strstr(start, "】") : NULL;
-
-	return (start && end) ? g_strndup(start, end - start) : g_strdup(str);
-}
-
-char*
-extract_reading(const char *str)
-{
-	char *end_read = strstr(str, "【");
-	if (!end_read)
-		return g_strdup(str);
-
-	return g_strndup(str, end_read - str);
-}
-
 char*
 str_repl_by_char(char *str, char *target, char repl_c)
 {
-	if (!str || !target)
-	{
-		g_warning("str_repl_by_char has been called with NULL values.");
-		return str;
-	}
+	assert(str && target);
 
 	size_t target_len = strlen(target);
 	char *s = str, *e = str;
@@ -173,3 +123,50 @@ printf_cmd_sync(char const *fmt, ...)
 	return system(cmd);
 	/* return g_spawn_command_line_sync(cmd, NULL); */
 }
+
+
+// Old code from sdcv implementation. Might become usefull again if we support other dictionary formats
+/* char** */
+/* extract_kanji_array(const char *str) */
+/* { */
+/* 	char *start = strstr(str, "【"); */
+/* 	start = start ? start + strlen("【") : NULL; */
+/* 	char *end = start ? strstr(start, "】") : NULL; */
+
+/* 	g_autoptr(GStrvBuilder) builder = g_strv_builder_new(); */
+
+/* 	if (!start || !end) // unknown format or no kanji. */
+/* 		g_strv_builder_add(builder, str); */
+/* 	else */
+/* 	{ */
+/* 		char *delim; */
+/* 		while ((delim = strstr(start, "・"))) */
+/* 		{ */
+/* 			g_strv_builder_add(builder, g_strndup(start, delim - start)); */
+/* 			start = delim + strlen("・"); */
+/* 		} */
+/* 		g_strv_builder_add(builder, g_strndup(start, end - start)); */
+/* 	} */
+
+/* 	return g_strv_builder_end(builder); */
+/* } */
+
+/* char * */
+/* extract_kanji(const char *str) */
+/* { */
+/* 	char *start = strstr(str, "【"); */
+/* 	start = start ? start + strlen("【") : NULL; */
+/* 	char *end = start ? strstr(start, "】") : NULL; */
+
+/* 	return (start && end) ? g_strndup(start, end - start) : g_strdup(str); */
+/* } */
+
+/* char* */
+/* extract_reading(const char *str) */
+/* { */
+/* 	char *end_read = strstr(str, "【"); */
+/* 	if (!end_read) */
+/* 		return g_strdup(str); */
+
+/* 	return g_strndup(str, end_read - str); */
+/* } */

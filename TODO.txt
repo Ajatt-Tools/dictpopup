@@ -1,13 +1,14 @@
 High priority
 - fix duplicate entries
 - create man page
-- Import ankiconnectC as a git submodule
+- Import libraries as git submodule
 - Error handling for missing config file
 - Search for card in anki gui by clicking on the dot. Auto open first result
 - publish on AUR
 - package with autotools
 
 Mid priority
+- Add compilation checking on github
 - Implement better error checking macros.
 - Make proper use of gapplication (for sending notifications)
 - Consider using gio's g_task_run_in_thread() instead of having two threads
@@ -18,6 +19,7 @@ Mid priority
 - Remove trailing spaces from user settings
 
 Low priority
+- Command line options for verbosity
 - Port file reading in dictpopup_create to gio (if there exists equivalent functionality)
 - Implement freeing user settings
 - Refactor popup.c

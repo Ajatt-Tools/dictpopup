@@ -29,7 +29,7 @@ dictentry_print(dictentry *de)
 void
 dictionary_print(dictionary* dict)
 {
-	for (int i = 0; i < dict->len; i++)
+	for (unsigned int i = 0; i < dict->len; i++)
 		dictentry_print(dictentry_at_index(dict, i));
 }
 
@@ -44,6 +44,20 @@ dictentry_free(void *ptr)
 	g_free(de);
 }
 
+dictentry*
+dictentry_dup(dictentry de)
+{
+	dictentry* de_dup = g_new(dictentry, 1);
+	*de_dup = (dictentry){
+		.dictname = g_strdup(de.dictname),
+		.kanji = g_strdup(de.kanji),
+		.reading = g_strdup(de.reading),
+		.definition = g_strdup(de.definition)
+	};
+
+	return de_dup;
+}
+
 dictionary*
 dictionary_new()
 {
@@ -53,26 +67,21 @@ dictionary_new()
 void
 dictionary_copy_add(dictionary* dict, dictentry de)
 {
-	dictentry *de_copy = g_new(dictentry, 1);
-
-	*de_copy = (dictentry) {
-		.dictname = g_strdup(de.dictname),
-		.kanji = g_strdup(de.kanji),
-		.reading = g_strdup(de.reading),
-		.definition = g_strdup(de.definition),
-	};
-
-	g_ptr_array_add(dict, de_copy);
+	dictentry *de_dup = dictentry_dup(de);
+	g_ptr_array_add(dict, de_dup);
 }
 
 void
 dictionary_free(dictionary* dict)
 {
+	if (!dict) // TODO: Test if g_ptr_array_free already handles that case
+		return;
+
 	g_ptr_array_free(dict, TRUE);
 }
 
 dictentry*
-dictentry_at_index(dictionary *dict, size_t index)
+dictentry_at_index(dictionary *dict, unsigned int index)
 {
 	return (dictentry*)g_ptr_array_index(dict, index);
 }

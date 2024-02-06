@@ -25,6 +25,8 @@ typedef GPtrArray dictionary;
  */
 void dictentry_free(void *ptr);
 
+dictentry* dictentry_dup(dictentry de);
+
 /*
  * Returns: A newly allocated dictionary.
  */
@@ -48,7 +50,7 @@ void dictionary_free(dictionary* dict);
 /*
  * Returns a pointer to the dictentry at the given index.
  */
-dictentry* dictentry_at_index(dictionary* dict, size_t index);
+dictentry* dictentry_at_index(dictionary* dict, unsigned int index);
 
 void dictentry_print(dictentry *de);
 void dictionary_print(dictionary *dict);

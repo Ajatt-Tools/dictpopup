@@ -4,6 +4,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #include <glib.h>
 #include "unishox2.h"
@@ -15,11 +16,11 @@
 void
 compress_entries(dictentry de, char** compressed, size_t *clen)
 {
-	unsigned int dictname_len = strlen(de.dictname);
-	unsigned int kanji_len = strlen(de.kanji);
-	unsigned int reading_len = strlen(de.reading);
-	unsigned int definition_len = strlen(de.definition);
-	unsigned int data_str_len = dictname_len + 1 + kanji_len + 1 + reading_len + 1 + definition_len;
+	size_t dictname_len = strlen(de.dictname);
+	size_t kanji_len = strlen(de.kanji);
+	size_t reading_len = strlen(de.reading);
+	size_t definition_len = strlen(de.definition);
+	size_t data_str_len = dictname_len + 1 + kanji_len + 1 + reading_len + 1 + definition_len;
 
 	char data_str[data_str_len];
 	char* data_ptr = data_str;
@@ -39,12 +40,12 @@ compress_entries(dictentry de, char** compressed, size_t *clen)
 	memcpy(data_ptr, de.definition, definition_len);
 
 	// TODO: Use string array compression from unishox2 instead
-	unsigned int csize = data_str_len;
+	size_t csize = data_str_len;
 	*compressed = malloc(data_str_len + 5);
 	do{
 		csize += 10;
 		*compressed = realloc(*compressed, csize);
-		*clen = unishox2_compress(data_str, data_str_len, UNISHOX_API_OUT_AND_LEN(*compressed, csize), USX_PSET_FAVOR_SYM);
+		*clen = unishox2_compress(data_str, (int)data_str_len, UNISHOX_API_OUT_AND_LEN(*compressed, (int)csize), USX_PSET_FAVOR_SYM);
 	} while (*clen > csize);
 }
 
@@ -117,37 +118,11 @@ read_string(FILE* fp, char* buffer, unsigned int buffer_len)
 void
 skip_whitespace(FILE* fp)
 {
-	char c;
-	do{
+	unsigned char c = fgetc(fp);
+	while (isspace(c))
 		c = fgetc(fp);
-	} while (c == ' ' || c == '\n' || c == '\t');
 	ungetc(c, fp);
 }
-
-/*
- * Returns: true if next entry is a string, false otherwise or on parsing error
- */
-/* bool */
-/* skip_to_next_string(FILE* fp) */
-/* { */
-/* 	char c; */
-
-/* 	skip_whitespace(fp); */
-/* 	if ((c = fgetc(fp)) != ':') */
-/* 	{ */
-/* 		ungetc(c, fp); */
-/* 		return false; */
-/* 	} */
-/* 	skip_whitespace(fp); */
-/* 	if ((c = fgetc(fp)) != '"') */
-/* 	{ */
-/* 		ungetc(c, fp); */
-/* 		return false; */
-/* 	} */
-
-/* 	return true; */
-/* } */
-
 
 void
 write_json(char* dictname, char* json_file_path)
@@ -177,15 +152,14 @@ write_json(char* dictname, char* json_file_path)
 	while ((c = fgetc(fp)) != EOF)
 	{
 		if (c == '\\')
-		    escaped_slash = (prev_c == '\\' && !escaped_slash) ? true : false;
-
-		if (c == '"' && (prev_c != '\\' || escaped_slash))
+			escaped_slash = (prev_c == '\\' && !escaped_slash);
+		else if (c == '"' && (prev_c != '\\' || escaped_slash))
 		{
 			if (
 				(entry_nr == 2 && sbracket_lvl < 3) // Don't read anything in between reading and content
 				||
 				entry_nr >= 3 // Don't read anything after content
-			   )
+				)
 				continue;
 
 

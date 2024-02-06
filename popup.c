@@ -6,45 +6,43 @@
 #include "readsettings.h"
 #include "ankiconnectc.h"
 
-const char* error;
-#define E(expr) if ((error = expr)) { notify(1, "%s", error); return; }
+// TODO: Remove globals or store in struct
 
-GMutex vars_mutex;
-GCond vars_set_condition;
-gboolean gtk_vars_set = 0;
-gboolean dict_data_ready = 0;
+static GMutex vars_mutex;
+static GCond vars_set_condition;
+static gboolean gtk_vars_set = 0;
+static gboolean dict_data_ready = 0;
 
-dictionary* dict;
-dictentry *cur_entry;
-size_t *cur_entry_num = 0;
-char **def;
+static dictionary* dict = NULL;
+static dictentry *cur_entry = NULL;
+static unsigned int cur_entry_num = 0;
 
-GtkWidget *window = NULL;
-GtkWidget *dict_tw;
-GtkTextBuffer *dict_tw_buffer;
-GtkWidget *lbl_dictnum;
-GtkWidget *lbl_dictname;
-GtkWidget *exists_dot;
+static GtkWidget *window = NULL;
+static GtkWidget *dict_tw;
+static GtkTextBuffer *dict_tw_buffer;
+static GtkWidget *lbl_dictnum;
+static GtkWidget *lbl_dictname;
+static GtkWidget *exists_dot;
 
-int word_exists_in_db = 0;
-int EXIT_CODE = 0; /* 0 = close, 1 = anki */
+static int word_exists_in_db = 0;
 
-void update_window();
-void check_if_exists();
-void play_pronunciation();
+static void update_window();
+static void check_if_exists();
+static void play_pronunciation();
 
 void
-dictionary_data_done()
+dictionary_data_done(dictionary* passed_dict)
 {
 	g_mutex_lock(&vars_mutex);
 
+	dict = passed_dict;
 	dict_data_ready = TRUE;
 	while (!gtk_vars_set)
 		g_cond_wait(&vars_set_condition, &vars_mutex);
 
 	g_mutex_unlock(&vars_mutex);
 
-	cur_entry = dictentry_at_index(dict, *cur_entry_num);
+	cur_entry = dictentry_at_index(dict, cur_entry_num);
 
 	if (cfg.pronounceonstart)
 		play_pronunciation();
@@ -52,42 +50,41 @@ dictionary_data_done()
 	check_if_exists(); // Check only once
 }
 
-void
-check_search_response(bool exists)
-{
-	word_exists_in_db = exists ? 1 : 0;
-}
-
-void
+static void
 check_if_exists()
 {
 	if (!cfg.checkexisting || !cfg.ankisupport)
 		return;
 
 	// exclude suspended cards
-	E(ac_search(false, cfg.deck, cfg.searchfield, cur_entry->kanji, check_search_response));
+	retval_s ac_resp = ac_search(false, cfg.deck, cfg.searchfield, cur_entry->kanji);
+	if (!check_ac_response(ac_resp))
+		return;
 
+	word_exists_in_db = ac_resp.data.boolean;
 	if (!word_exists_in_db)
 	{
 		// include suspended cards
-		E(ac_search(true, cfg.deck, cfg.searchfield, cur_entry->kanji, check_search_response));
+		ac_resp = ac_search(true, cfg.deck, cfg.searchfield, cur_entry->kanji);
+		if (!check_ac_response(ac_resp))
+			return;
 
-		if (word_exists_in_db)
+		if (ac_resp.data.boolean)
 			word_exists_in_db = 2;
 	}
 
 	gtk_widget_queue_draw(exists_dot);
 }
 
-void
+static void
 play_pronunciation()
 {
 	if (!printf_cmd_async("jppron '%s'", cur_entry->kanji))
 		notify(1, "Error calling jppron. Is it installed?");
 }
 
-void
-draw_dot(GtkWidget *widget, cairo_t *cr)
+static void
+draw_dot(cairo_t *cr)
 {
 	if (word_exists_in_db == 1)
 		cairo_set_source_rgb(cr, 0, 1, 0); // green
@@ -101,14 +98,14 @@ draw_dot(GtkWidget *widget, cairo_t *cr)
 	cairo_fill(cr);
 }
 
-gboolean
-on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_data)
+static gboolean
+on_draw_event(GtkWidget *widget, cairo_t *cr)
 {
-	draw_dot(widget, cr);
+	draw_dot(cr);
 	return FALSE;
 }
 
-void
+static void
 update_buffer()
 {
 	gtk_text_buffer_set_text(dict_tw_buffer, cur_entry->definition, -1);
@@ -118,30 +115,30 @@ update_buffer()
 	gtk_text_buffer_apply_tag_by_name(dict_tw_buffer, "x-large", &start, &end);
 }
 
-void
+static void
 update_win_title()
 {
 	g_autofree char* title = g_strdup_printf("dictpopup - %s (%s)", cur_entry->kanji, cur_entry->dictname);
 	gtk_window_set_title(GTK_WINDOW(window), title);
 }
 
-void
+static void
 update_dictnum_info()
 {
-	g_autofree char* info_txt = g_strdup_printf("%li/%i", *cur_entry_num + 1, dict->len);
+	g_autofree char* info_txt = g_strdup_printf("%i/%i", cur_entry_num + 1, dict->len);
 	gtk_label_set_text(GTK_LABEL(lbl_dictnum), info_txt);
 }
 
-void
+static void
 update_dictname_info()
 {
 	gtk_label_set_text(GTK_LABEL(lbl_dictname), cur_entry->dictname);
 }
 
-void
+static void
 update_window()
 {
-	if (dict_data_ready) // Very unlikely but simultanous access possible
+	if (dict_data_ready) // TODO: Very unlikely but data race possible
 	{
 		update_buffer();
 		update_win_title();
@@ -150,65 +147,77 @@ update_window()
 	}
 }
 
-gboolean
+static gboolean
 change_de(char c)
 {
-	/* incr == '+' -> increment
-	   incr == '-' -> decrement */
-	if (c == '+')
-		*cur_entry_num = (*cur_entry_num != dict->len - 1) ? *cur_entry_num + 1 : 0;
-	else if (c == '-')
-		*cur_entry_num = (*cur_entry_num != 0) ? *cur_entry_num - 1 : dict->len - 1;
-	else
-		g_warning("Wrong usage of change_de function. Doing nothing.");
+	assert(c == '+' || c == '-');
 
-	cur_entry = dictentry_at_index(dict, *cur_entry_num);
+	if (c == '+')
+		cur_entry_num = (cur_entry_num != dict->len - 1) ? cur_entry_num + 1 : 0;
+	else if (c == '-')
+		cur_entry_num = (cur_entry_num != 0) ? cur_entry_num - 1 : dict->len - 1;
+
+	cur_entry = dictentry_at_index(dict, cur_entry_num);
 	update_window();
 	return TRUE;
 }
 
-void
+static void
 change_de_up()
 {
 	change_de('+');
 }
 
-void
+static void
 change_de_down()
 {
 	change_de('-');
 }
 
-gboolean
-close_with_code(int exit_code)
+static void
+close_window()
 {
-	EXIT_CODE = exit_code;
 	gtk_widget_destroy(window);
 	gtk_main_quit();
+}
+
+static gboolean
+add_anki()
+{
+	g_mutex_lock(&vars_mutex);
+	if (!dict_data_ready)
+		return FALSE;
+	g_mutex_unlock(&vars_mutex);
+
+	cur_entry = dictentry_dup(*cur_entry);
+	dictionary_free(dict);
+
+	GtkTextIter start, end;
+	if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end)) // Use text selection if existing
+	{
+		g_free(cur_entry->definition);
+		cur_entry->definition = gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE);
+	}
+
+	close_window();
 	return TRUE;
 }
 
-gboolean
-add_anki()
-{
-	GtkTextIter start, end;
-	if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end)) // Use text selection on selection
-		*def = gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE);
-	else
-		*def = g_strdup(cur_entry->definition);
-
-	return close_with_code(1);
-}
-
-gboolean
+static gboolean
 quit()
 {
-	return close_with_code(0);
+	cur_entry = NULL;
+	dictionary_free(dict);
+	close_window();
+
+	return TRUE;
 }
 
-gboolean
+static gboolean
 key_press_on_win(GtkWidget *widget, GdkEventKey *event)
 {
+	assert(event);
+
 	/* Keyboard shortcuts */
 	if (event->keyval == GDK_KEY_Escape || event->keyval == GDK_KEY_q)
 		return quit();
@@ -222,7 +231,7 @@ key_press_on_win(GtkWidget *widget, GdkEventKey *event)
 	return FALSE;
 }
 
-void
+static void
 set_margins()
 {
 	gtk_text_view_set_top_margin(GTK_TEXT_VIEW(dict_tw), cfg.win_margin);
@@ -231,7 +240,7 @@ set_margins()
 	gtk_text_view_set_right_margin(GTK_TEXT_VIEW(dict_tw), cfg.win_margin);
 }
 
-void
+static void
 move_win_to_mouse_ptr()
 {
 	GdkDisplay *display = gdk_display_get_default();
@@ -241,28 +250,25 @@ move_win_to_mouse_ptr()
 	gtk_window_move(GTK_WINDOW(window), x, y);
 }
 
-void
+static void
 search_in_anki_browser()
 {
-	E(ac_gui_search(cfg.deck, cfg.searchfield, cur_entry->kanji));
+	check_ac_response(ac_gui_search(cfg.deck, cfg.searchfield, cur_entry->kanji));
 }
 
-void
+static void
 button_press(GtkWidget *widget, GdkEventButton *event)
 {
+	assert(event);
+
 	if (event->type == GDK_BUTTON_PRESS)
 		search_in_anki_browser();
 }
 
-int
-popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
+dictentry*
+popup()
 {
-	dict = passed_dict;
-	def = passed_definition;
-	cur_entry_num = passed_curde;
-	*cur_entry_num = 0;
-
-	/* gtk_init(NULL, NULL); */
+	gtk_init(NULL, NULL);
 
 	g_mutex_lock(&vars_mutex);
 	/* ------------ WINDOW ------------ */
@@ -359,5 +365,5 @@ popup(dictionary* passed_dict, char **passed_definition, size_t *passed_curde)
 	gtk_widget_show_all(window);
 	gtk_main();
 
-	return EXIT_CODE;
+	return cur_entry;
 }

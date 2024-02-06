@@ -648,7 +648,7 @@ int unishox2_compress_lines(const char *in, int len, UNISHOX_API_OUT_AND_LEN(cha
             if (c_t != c_in)
               break;
           }
-          if (((float)j / rem) > 0.66) {
+          if (((float)j / rem) > (float)0.66) {
             //printf("%s\n", usx_templates[i]);
             rem = rem - j;
             SAFE_APPEND_BITS2(rawolen, ol = append_nibble_escape(out, olen, ol, state, usx_hcodes, usx_hcode_lens));
@@ -1050,7 +1050,7 @@ int decodeRepeat(const char *in, int len, char *out, int olen, int ol, int *bit_
     if (cur_line == NULL)
       return -1;
     if (left <= 0) return olen + 1;
-    if (dist >= strlen(cur_line->data))
+    if ((size_t)dist >= strlen(cur_line->data))
       return -1;
     memmove(out + ol, cur_line->data + dist, min_of(left, dict_len));
     if (left < dict_len) return olen + 1;
@@ -1236,7 +1236,7 @@ int unishox2_decompress_lines(const char *in, int len, UNISHOX_API_OUT_AND_LEN(c
             if (usx_templates[idx] == NULL)
               break;
             size_t tlen = strlen(usx_templates[idx]);
-            if (rem > tlen)
+            if ((size_t)rem > tlen)
               break;
             rem = tlen - rem;
             int eof = 0;

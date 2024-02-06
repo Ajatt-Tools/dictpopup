@@ -1,12 +1,19 @@
 #include <stdbool.h>
 
+#define assert(c)  while (!(c)) __builtin_unreachable()
+
+
 #define Stopif(assertion, error_action, ...)          \
 	if (assertion) {                              \
-		notify(1, __VA_ARGS__);	  	      \
+		notify(1, __VA_ARGS__);               \
 		fprintf(stderr, __VA_ARGS__);         \
 		fprintf(stderr, "\n");                \
 		error_action;                         \
 	}
+
+#include "ankiconnectc.h"
+// TODO: Find proper place for this function
+bool check_ac_response(retval_s ac_resp);
 
 /*
  * Sends a notification. @error=1 sets to urgency level to urgent.
@@ -15,7 +22,7 @@ void notify(bool error, char const *fmt, ...);
 
 char* sselp();
 
-void remove_last_unichar(char *str, int *len);
+void remove_last_unichar(size_t len[static 1], char str[*len]);
 
 /*
  * Returns an array of kanji readings

@@ -1,8 +1,8 @@
 include config.mk
 
 P=dictpopup
-SRC = main.c popup.c util.c xlib.c deinflector.c unistr.c readsettings.c dictionary.c dictionarylookup.c kanaconv.c unishox2.c ankiconnectc.c
-OBJ = $(SRC:.c=.o)
+SRC = main.c popup.c util.c xlib.c deinflector.c readsettings.c dictionary.c dictionarylookup.c kanaconv.c unishox2.c ankiconnectc.c
+SRC_CREATE = dictpopup_create.c unishox2.c util.c db_writer.c dictionary.c
 
 all: options $(P) dictpopup_create
 
@@ -12,17 +12,14 @@ options:
 	@echo "LDFLAGS  = $(LDFLAGS)"
 	@echo "CC       = $(CC)"
 
-.c.o:
-	$(CC) -c $(CFLAGS) $<
+${P}:
+	$(CC) ${SRC} ${CFLAGS} ${LDFLAGS} -o $@ 
 
-$(P): ${OBJ}
-	$(CC) ${OBJ} ${LDFLAGS} -o $@ 
-
-dictpopup_create: dictpopup_create.o unishox2.o util.o db_writer.o dictionary.o
-	$(CC) $^ ${LDFLAGS} -o $@
+${P}_create:
+	$(CC) ${SRC_CREATE} ${CFLAGS} ${LDFLAGS} -o $@ 
 
 clean:
-	rm -f $(P) ${OBJ} dictpopup_create dictpopup_create.o unishox2.o util.o db_writer.o
+	rm -f $(P) dictpopup_create
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin

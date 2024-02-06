@@ -4,7 +4,7 @@
 
 #include <glib.h>
 
-char*
+static char*
 kata2hira(const char* katakana_in)
 {
 	if (!katakana_in)
@@ -42,7 +42,6 @@ kata2hira(const char* katakana_in)
 			h++;
 	}
 
-	printf("Conversion: %s\n", (char*) hiragana_out);
 	return (char *)hiragana_out;
 }
 
