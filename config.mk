@@ -11,13 +11,15 @@ GTK3LIBS = $(shell $(PKGCONFIG) --libs gtk+-3.0)
 
 # includes and libs
 INCS = -I$(X11INC)
-LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) -lmecab
+LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) -lmecab -llmdb -pthread
 # LIBS = -L$(X11LIB) -lX11 $(FREETYPELIBS) -lcurl -lXfixes $(GTK3LIBS) $(NOTIFYLIBS)
 
 # flags
-# CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -fanalyzer $(INCS) $(GTK3CFLAGS) -pthread
-CFLAGS   = -std=c17 -O3 -g -pedantic -Wall -Werror $(INCS) $(GTK3CFLAGS) -pthread
-LDFLAGS  = $(LIBS) -g -lpthread -lcdb -llmdb
+#debug flags
+# CFLAGS = -g3 -Wall -Wextra -Wno-unused-parameter -Wdouble-promotion -fsanitize=undefined,unreachable -fsanitize-trap $(GTK3CFLAGS) 
+#relase build flags
+CFLAGS   = -O3 $(GTK3CFLAGS) 
+LDFLAGS = $(LIBS)
 
 # compiler and linker
 CC = cc
