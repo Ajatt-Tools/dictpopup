@@ -9,14 +9,15 @@
 #include <pthread.h>
 
 #include "xlib.h"
-#include "util.h"
-#include "deinflector.h"
 #include "popup.h"
-#include "readsettings.h"
-#include "dictionary.h"
-#include "dictionarylookup.h"
-#include "kanaconv.h"
 #include "ankiconnectc.h"
+#include "settings.h"
+#include "deinflector.h"
+#include "dbreader.h"
+
+#ifndef UTIL_H
+#include "util.h"
+#endif
 
 static int const number_of_possible_entries = 9;
 typedef struct possible_entries_s {
@@ -64,20 +65,27 @@ pe_free(possible_entries_s p)
 	g_free(p.windowname);
 }
 
-static void
-add_deinflections_to_dict(dictionary dict[static 1], char* word)
+char*
+get_selection()
 {
-	char** deinflections = deinflect(word);
-
-	assert(deinflections != NULL);
-	for (char **ptr = deinflections; *ptr; ptr++)
-		add_word_to_dict(dict, *ptr);
-
-	g_strfreev(deinflections);
+	GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
+	return gtk_clipboard_wait_for_text(clipboard);
 }
 
 static void
-fill_dictionary_with(dictionary dict[static 1], char* word)
+add_deinflections_to_dict(dictionary dict[static 1], s8 word)
+{
+	s8** deinflections = deinflect(word);
+
+	assert(deinflections != NULL);
+	for (s8** ptr = deinflections; *ptr; ptr++)
+		add_word_to_dict(dict, **ptr);
+
+	/* g_strfreev(deinflections); */
+}
+
+static void
+fill_dictionary_with(dictionary dict[static 1], s8 word)
 {
 	add_word_to_dict(dict, word);
 	add_deinflections_to_dict(dict, word);
@@ -113,7 +121,7 @@ populate_entries(possible_entries_s pe[static 1], dictentry const de)
 	{
 		notify(0, "Please select the context.");
 		clipnotify();
-		pe->copiedsentence = sselp();
+		pe->copiedsentence = get_selection();
 		if (cfg.nukewhitespace)
 			nuke_whitespace(pe->copiedsentence);
 
@@ -133,7 +141,7 @@ send_ankicard(possible_entries_s pe)
 	ankicard ac = (ankicard) {
 		.deck = cfg.deck,
 		.notetype = cfg.notetype,
-		.num_fields = (int)cfg.num_fields,
+		.num_fields = (signed int)cfg.num_fields,
 		.fieldnames = cfg.fieldnames,
 		.fieldentries = g_new(char*, cfg.num_fields)
 	};
@@ -148,8 +156,10 @@ send_ankicard(possible_entries_s pe)
 static void*
 create_dictionary(void* voidin)
 {
-	char* lookup = voidin;
+	char* lookupcstr = voidin;
 	dictionary* dict = dictionary_new();
+
+	s8 lookup = s8fromcstr(lookupcstr); // TODO: Convert somewhere earlier and switch to s8 below
 
 	/* clock_t begin = clock(); */
 	open_database();
@@ -157,15 +167,14 @@ create_dictionary(void* voidin)
 	if (dict->len == 0 && cfg.mecabconversion)
 	{
 		char *hira = kanji2hira(lookup);
-		fill_dictionary_with(dict, hira);
+		fill_dictionary_with(dict, s8fromcstr(hira));
 		free(hira);
 	}
 	if (dict->len == 0 && cfg.substringsearch)
 	{
-		size_t lookup_strlen = strlen(lookup);
-		while (dict->len == 0 && lookup_strlen > 3) //FIXME: magic number. Change to > one UTF-8 character
+		while (dict->len == 0 && lookup.len > 3) //FIXME: magic number. Change to > one UTF-8 character
 		{
-			remove_last_unichar(&lookup_strlen, lookup);
+			lookup = s8striputf8chr(lookup);
 			fill_dictionary_with(dict, lookup);
 		}
 	}
@@ -183,11 +192,12 @@ int
 main(int argc, char**argv)
 {
 	read_user_settings(number_of_possible_entries);
+
 	gtk_init(&argc, &argv);
 
 	possible_entries_s p = {
 		.windowname = getwindowname(),
-		.lookup = argc > 1 ? g_strdup(argv[1]) : sselp()
+		.lookup = argc > 1 ? g_strdup(argv[1]) : get_selection()
 	};
 
 	Stopif(!p.lookup || !*p.lookup, exit(1), "No selection and no argument provided. Exiting.");
@@ -199,7 +209,7 @@ main(int argc, char**argv)
 	pthread_create(&thread, NULL, create_dictionary, p.lookup);
 
 	dictentry* chosen_entry = popup();
-	if (cfg.ankisupport && chosen_entry)
+	if (chosen_entry && cfg.ankisupport)
 	{
 		populate_entries(&p, *chosen_entry);
 		dictentry_free(chosen_entry);

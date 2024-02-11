@@ -5,9 +5,8 @@
 #include <lmdb.h>
 
 #include "unishox2.h"
-#include "dictionary.h"
-#include "readsettings.h"
 #include "util.h"
+#include "settings.h" // for dbpath
 
 #define MDB_CHECK(call) \
 	if ((rc = call) != MDB_SUCCESS) { \
@@ -67,12 +66,17 @@ add_de_from_db_lookup(dictionary *dict, char *db_lookup)
 static char*
 decompress_data(const char* in, int in_size)
 {
-	size_t buffer_size = 0, dlen = 0;
+	int buffer_size = 0, dlen = 0;
 	char* buffer = NULL;
 
 	do{
-		buffer_size += 1000;
-		buffer = g_realloc(buffer, buffer_size);
+		if ((buffer_size += 1000) < 0)
+		{
+			fprintf(stderr, "Integer overflow when decompressing data.\n");
+			abort();
+		}
+
+		buffer = g_realloc(buffer, (gsize)buffer_size);
 		dlen = unishox2_decompress(in, in_size, UNISHOX_API_OUT_AND_LEN(buffer, buffer_size), USX_PSET_FAVOR_SYM);
 	} while (dlen > buffer_size - 1);
 
@@ -82,10 +86,10 @@ decompress_data(const char* in, int in_size)
 
 
 void
-add_word_to_dict(dictionary *dict, char *word)
+add_word_to_dict(dictionary *dict, s8 word)
 {
 	/* printf("Looking up: %s\n", word); */
-	MDB_val key = (MDB_val) { .mv_data = word, .mv_size = strlen(word) };
+	MDB_val key = (MDB_val) { .mv_data = word.s, .mv_size = word.len };
 	MDB_val value;
 
 	MDB_cursor *cursor;
@@ -103,7 +107,7 @@ add_word_to_dict(dictionary *dict, char *word)
 		MDB_val data;
 		MDB_CHECK(mdb_get(txn, dbi2, &key, &data));
 
-		char* decompressed = decompress_data(data.mv_data, data.mv_size);
+		char* decompressed = decompress_data(data.mv_data, (int)data.mv_size);
 		add_de_from_db_lookup(dict, decompressed);
 		g_free(decompressed);
 	}

@@ -23,7 +23,7 @@ MDB_dbi dbi_tmp;
 uint32_t entry_number = 0;
 
 void
-open_db(const char* path)
+opendb(const char* path)
 {
 	MDB_CHECK(mdb_env_create(&env));
 	mdb_env_set_maxdbs(env, 3);
@@ -47,7 +47,7 @@ open_db(const char* path)
 }
 
 void
-close_db()
+closedb()
 {
 	MDB_CHECK(mdb_txn_commit(txn));
 	mdb_dbi_close(env, dbi1);
@@ -60,7 +60,7 @@ close_db()
 	printf("Number of distinct entries: %i\n", entry_number);
 }
 
-void add_to_db(char* key_str, unsigned int keylen, char* value_str, unsigned int vallen)
+void addtodb(char* key_str, unsigned int keylen, char* value_str, unsigned int vallen)
 {
 	entry_number++;
 

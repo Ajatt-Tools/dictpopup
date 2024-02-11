@@ -2,8 +2,7 @@
 #include <stdbool.h>
 
 #include "util.h"
-#include "dictionary.h"
-#include "readsettings.h"
+#include "settings.h"
 #include "ankiconnectc.h"
 
 // TODO: Remove globals or store in struct

@@ -5,16 +5,137 @@
 
 #include <unistd.h>
 #include <glib.h>
-#include <gio/gio.h>
+#include <gio/gio.h> // notifications
 
 #include "util.h"
 
-#include <gtk/gtk.h>
-char*
-sselp()
+static void u8copy(u8 *dst, u8 *src, size n)
 {
-	GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
-	return gtk_clipboard_wait_for_text(clipboard); // TODO: Maybe don't wait but quit if empty?
+    assert(n >= 0);
+    for (; n; n--) {
+        *dst++ = *src++;
+    }
+}
+
+s8*
+s8dup(s8 s)
+{
+    s8* r = g_new(s8, 1);
+    *r = (s8) {
+      .s = g_malloc(s.len),
+      .len = s.len
+    };
+    u8copy(r->s, s.s, s.len);
+    return r;
+}
+
+s8
+s8fromcstr(char *z)
+{
+    return (s8) {
+      .s = (u8 *)z,
+      .len = z ? strlen(z) : 0
+    };
+}
+
+i32
+u8compare(u8 *a, u8 *b, size n)
+{
+    for (; n; n--) {
+        i32 d = *a++ - *b++;
+        if (d) return d;
+    }
+    return 0;
+}
+
+i32
+s8equals(s8 a, s8 b)
+{
+    return a.len==b.len && !u8compare(a.s, b.s, a.len);
+}
+
+s8
+s8striputf8chr(s8 s)
+{
+	// 0x80 = 10000000
+	// 0xC0 = 11000000
+	assert(s.len > 0);
+	s.len--;
+	while (s.len > 0 && (s.s[s.len] & 0x80) != 0x00 && (s.s[s.len] & 0xC0) != 0xC0)
+		s.len--;
+	return s;
+}
+
+
+dictentry*
+dictentry_dup(dictentry de)
+{
+	dictentry* de_dup = g_new(dictentry, 1);
+	*de_dup = (dictentry){
+		.dictname = g_strdup(de.dictname),
+		.kanji = g_strdup(de.kanji),
+		.reading = g_strdup(de.reading),
+		.definition = g_strdup(de.definition)
+	};
+
+	return de_dup;
+}
+
+void
+dictentry_free(void *ptr)
+{
+	dictentry *de = ptr;
+	g_free(de->dictname);
+	g_free(de->kanji);
+	g_free(de->reading);
+	g_free(de->definition);
+	g_free(de);
+}
+
+void
+dictentry_print(dictentry *de)
+{
+	printf("dictname: %s\n"
+	       "kanji: %s\n"
+	       "reading: %s\n"
+	       "definition: %s\n", 
+	       de->dictname, 
+	       de->kanji, 
+	       de->reading, 
+	       de->definition);
+}
+
+
+dictionary*
+dictionary_new()
+{
+	return g_ptr_array_new_with_free_func(dictentry_free);
+}
+
+void
+dictionary_copy_add(dictionary* dict, dictentry de)
+{
+	dictentry *de_dup = dictentry_dup(de);
+	g_ptr_array_add(dict, de_dup);
+}
+
+void
+dictionary_free(dictionary* dict)
+{
+	g_ptr_array_free(dict, TRUE);
+}
+
+dictentry*
+dictentry_at_index(dictionary *dict, unsigned int index)
+{
+	return (dictentry*)g_ptr_array_index(dict, index);
+}
+
+void
+dictionary_print(dictionary* dict)
+{
+	for (unsigned int i = 0; i < dict->len; i++)
+		dictentry_print(dictentry_at_index(dict, i));
 }
 
 void
@@ -51,17 +172,6 @@ check_ac_response(retval_s ac_resp)
 	}
 
 	return true;
-}
-
-void
-remove_last_unichar(size_t len[static 1], char str[*len])
-{
-	assert(*len > 0);
-
-	--(*len);
-	while (*len > 0 && (str[*len] & 0x80) != 0x00 && (str[*len] & 0xC0) != 0xC0)
-		--(*len);
-	str[*len] = '\0';
 }
 
 char*
@@ -123,50 +233,3 @@ printf_cmd_sync(char const *fmt, ...)
 	return system(cmd);
 	/* return g_spawn_command_line_sync(cmd, NULL); */
 }
-
-
-// Old code from sdcv implementation. Might become usefull again if we support other dictionary formats
-/* char** */
-/* extract_kanji_array(const char *str) */
-/* { */
-/* 	char *start = strstr(str, "【"); */
-/* 	start = start ? start + strlen("【") : NULL; */
-/* 	char *end = start ? strstr(start, "】") : NULL; */
-
-/* 	g_autoptr(GStrvBuilder) builder = g_strv_builder_new(); */
-
-/* 	if (!start || !end) // unknown format or no kanji. */
-/* 		g_strv_builder_add(builder, str); */
-/* 	else */
-/* 	{ */
-/* 		char *delim; */
-/* 		while ((delim = strstr(start, "・"))) */
-/* 		{ */
-/* 			g_strv_builder_add(builder, g_strndup(start, delim - start)); */
-/* 			start = delim + strlen("・"); */
-/* 		} */
-/* 		g_strv_builder_add(builder, g_strndup(start, end - start)); */
-/* 	} */
-
-/* 	return g_strv_builder_end(builder); */
-/* } */
-
-/* char * */
-/* extract_kanji(const char *str) */
-/* { */
-/* 	char *start = strstr(str, "【"); */
-/* 	start = start ? start + strlen("【") : NULL; */
-/* 	char *end = start ? strstr(start, "】") : NULL; */
-
-/* 	return (start && end) ? g_strndup(start, end - start) : g_strdup(str); */
-/* } */
-
-/* char* */
-/* extract_reading(const char *str) */
-/* { */
-/* 	char *end_read = strstr(str, "【"); */
-/* 	if (!end_read) */
-/* 		return g_strdup(str); */
-
-/* 	return g_strndup(str, end_read - str); */
-/* } */

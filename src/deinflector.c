@@ -5,25 +5,17 @@
 #include <stdbool.h>
 
 #include <glib.h>
-#include "kanaconv.h"
+#include <mecab.h>
+
 #include "util.h"
 
 static GPtrArray *deinfs;
 
-// The "" s "" adds compile-time checking for string literal input
-#define lengthof(s)   ((ptrdiff_t)(sizeof("" s "") / sizeof(*(s))) - 1)
-#define s8(s)     (s8){ (char*)s, lengthof(s) }
-#define s8_new(s) (s8){ (char*)s, (ptrdiff_t)(strlen(s)) }
-typedef struct {
-	char const* data;
-	ptrdiff_t len;
-} s8; // A string
+#define startswith(str, prefix)                                                           \
+	(str.len >= lengthof(prefix) && !u8compare(str.s, (u8*)prefix, lengthof(prefix)))
 
-#define startswith(str, prefix)                                                       \
-	(str.len >= lengthof(prefix) && !strncmp(str.data, prefix, lengthof(prefix)))
-
-#define endswith(str, suffix)                                                                                      \
-	(str.len >= lengthof(suffix) && !strncmp(str.data + str.len - lengthof(suffix), suffix, lengthof(suffix)))
+#define endswith(str, suffix)                                                                                     \
+	(str.len >= lengthof(suffix) && !u8compare(str.s + str.len - lengthof(suffix), (u8*)suffix, lengthof(suffix)))
 
 #define IF_STARTSWITH_REPLACE(prefix, replacement)                                 \
 	if (startswith(word, prefix))                                              \
@@ -37,7 +29,7 @@ typedef struct {
 	{                                                                                     \
 		for (char **iterator = (char*[]){ __VA_ARGS__, NULL }; *iterator; iterator++) \
 		{                                                                             \
-			add_replace_suffix(word, s8_new(*iterator), lengthof(ending));        \
+			add_replace_suffix(word, s8fromcstr(*iterator), lengthof(ending));        \
 		}                                                                             \
 	}
 
@@ -53,11 +45,82 @@ typedef struct {
 		itou_form(word, lengthof(ending)); \
 	}
 
-#define IF_EQUALS_ADD(str, wordtoadd)       \
-	if (!strcmp(word.data, str))        \
-	{                                   \
-		add_str(wordtoadd);         \
+#define IF_EQUALS_ADD(str, wordtoadd)                    \
+	if (s8equals(word, s8(str)))                     \
+	{                                   		 \
+		g_ptr_array_add(deinfs, s8dup(s8(str))); \
 	}
+
+
+// TODO: Write this properly
+static char*
+kata2hira(s8 katakana_in)
+{
+	char* hiragana_out = g_strndup((char*)katakana_in.s, katakana_in.len);
+	u8* h = (u8*)hiragana_out;
+
+	while (*h)
+	{
+		/* Check that this is within the katakana block from E3 82 A0 to E3 83 BF. */
+		if (h[0] == 0xe3 && (h[1] == 0x82 || h[1] == 0x83) && h[2] != '\0')
+		{
+			/* Check that this is within the range of katakana which
+			   can be converted into hiragana. */
+			if ((h[1] == 0x82 && h[2] >= 0xa1) ||
+			    (h[1] == 0x83 && h[2] <= 0xb6) ||
+			    (h[1] == 0x83 && (h[2] == 0xbd || h[2] == 0xbe)))
+			{
+				/* Byte conversion from katakana to hiragana. */
+				if (h[2] >= 0xa0)
+				{
+					h[1] -= 1;
+					h[2] -= 0x20;
+				}
+				else
+				{
+					h[1] = h[1] - 2;
+					h[2] += 0x20;
+				}
+			}
+			h = (unsigned char*)g_utf8_next_char(h);
+		}
+		else
+			h++;
+	}
+
+	return hiragana_out;
+}
+
+char*
+kanji2hira(s8 input)
+{
+	// TODO: Write this properly
+	GString* output = g_string_sized_new(input.len + 2);
+
+	mecab_t *mecab = mecab_new2("");
+	const mecab_node_t *node = mecab_sparse_tonode(mecab, (char*)input.s);
+
+	char kata_reading[64];
+
+	for (; node; node = node->next)
+	{
+		if (node->stat == MECAB_BOS_NODE || node->stat == MECAB_EOS_NODE)
+			continue;
+
+		sscanf(node->feature, "%*[^,],%*[^,],%*[^,],%*[^,],%*[^,],%*[^,],%*[^,],%[^,],", kata_reading);
+		if (strlen(kata_reading) == 0)
+		{
+			strcpy(kata_reading, node->surface);
+			kata_reading[node->length] = '\0';
+		}
+		char* reading_hira = kata2hira(s8fromcstr(kata_reading));
+		g_string_append(output, reading_hira);
+		free(reading_hira);
+	}
+
+	mecab_destroy(mecab);
+	return g_string_free_and_steal(output);
+}
 
 /**
  * add_replace_ending:
@@ -72,42 +135,41 @@ typedef struct {
 static void
 add_replace_suffix(s8 word, s8 replacement, ptrdiff_t suffix_len)
 {
+	assert(word.s);
 	assert(word.len >= suffix_len);
+	assert(replacement.len >= 0);
 
-	ptrdiff_t repl_strlen = word.len - suffix_len + replacement.len + 1;
-	char* replstr = g_malloc(repl_strlen);
-	memcpy(replstr, word.data, word.len - suffix_len);
-	memcpy(replstr + word.len - suffix_len, replacement.data, replacement.len);
-	replstr[repl_strlen - 1] = '\0';
+	s8* replstr = g_new(s8, 1);
+	replstr->len = word.len - suffix_len + replacement.len;
+	replstr->s = g_malloc((gsize)replstr->len);
+
+	memcpy(replstr->s, word.s, (size_t)(word.len - suffix_len));
+	if (replacement.len)
+		memcpy(replstr->s + word.len - suffix_len, replacement.s, (size_t)replacement.len);
 
 	// Alt:
-	/* char* replstr = g_strdup_printf("%.*s%.*s", word.len - suffix_len, word.data, replacement.len, replacement.data); */
+	/* char* replstr = g_strdup_printf("%.*s%.*s", word.len - suffix_len, word.s, replacement.len, replacement.s); */
 	g_ptr_array_add(deinfs, replstr);
 }
 
 static void
 add_replace_prefix(s8 word, s8 replacement, ptrdiff_t prefix_len)
 {
+	assert(word.s);
 	assert(word.len >= prefix_len);
+	assert(replacement.len >= 0);
 
-	ptrdiff_t repl_strlen = word.len - prefix_len + replacement.len + 1;
-	char* replstr = g_malloc(repl_strlen);
-	memcpy(replstr, replacement.data, replacement.len);
-	memcpy(replstr + replacement.len, word.data + prefix_len, word.len - prefix_len);
-	replstr[repl_strlen - 1] = '\0';
+	s8* replstr = g_new(s8, 1);
+	replstr->len = word.len - prefix_len + replacement.len;
+	replstr->s = g_malloc((gsize)replstr->len);
+
+	if (replacement.len)
+	      memcpy(replstr->s, replacement.s, (size_t)replacement.len);
+	memcpy(replstr->s + replacement.len, word.s + prefix_len, (size_t)(word.len - prefix_len));
 
 	// Alt:
-	/* char* replstr = g_strdup_printf("%.*s%.*s", replacement.len, replacement.data, word.len - prefix_len, word.data + prefix_len); */
+	/* char* replstr = g_strdup_printf("%.*s%.*s", replacement.len, replacement.s, word.len - prefix_len, word.s + prefix_len); */
 	g_ptr_array_add(deinfs, replstr);
-}
-
-/*
- * Adds @str to the deinflections array.
- */
-static void
-add_str(char const* str)
-{
-	g_ptr_array_add(deinfs, g_strdup(str));
 }
 
 /*
@@ -315,17 +377,20 @@ deinflect_one_iter(s8 word)
 	kanjify(word);
 }
 
-char**
-deinflect(char const* word)
+s8**
+deinflect(s8 word)
 {
 	deinfs = g_ptr_array_new_with_free_func(g_free);
 
-	deinflect_one_iter(s8_new(word));
-	for (unsigned int i = 0; i < deinfs->len; i++)
-		deinflect_one_iter(s8_new(g_ptr_array_index(deinfs, i)));
+	deinflect_one_iter(word);
+	for (u32 i = 0; i < deinfs->len; i++)
+	{
+		s8* entry = g_ptr_array_index(deinfs, i);
+		deinflect_one_iter(*entry);
+	}
 
-	itou_form(s8_new(word), 0);
+	itou_form(word, 0);
 
 	g_ptr_array_add(deinfs, NULL);  /* Add NULL terminator */
-	return (char**)g_ptr_array_steal(deinfs, NULL);
+	return (s8**)g_ptr_array_steal(deinfs, NULL);
 }

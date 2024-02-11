@@ -7,12 +7,12 @@ typedef struct {
 	char* notetype;
 	char** fieldnames;
 	size_t num_fields;
-	unsigned int* fieldmapping;
+	int* fieldmapping;
 	char* searchfield;
 	// Popup
-	unsigned int win_width;
-	unsigned int win_height;
-	unsigned int win_margin;
+	int win_width;
+	int win_height;
+	int win_margin;
 	// Database
 	char* db_path;
 	// Behaviour
@@ -29,7 +29,7 @@ typedef struct {
 extern settings cfg;
 
 void print_settings();
-void read_user_settings();
+void read_user_settings(int fieldmapping_max);
 void free_user_settings();
 
 #endif /* SETTINGS_H */

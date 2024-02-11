@@ -1,24 +1,23 @@
+## dictpopup
 High priority
-- fix duplicate entries
 - create man page
 - Import libraries as git submodule
 - Error handling for missing config file
-- package with autotools?
 - publish on AUR
 
 Mid priority
+- Remove Xlib code
 - Add compilation checking on github
 - Implement better error checking macros.
 - Make proper use of gapplication (for sending notifications)
 - Leave "SearchField" option empty to search in entire collection
-- Convert external input to UTF-8 (for Windows support)
+- Convert all external input to UTF-8 (for Windows support)
 - Expand deinflection list
 - Kanjify the word in the copied sentence according to the dictionary entry
 - Remove trailing spaces from user settings
 
 Low priority
 - Add command line options for verbosity
-- Port file reading in dictpopup_create to gio (if there exists equivalent functionality)
 - Implement freeing user settings
 - Refactor popup.c
 - Skip certain lines on definition add (without selection), e.g.:
@@ -33,13 +32,24 @@ Low priority
 - Put length of longest entry into the database under LENGTH_OF_LONGEST_ENTRY. Then limit the lookup by that length
   - Only important for some auto scan implementation though
 
+## dictpopup_create
+- fix duplicate entries
+- Unpack in a dictpopup tmp directory
+- Always remove unpacked files before closing and remove if present when trying to unpack
+- Switch to zip library?
+- Add loading percentage
+- Process every dictionary in different thread?
+  - Questionable if this makes sense, since the bottleneck is probably the db insertion
+- Port file reading to gio? (if there exists equivalent functionality)
+- Handle escape sequences (i.e. implement s8_unescape)
+
 ## Known problems:
 - There might be "duplicate" entries especially when looking up hiragana strings, since the corresponding kanji writing is different.
   This is also unnecessary duplication in the database. Currently the only way of knowing under which kanji writing the entry is added, is the title bar.
-### dictionary parser
-- Escape sequences aren't handled
 
 Possible ideas:
+- Add a seperate database for importing frequency dicts
+  - Will allow sorting dictionary entries by frequency
 - Support hyper links?
   - Most "suckless" way would probably be to just open a new window with that definition (if it points to a definition)
 - An "Add this entry"-button before every entry

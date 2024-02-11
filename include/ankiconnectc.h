@@ -13,25 +13,21 @@ typedef struct {
   char **tags;
 } ankicard;
 
-typedef struct {
-    union {
-	char* string;
-	char* stringv;
-	bool boolean;
-    } data;
-    bool ok; // Signalizes if there was an error on not. The error msg is stored in data.string
-} retval_s;
+void ankicard_free(ankicard ac);
 
-
-/* Print the contents of an ankicard */
-void ac_print_ankicard(ankicard *ac);
-
-/* 
- * Create an anki card with entries initialized to NULL and num_fields set to -1. Needs to be freed. 
+/*
+ * Print the contents of an ankicard 
  */
-ankicard* ankicard_new();
+void ac_print_ankicard(ankicard ac);
 
-void ankicard_free(ankicard* ac, bool free_contents);
+typedef struct {
+      union {
+          char* string;
+          char* stringv;
+          bool boolean;
+      } data;
+      bool ok; // Signalizes if there was an error on not. The error msg is stored in data.string
+} retval_s;
 
 /*
  * Returns: The null terminated list of decks in data.stringv

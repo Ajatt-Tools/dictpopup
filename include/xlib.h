@@ -1,0 +1,2 @@
+int clipnotify();
+char* getwindowname();

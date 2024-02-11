@@ -1,5 +1,4 @@
-#include "readsettings.h"
-#include "dictionary.h"
+#include "util.h"
 
 /*
  * @dictionary: The dictionary to be displayed

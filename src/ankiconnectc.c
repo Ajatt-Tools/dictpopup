@@ -14,58 +14,24 @@
 
 typedef size_t (*ResponseFunc)(char *ptr, size_t size, size_t nmemb, void *userdata);
 
-ankicard*
-ankicard_new()
+void
+ankicard_free(ankicard ac)
 {
-	ankicard *ac = g_new(ankicard, 1);
-	*ac = (ankicard) { .num_fields=-1 };
-	return ac;
+	g_free(ac.deck);
+	g_free(ac.notetype);
+
+	g_strfreev(ac.fieldnames);
+	g_strfreev(ac.fieldentries);
+	g_strfreev(ac.tags);
 }
 
 void
-ankicard_free(ankicard* ac, bool free_contents)
+ac_print_ankicard(ankicard ac)
 {
-	if (free_contents)
-	{
-	      g_free(ac->deck);
-	      g_free(ac->notetype);
-
-	      g_strfreev(ac->fieldnames);
-	      g_strfreev(ac->fieldentries);
-	      g_strfreev(ac->tags);
-	}
-
-	g_free(ac);
-}
-
-void
-ac_print_ankicard(ankicard *ac)
-{
-	printf("Deck name: %s\n", ac->deck);
-	printf("Notetype: %s\n", ac->notetype);
-	for (int i = 0; i < ac->num_fields; i++)
-		printf("%s: %s\n", ac->fieldnames[i], ac->fieldentries[i] == NULL ? "" : ac->fieldentries[i]);
-}
-
-retval_s
-ac_get_notetypes()
-{
-      //TODO: Implement
-      return (retval_s) {0};
-}
-
-static size_t
-check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	assert(userdata);
-	retval_s* ret = userdata;
-
-	if (strstr(ptr, "\"error\": null"))
-		*ret = (retval_s) { .ok = true };
-	else
-		*ret = (retval_s) { .data.string = ptr, .ok = false };
-
-	return nmemb;
+	printf("Deck name: %s\n", ac.deck);
+	printf("Notetype: %s\n", ac.notetype);
+	for (int i = 0; i < ac.num_fields; i++)
+		printf("%s: %s\n", ac.fieldnames[i], ac.fieldentries[i] == NULL ? "" : ac.fieldentries[i]);
 }
 
 static retval_s
@@ -145,6 +111,13 @@ ac_gui_search(const char* deck, const char* field, const char* entry)
 	return sendRequest(request, NULL);
 }
 
+retval_s
+ac_get_notetypes()
+{
+      //TODO: Implement
+      return (retval_s) {0};
+}
+
 /*
  * Stores the file at @path in the Anki media collection under the name @filename.
  * Doesn't overwrite existing files.
@@ -164,7 +137,7 @@ ac_store_file(char const* filename, char const* path)
  *
  * Returns: A json escaped copy of @str
  */
-char*
+static char*
 json_escape_str(const char *str)
 {
 	if (!str)
@@ -203,25 +176,22 @@ json_escape_str(const char *str)
 }
 
 // Non-macro version:
-/* int */
-/* get_array_len(void* array[]) */
-/* { */
-/*       if (!array) */
-/* 	    return -1; */
-
-/*       int n = 0; */
-/*       while (*array++) */
-/* 	    n++; */
-/*       return n; */
-/* } */
+static int
+get_array_len(char* array[static 1])
+{
+      int n = 0;
+      while (*array++)
+	    n++;
+      return n;
+}
 
 // Expects array to be non-null
-#define get_array_len(len, array) \
-      {				  \
-	    len = 0;		  \
-      	    while(array[len++])	  \
-		    ;		  \
-      }
+/* #define get_array_len(len, array) \ */
+/*       {				  \ */
+/* 	    len = 0;		  \ */
+/*       	    while(array[len++])	  \ */
+/* 		    ;		  \ */
+/*       } */
 
 /*
  * @array: An array of strings to be json escaped
@@ -229,67 +199,58 @@ json_escape_str(const char *str)
  *
  * Returns: A null terminated copy of @array with every string json escaped.
  */
-char**
+static char**
 json_escape_str_array(int n, char** array)
 {
-    if (n < 0)
-	  get_array_len(n, array); // Not handling null case return as declaring to expect non-null
-    char **output = g_new(char*, n + 1);
-    
+    n = n < 0 ? get_array_len(array) : n;
+
+    char **output = g_new(char*, (gsize)(n + 1));
     for (int i = 0; i < n; i++)
 	  output[i] = json_escape_str(array[i]);
     output[n] = NULL;
     
-    // If one can expect array to be NULL-terminated:
-    /* char* out_ptr = output; */
-    /* while ((*out_ptr++ = json_escape_str(*array++))) */
-    /*   ; */
     return output;
 }
 
 /*
  * Creates a json escaped and \n -> <br> converted copy of the anki card.
  */
-ankicard*
-ankicard_json_escape_dup(ankicard const ac)
+static ankicard
+ankicard_dup_json_esc(ankicard const ac)
 {
 	signed int num_fields = ac.num_fields;
-	if (num_fields < 0)
-	      get_array_len(num_fields, ac.fieldnames);
-
-	ankicard *je_ac = ankicard_new();
-	*je_ac = (ankicard) {
+	return (ankicard) {
 	      .deck = json_escape_str(ac.deck),
 	      .notetype = json_escape_str(ac.notetype),
 	      .fieldnames = json_escape_str_array(num_fields, ac.fieldnames),
 	      .fieldentries = json_escape_str_array(num_fields, ac.fieldentries),
 	      .tags = ac.tags ? json_escape_str_array(-1, ac.tags) : NULL
 	};
-
-	return je_ac;
 }
 
-void
-json_escaped_ankicard_free(ankicard *je_ac)
-{
-	g_free(je_ac->deck);
-	g_free(je_ac->notetype);
-
-	g_strfreev(je_ac->fieldnames);
-	g_strfreev(je_ac->fieldentries);
-	g_strfreev(je_ac->tags);
-
-	g_free(je_ac);
-}
-
-char*
+static char*
 check_card(ankicard const ac)
 {
 	return !ac.deck ? "No deck specified."
 	     : !ac.notetype ? "No notetype specified."
+	     : !ac.num_fields ? "Number of fields is 0"
 	     : !ac.fieldnames ? "No fieldnames provided."
 	     : !ac.fieldentries ? "No fieldentries provided."
 	     : NULL;
+}
+
+static size_t
+check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	assert(userdata);
+	retval_s* ret = userdata;
+
+	if (strstr(ptr, "\"error\": null"))
+		*ret = (retval_s) { .ok = true };
+	else
+		*ret = (retval_s) { .data.string = ptr, .ok = false };
+
+	return nmemb;
 }
 
 retval_s
@@ -298,7 +259,7 @@ ac_addNote(ankicard const ac)
 	if(check_card(ac))
 	    return (retval_s) { .data.string = check_card(ac), .ok = false };
 
-	ankicard* ac_je = ankicard_json_escape_dup(ac);
+	ankicard ac_je = ankicard_dup_json_esc(ac);
 
 	g_autoptr(GString) request = g_string_sized_new(500);
 	g_string_printf(request,
@@ -310,20 +271,20 @@ ac_addNote(ankicard const ac)
 			                "\"deckName\": \"%s\","
 			                "\"modelName\": \"%s\","
 			                "\"fields\": {",
-			                ac_je->deck,
-			                ac_je->notetype
+			                ac_je.deck,
+			                ac_je.notetype
 	);
 
 	bool first = 1;
-	for (int i = 0; ac_je->fieldnames[i]; i++)
+	for (int i = 0; ac_je.fieldnames[i]; i++)
 	{
 		if (!first) g_string_append_c(request, ',');
 		else first = 0;
 
 		g_string_append_printf(request,
 			     "\"%s\": \"%s\"",
-			     ac_je->fieldnames[i],
-			     ac_je->fieldentries[i] ? ac_je->fieldentries[i] : ""
+			     ac_je.fieldnames[i],
+			     ac_je.fieldentries[i] ? ac_je.fieldentries[i] : ""
 		);
 	}
 
@@ -335,10 +296,10 @@ ac_addNote(ankicard const ac)
 	                               "\"tags\": ["
 	);
 
-	if (ac_je->tags)
+	if (ac_je.tags)
 	{
 	      first = 1;
-	      for (char **ptr = ac_je->tags; *ptr; ptr++)
+	      for (char **ptr = ac_je.tags; *ptr; ptr++)
 	      {
 		      if (!first) g_string_append_c(request, ',');
 		      else first = 0;
@@ -355,6 +316,6 @@ ac_addNote(ankicard const ac)
 	);
  
 	retval_s ret = sendRequest(request->str, check_add_response);
-	ankicard_free(ac_je, true);
+	ankicard_free(ac_je);
 	return ret;
 }

@@ -5,4 +5,11 @@
  *
  * Returns: A null terminated array with possible deinflections. Array needs to be freed with g_strfreev() for example.
  */
-char **deinflect(char *word);
+s8** deinflect(s8 word);
+
+/*
+ * Tries to give a hiragana conversion of @input using MeCab.
+ *
+ * Returns: A newly allocated string containing the conversion.
+ */
+char* kanji2hira(s8 input);
