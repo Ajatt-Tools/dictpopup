@@ -4,7 +4,8 @@ IDIR=include
 SDIR=src
 CC=gcc
 CFLAGS=-I$(IDIR) $(shell pkg-config --cflags gtk+-3.0) -Wall
-DEBUG_FLAGS=-g3 -Wextra -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-unused-parameter -fsanitize=undefined,address -fsanitize-undefined-trap-on-error
+DEBUG_FLAGS=-g3 -Wextra -Wdouble-promotion -Wno-sign-conversion -Wno-unused-parameter -fsanitize=undefined -fsanitize-undefined-trap-on-error
+#-Wconversion ,address
 RELEASE_FLAGS=-O3 -flto
 LIBS = $(shell pkg-config --libs gtk+-3.0) -lcurl -lmecab -llmdb -pthread -lXfixes -lX11
 PREFIX = /usr/local

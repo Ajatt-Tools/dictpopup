@@ -27,7 +27,7 @@ opendb(const char* path)
 {
 	MDB_CHECK(mdb_env_create(&env));
 	mdb_env_set_maxdbs(env, 3);
-	unsigned int mapsize = 2097152000;
+	unsigned int mapsize = 2097152000; // 2Gb
 	MDB_CHECK(mdb_env_set_mapsize(env, mapsize));
 
 	MDB_CHECK(mdb_env_open(env, path, 0, 0664));
@@ -36,8 +36,6 @@ opendb(const char* path)
 	MDB_CHECK(mdb_dbi_open(txn, "db1", MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE, &dbi1)); // Can use MDB_GET_MULTIPLE and MDB_NEXT_MULTIPLE
 	MDB_CHECK(mdb_dbi_open(txn, "db2", MDB_INTEGERKEY | MDB_CREATE, &dbi2));
 
-	/* #define DATANAME "/dictpopup_tmp_data.mdb" */
-	/* #define LOCKNAME "/dictpopup_tmp_lock.mdb" */
 	MDB_CHECK(mdb_env_create(&env_tmp));
 	mdb_env_set_maxdbs(env_tmp, 3);
 	MDB_CHECK(mdb_env_set_mapsize(env_tmp, mapsize));

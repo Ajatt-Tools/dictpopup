@@ -14,9 +14,9 @@
 
 #define INITIAL_SIZE 16384
 
-#define ds8(s)     (ds8){ (uint8_t*)s, lengthof(s), .cap = 0 }
+#define ds8(s)  (ds8){ (u8*)s, lengthof(s), 0 }
 typedef struct {
-	uint8_t* data;
+	uint8_t* s;
 	ptrdiff_t len;
 	ptrdiff_t cap;
 } ds8;
@@ -31,7 +31,7 @@ typedef struct {
 ds8
 ds8_new(size cap)
 {
-	return (ds8) { .data = g_malloc(cap), .len = 0, .cap = cap };
+	return (ds8) { .s = g_malloc(cap), .len = 0, .cap = cap };
 }
 
 bool
@@ -41,35 +41,62 @@ ds8_equals(ds8 a, ds8 b)
 		return false;
 
 	for (ptrdiff_t i = 0; i < a.len; i++)
-		if (a.data[i] != b.data[i])
+		if (a.s[i] != b.s[i])
 			return false;
 
 	return true;
 }
 
 void
-ds8_append(ds8* str, char c)
+ds8_appendc(ds8* str, char c)
 {
 	if (str->len + 1 > str->cap)
+		str->s = g_realloc(str->s, (size_t)(str->cap *= 2));
+
+	(str->s)[(str->len)++] = c;
+}
+
+void
+ds8_appendstr(ds8* a, ds8 b)
+{
+	size startlen = a->len;
+	assert(a);
+	assert(b.len >= 0);
+
+	if (a->len + b.len > a->cap)
 	{
-		(str->cap) *= 2;
-		str->data = g_realloc(str->data, (size_t)(str->cap));
+		a->cap = a->len + b.len;
+		a->s = g_realloc(a->s, (size_t)(a->cap));
 	}
-	(str->data)[(str->len)++] = c;
+
+	/* a->len += b.len; */
+	u8* aptr = a->s + a->len;
+	for (; b.len; b.len--)
+	{
+		*aptr++ = *b.s++;
+		a->len++;
+	}
+
+	assert(a->len >= startlen);
 }
 
 void
 ds8_free(ds8* str)
 {
-	g_free(str->data);
-	str->data = NULL;
+	g_free(str->s);
+	str->s = NULL;
 }
 
 void
 ds8_trim(ds8* str)
 {
-	while (str->len > 0 && isspace(str->data[str->len - 1]))
+	while (str->len > 0 && isspace(str->s[str->len - 1]))
 		str->len--;
+	while (str->len > 0 && isspace(*str->s))
+	{
+		str->s++;
+		str->len--;
+	}
 }
 
 void
@@ -79,17 +106,18 @@ ds8_unescape(ds8* str)
 	ptrdiff_t s = 0, e = 0;
 	while (e < str->len)
 	{
-		if (str->data[e] == '\\' && e + 1 < str->len && str->data[e + 1] == 'n')
+		if (str->s[e] == '\\' && e + 1 < str->len && str->s[e + 1] == 'n')
 		{
-			str->data[s++] = '\n';
+			str->s[s++] = '\n';
 			e += 2;
 		}
 		else
-			str->data[s++] = str->data[e++];
+			str->s[s++] = str->s[e++];
 	}
 	str->len = s;
 }
 
+// Debug code
 /* static char */
 /* _fgetc(FILE* fp) */
 /* { */
@@ -104,44 +132,44 @@ ds8_unescape(ds8* str)
 /* 		exit(0);      \ */
 /* 	} */
 
-static ds8
-compress_dictentry(dictentry_s de)
-{
-	ds8 cstr = {0};
-	size data_str_len = de.dictname.len + 1 + de.kanji.len + 1 + de.reading.len + 1 + de.definition.len;
-
-	char data_str[data_str_len];
-	char* data_ptr = data_str;
-
-	memcpy(data_ptr, de.dictname.data, de.dictname.len);
-	data_ptr += de.dictname.len;
-	*data_ptr++ = '\0';
-
-	memcpy(data_ptr, de.kanji.data, de.kanji.len);
-	data_ptr += de.kanji.len;
-	*data_ptr++ = '\0';
-
-	memcpy(data_ptr, de.reading.data, de.reading.len);
-	data_ptr += de.reading.len;
-	*data_ptr++ = '\0';
-
-	memcpy(data_ptr, de.definition.data, de.definition.len);
-
-	// TODO: Use string array compression from unishox2 instead
-	// TODO: Can overflow
-	cstr = ds8_new(data_str_len + 10);
-	cstr.len = unishox2_compress(data_str, (int)data_str_len, 
-	    UNISHOX_API_OUT_AND_LEN((char*)cstr.data, (int)cstr.len), USX_PSET_FAVOR_SYM);
-	return cstr;
-}
-
 /* static void */
 /* dump_ds8v(int len, ds8 stringv[len]) */
 /* { */
 /* 	for (int i = 0; i < len; i++) */
-/* 		printf("[%i]: %.*s\n", i, (int)stringv[i].len, stringv[i].data); */
+/* 		printf("[%i]: %.*s\n", i, (int)stringv[i].len, stringv[i].s); */
 /* 	printf("\n"); */
 /* } */
+
+static ds8
+compress_dictentry(dictentry_s de)
+{
+	// TODO: Use string array compression from unishox2 instead
+	size data_str_len = de.dictname.len + 1 + de.kanji.len + 1 + de.reading.len + 1 + de.definition.len;
+	char data_str[data_str_len];
+	char* data_ptr = data_str;
+	memcpy(data_ptr, de.dictname.s, de.dictname.len);
+	data_ptr += de.dictname.len;
+	*data_ptr++ = '\0';
+	memcpy(data_ptr, de.kanji.s, de.kanji.len);
+	data_ptr += de.kanji.len;
+	*data_ptr++ = '\0';
+	memcpy(data_ptr, de.reading.s, de.reading.len);
+	data_ptr += de.reading.len;
+	*data_ptr++ = '\0';
+	memcpy(data_ptr, de.definition.s, de.definition.len);
+
+	ds8 cstr = ds8_new(data_str_len + 5);
+	cstr.len = unishox2_compress(data_str, (int)data_str_len,
+				     UNISHOX_API_OUT_AND_LEN((char*)cstr.s, (int)cstr.cap), USX_PSET_FAVOR_SYM);
+	while (cstr.len > cstr.cap)
+	{
+		cstr.cap += 20;
+		cstr.s = g_realloc(cstr.s, (gsize)(cstr.cap));
+		cstr.len = unishox2_compress(data_str, (int)data_str_len,
+					     UNISHOX_API_OUT_AND_LEN((char*)cstr.s, (int)cstr.cap), USX_PSET_FAVOR_SYM);
+	}
+	return cstr;
+}
 
 static void
 add_dictentry(dictentry_s de)
@@ -149,31 +177,33 @@ add_dictentry(dictentry_s de)
 	ds8_unescape(&de.definition);
 	ds8_trim(&de.definition);
 
-	/* if (de.definition.len == 0) */
-	/* 	fprintf(stderr, "Warning: Could not parse a definition for entry with kanji: \"%.*s\" and reading: \"%.*s\". In dictionary: \"%.*s\"\n", */
-	/* 		(int)de.kanji.len, de.kanji.data, */
-	/* 		(int)de.reading.len, de.reading.data, */
-	/* 		(int)de.dictname.len, de.dictname.data); */
-	/* else if (de.kanji.len == 0 && de.reading.len == 0) */
-	/* 	fprintf(stderr, "Warning: Could not obtain kanji nor reading for entry with definition: \"%.*s\", in dictionary: \"%.*s\"\n", */
-	/* 		(int)de.definition.len, de.definition.data, */
-	/* 		(int)de.dictname.len, de.dictname.data); */
-	/* else */
-	/* { */
-	if (de.definition.len != 0 && (de.kanji.len != 0 || de.reading.len != 0))
+	if (de.definition.len == 0)
+	{
+		fprintf(stderr, "Warning: Could not parse a definition for entry with kanji: \"%.*s\" and reading: \"%.*s\". In dictionary: \"%.*s\"\n",
+			(int)de.kanji.len, de.kanji.s,
+			(int)de.reading.len, de.reading.s,
+			(int)de.dictname.len, de.dictname.s);
+	}
+	else if (de.kanji.len == 0 && de.reading.len == 0)
+	{
+		fprintf(stderr, "Warning: Could not obtain kanji nor reading for entry with definition: \"%.*s\", in dictionary: \"%.*s\"\n",
+			(int)de.definition.len, de.definition.s,
+			(int)de.dictname.len, de.dictname.s);
+	}
+	else
 	{
 		ds8 compressed = compress_dictentry(de);
 
-		if (*de.kanji.data)
-			addtodb((char*)de.kanji.data, de.kanji.len, (char*)compressed.data, compressed.len);
-		if (*de.reading.data) // Let the db figure out duplicates
-			addtodb((char*)de.reading.data, de.reading.len, (char*)compressed.data, compressed.len);
+		if (de.kanji.len > 0)
+			addtodb((char*)de.kanji.s, de.kanji.len, (char*)compressed.s, compressed.len);
+		if (de.reading.len > 0) // Let the db figure out duplicates
+			addtodb((char*)de.reading.s, de.reading.len, (char*)compressed.s, compressed.len);
 
 		ds8_free(&compressed);
 	}
 }
 
-#define ds8_reset_entries(array)                  \
+#define ds8_reset_entries(array)                 \
 	for (int i = 0; i < countof(array); i++) \
 	array[i].len = 0;
 
@@ -195,7 +225,7 @@ read_string_into(ds8* buffer, FILE* fp)
 		else if (c == '"' && (prev_c != '\\' || escaped_slash))
 			break;
 
-		ds8_append(buffer, c);
+		ds8_appendc(buffer, c);
 
 		prev_c = c;
 		c = fgetc(fp);
@@ -208,12 +238,26 @@ read_number_into(ds8* buffer, FILE* fp)
 {
 	char c;
 	for (c = fgetc(fp); isdigit(c); c = fgetc(fp))
-		ds8_append(buffer, c);
+		ds8_appendc(buffer, c);
 	ungetc(c, fp);
 }
 
+/*
+ * Advances the pointer to the next ocurrence of @skip_c
+ *
+ * Returns: The last read char
+ */
+static char
+skip_to(char skip_c, FILE* fp)
+{
+	char c;
+	for (c = fgetc(fp); c != EOF && c != skip_c; c = fgetc(fp))
+		;
+	return c;
+}
+
 static void
-read_next_entry_into(ds8* buffer, FILE* fp, int depth)
+read_next_entry_into(ds8* str, FILE* fp, i32 ul)
 {
 	char c;
 	/* Skip to start */
@@ -222,24 +266,24 @@ read_next_entry_into(ds8* buffer, FILE* fp, int depth)
 
 	if (isdigit(c) || c == '-') // Interpret - as negative sign
 	{
-		ds8_append(buffer, c);
-		read_number_into(buffer, fp);
+		ds8_appendc(str, c);
+		read_number_into(str, fp);
 	}
 	else if (c == '"')
-		read_string_into(buffer, fp);
+		read_string_into(str, fp);
 	else if (c == '[')
-	{       /* read all entries contained in [] into buffer */
+	{       /* read all entries contained in [] into str */
 		bool stop = false;
 		while (!stop)
 		{
-			read_next_entry_into(buffer, fp, depth+1);
+			read_next_entry_into(str, fp, ul);
 
 			// Check if this was the last entry
 			while ((c = fgetc(fp)))
 			{
 				if (c == ',')
 				{       // Next incoming
-					break;         
+					break;
 				}
 				else if (c == ']')
 				{
@@ -260,8 +304,9 @@ read_next_entry_into(ds8* buffer, FILE* fp, int depth)
 	else if (c == '{')
 	{
 		// search for string "content" (if existing)
-		// Add entry after it to buffer
+		// Add entry after it to str
 		ds8 json_entry = ds8_new(50);
+		ds8 tag = ds8_new(50);
 		int cbracket_lvl = 1;
 
 		for (c = fgetc(fp); c != EOF; c = fgetc(fp))
@@ -269,8 +314,32 @@ read_next_entry_into(ds8* buffer, FILE* fp, int depth)
 			if (c == '"' && cbracket_lvl == 1)
 			{
 				read_string_into(&json_entry, fp);
-				if (ds8_equals(json_entry, ds8("content")))
-					read_next_entry_into(buffer, fp, depth+1);
+
+				if (ds8_equals(json_entry, ds8("tag"))) // Expects "tag" to appear before "content"
+				{
+					read_next_entry_into(&tag, fp, ul);
+
+					if (ds8_equals(tag, ds8("ul")))
+						ul++;
+					else if (ds8_equals(tag, ds8("li")))
+					{
+						if (str->len == 0 || str->s[str->len - 1] != '\n')
+							ds8_appendc(str, '\n');
+						for (i32 i = 0; i < ul - 1; i++)
+							ds8_appendc(str, '\t'); // ul-times
+						ds8_appendstr(str, ds8("•"));
+					}
+					else if (ds8_equals(tag, ds8("div")))
+					{       //TODO: Find some better way
+						if (str->len == 0 || str->s[str->len - 1] != '\n')
+							ds8_appendc(str, '\n');
+					}
+
+					tag.len = 0;
+				}
+				else if (ds8_equals(json_entry, ds8("content")))
+					read_next_entry_into(str, fp, ul);
+
 				json_entry.len = 0;
 			}
 			else if (c == '{')
@@ -283,33 +352,20 @@ read_next_entry_into(ds8* buffer, FILE* fp, int depth)
 			}
 		}
 		assert(c == '}');
-		if(depth == 3) ds8_append(buffer, '\n');
+		ds8_free(&json_entry);
+		ds8_free(&tag);
 	}
 	else if (c == ',' || c == ']' || c == '}')
 		ungetc(c, fp);
 	else if (c == 'n')
 	{
-		// Assume this is null, so skip and leave empty
-		while ((c = fgetc(fp)) != ',')
-			;
-		ungetc(c, fp);
+		size len = lengthof("ull");
+		char buf[len];
+		fread(buf, 1, len, fp);
+		assert(strncmp(buf, "ull", len) == 0);
 	}
 	else
 		assert(false);
-}
-
-/*
- * Advances the pointer to the next ocurrence of @skip_c
- *
- * Returns: The last read char
- */
-static char
-skip_to(char skip_c, FILE* fp)
-{
-	char c;
-	for (c = fgetc(fp); c != EOF && c != skip_c; c = fgetc(fp))
-		;
-	return c;
 }
 
 static void
@@ -323,12 +379,12 @@ parse_json(ds8 dictname, char* json_file_path)
 	}
 
 	ds8 entry_buffer[] = {
-		(ds8){ .data = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
-		(ds8){ .data = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
-		(ds8){ .data = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
-		(ds8){ .data = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
-		(ds8){ .data = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
-		(ds8){ .data = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE }
+		(ds8){ .s = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
+		(ds8){ .s = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
+		(ds8){ .s = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
+		(ds8){ .s = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
+		(ds8){ .s = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE },
+		(ds8){ .s = g_malloc(INITIAL_SIZE), .cap = INITIAL_SIZE }
 	};
 
 	skip_to('[', fp);
@@ -350,6 +406,9 @@ parse_json(ds8 dictname, char* json_file_path)
 			.reading = entry_buffer[1],
 			.definition = entry_buffer[5]
 		});
+
+		/* dump_ds8v(countof(entry_buffer), entry_buffer); */
+
 		ds8_reset_entries(entry_buffer);
 
 		skip_to(']', fp);
@@ -378,7 +437,7 @@ extract_dictname(char *directory_path)
 	const char *title_end = strstr(title_start, "\"");
 
 	return (ds8){
-		       .data = (u8*)g_strndup(title_start, title_end - title_start),
+		       .s = (u8*)g_strndup(title_start, title_end - title_start),
 		       .len = title_end - title_start,
 		       .cap = title_end - title_start
 	};
@@ -388,7 +447,7 @@ static void
 add_folder(char *directory_path)
 {
 	ds8 dictname = extract_dictname(directory_path);
-	printf("Processing dictionary: %.*s\n", (int)dictname.len, dictname.data);
+	printf("Processing dictionary: %.*s\n", (int)dictname.len, dictname.s);
 
 	DIR *dir = opendir(directory_path);
 	if (dir == NULL)

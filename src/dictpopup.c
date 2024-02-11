@@ -14,10 +14,7 @@
 #include "settings.h"
 #include "deinflector.h"
 #include "dbreader.h"
-
-#ifndef UTIL_H
 #include "util.h"
-#endif
 
 static int const number_of_possible_entries = 9;
 typedef struct possible_entries_s {
@@ -120,7 +117,7 @@ populate_entries(possible_entries_s pe[static 1], dictentry const de)
 	if (cfg.copysentence)
 	{
 		notify(0, "Please select the context.");
-		clipnotify();
+		clipnotify(); // waits for clipboard change
 		pe->copiedsentence = get_selection();
 		if (cfg.nukewhitespace)
 			nuke_whitespace(pe->copiedsentence);
@@ -149,7 +146,9 @@ send_ankicard(possible_entries_s pe)
 	for (int i = 0; i < ac.num_fields; i++)
 		ac.fieldentries[i] = map_entry(pe, cfg.fieldmapping[i]);
 
-	check_ac_response(ac_addNote(ac));
+	if(check_ac_response(ac_addNote(ac)))
+	  notify(0, "Successfully added card.");
+
 	g_free(ac.fieldentries);
 }
 

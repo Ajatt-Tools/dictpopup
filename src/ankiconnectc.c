@@ -1,9 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+
 #include <curl/curl.h>
 #include <glib.h>
-#include <stdbool.h>
 
 #include "ankiconnectc.h"
 
@@ -23,15 +22,6 @@ ankicard_free(ankicard ac)
 	g_strfreev(ac.fieldnames);
 	g_strfreev(ac.fieldentries);
 	g_strfreev(ac.tags);
-}
-
-void
-ac_print_ankicard(ankicard ac)
-{
-	printf("Deck name: %s\n", ac.deck);
-	printf("Notetype: %s\n", ac.notetype);
-	for (int i = 0; i < ac.num_fields; i++)
-		printf("%s: %s\n", ac.fieldnames[i], ac.fieldentries[i] == NULL ? "" : ac.fieldentries[i]);
 }
 
 static retval_s
