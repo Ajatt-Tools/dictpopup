@@ -59,7 +59,6 @@ ds8_appendc(ds8* str, char c)
 void
 ds8_appendstr(ds8* a, ds8 b)
 {
-	size startlen = a->len;
 	assert(a);
 	assert(b.len >= 0);
 
@@ -76,8 +75,6 @@ ds8_appendstr(ds8* a, ds8 b)
 		*aptr++ = *b.s++;
 		a->len++;
 	}
-
-	assert(a->len >= startlen);
 }
 
 void
@@ -174,7 +171,7 @@ compress_dictentry(dictentry_s de)
 static void
 add_dictentry(dictentry_s de)
 {
-	ds8_unescape(&de.definition);
+	/* ds8_unescape(&de.definition); */
 	ds8_trim(&de.definition);
 
 	if (de.definition.len == 0)
@@ -214,21 +211,19 @@ add_dictentry(dictentry_s de)
 static void
 read_string_into(ds8* buffer, FILE* fp)
 {
-	char c = fgetc(fp);
-	char prev_c = 0;
-	// TODO: Handle escape sequences
-	bool escaped_slash = false;
-	while (c != EOF)
+	char c = 0;
+	bool prev_slash = false;
+	while ((c = fgetc(fp)) != EOF)
 	{
-		if (c == '\\')
-			escaped_slash = (prev_c == '\\' && !escaped_slash);
-		else if (c == '"' && (prev_c != '\\' || escaped_slash))
+		if (c == '"' && !prev_slash)
 			break;
 
-		ds8_appendc(buffer, c);
+		if (prev_slash && c == 'n')
+		      buffer->s[buffer->len-1] = '\n';
+		else
+		      ds8_appendc(buffer, c);
 
-		prev_c = c;
-		c = fgetc(fp);
+		prev_slash = (c == '\\' && !prev_slash); // Don't count escaped slashes
 	}
 	assert(c == '"');
 }
