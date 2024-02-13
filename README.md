@@ -16,7 +16,7 @@ See `TODO.txt` for more.
  * Deinflect
  * Kanjify e.g. お前 -> 御前
  * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
- * Try a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
+ * Fall back to a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
  * Play a pronunciation on lookup / button press (requires setup as for now)
  * Add word with selected definition to Anki
  * Indicator showing if a word already exists in your Anki deck / collection. Orange if existing cards are suspended. Anki browser search on press.
