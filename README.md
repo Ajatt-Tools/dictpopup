@@ -7,12 +7,10 @@ https://github.com/GenjiFujimoto/dictpopup/assets/50422430/4d22d4a2-e138-4bee-bc
 
 ## Current state
 This is still very much a work in progress.
-**It only works on Linux** right now and the parser for the Yomichan dictionaries isn't fully implemented yet (for dictionaries with structured content).
+**It only works on Linux with X11** right now and the parser for the Yomichan dictionaries isn't fully implemented yet (for dictionaries with structured content).
 See `TODO.txt` for more.
 
 ## List of features
- * Fast startup time
- * Very low memory footprint / CPU usage
  * Deinflect
  * Kanjify e.g. お前 -> 御前
  * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
@@ -21,6 +19,7 @@ See `TODO.txt` for more.
  * Add word with selected definition to Anki
  * Indicator showing if a word already exists in your Anki deck / collection. Orange if existing cards are suspended. Anki browser search on press.
  * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain the book title)
+ * Fast and memory efficient
 
 ## Dependencies
 x11, gtk3, [lmdb](https://www.symas.com/lmdb) (Arch package `lmdb`), mecab
