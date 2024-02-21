@@ -1,7 +1,7 @@
 #include "util.h"
 
-void open_database();
-void close_database();
+void open_database(void);
+void close_database(void);
 
 /*
  * Looks up @word in the database and adds 
@@ -10,4 +10,3 @@ void close_database();
  * @word is copied if used in a dictionary entry.
  */
 void add_word_to_dict(dictionary *dict, s8 word);
-size_t longest_entry_length();

@@ -45,10 +45,12 @@ static GPtrArray *deinfs;
 		itou_form(word, lengthof(ending)); \
 	}
 
-#define IF_EQUALS_ADD(str, wordtoadd)                    \
-	if (s8equals(word, s8(str)))                     \
-	{                                   		 \
-		g_ptr_array_add(deinfs, s8dup(s8(str))); \
+#define IF_EQUALS_ADD(str, wordtoadd)             \
+	if (s8equals(word, s8(str)))              \
+	{                                         \
+		s8* str_dup = new(s8, 1);	  \
+		*str_dup = s8dup(s8(str));	  \
+		g_ptr_array_add(deinfs, str_dup); \
 	}
 
 
@@ -95,7 +97,8 @@ char*
 kanji2hira(s8 input)
 {
 	// TODO: Write this properly
-	GString* output = g_string_sized_new(input.len + 2);
+	assert(input.len >= 0);
+	GString* output = g_string_sized_new((gsize)(input.len + 2));
 
 	mecab_t *mecab = mecab_new2("");
 	const mecab_node_t *node = mecab_sparse_tonode(mecab, (char*)input.s);
@@ -123,14 +126,12 @@ kanji2hira(s8 input)
 }
 
 /**
- * add_replace_ending:
+ * add_replace_suffix:
  * @word: The word whose ending should be replaced
  * @replacement: The UTF-8 encoded string the ending should be replaced with
  * @suffix_len: The length of the suffix (in bytes) that should be replaced
  *
  * Replaces the last @suffix_len bytes of @word with @replacement.
- *
- * Returns: The newly allocated string with replaced ending.
  */
 static void
 add_replace_suffix(s8 word, s8 replacement, ptrdiff_t suffix_len)
@@ -139,16 +140,14 @@ add_replace_suffix(s8 word, s8 replacement, ptrdiff_t suffix_len)
 	assert(word.len >= suffix_len);
 	assert(replacement.len >= 0);
 
-	s8* replstr = g_new(s8, 1);
+	s8* replstr = new(s8, 1);
 	replstr->len = word.len - suffix_len + replacement.len;
-	replstr->s = g_malloc((gsize)replstr->len);
+	replstr->s = _malloc((gsize)replstr->len);
 
 	memcpy(replstr->s, word.s, (size_t)(word.len - suffix_len));
 	if (replacement.len)
 		memcpy(replstr->s + word.len - suffix_len, replacement.s, (size_t)replacement.len);
 
-	// Alt:
-	/* char* replstr = g_strdup_printf("%.*s%.*s", word.len - suffix_len, word.s, replacement.len, replacement.s); */
 	g_ptr_array_add(deinfs, replstr);
 }
 
@@ -159,16 +158,14 @@ add_replace_prefix(s8 word, s8 replacement, ptrdiff_t prefix_len)
 	assert(word.len >= prefix_len);
 	assert(replacement.len >= 0);
 
-	s8* replstr = g_new(s8, 1);
+	s8* replstr = new(s8, 1);
 	replstr->len = word.len - prefix_len + replacement.len;
-	replstr->s = g_malloc((gsize)replstr->len);
+	replstr->s = _malloc((gsize)replstr->len);
 
 	if (replacement.len)
-	      memcpy(replstr->s, replacement.s, (size_t)replacement.len);
+		memcpy(replstr->s, replacement.s, (size_t)replacement.len);
 	memcpy(replstr->s + replacement.len, word.s + prefix_len, (size_t)(word.len - prefix_len));
 
-	// Alt:
-	/* char* replstr = g_strdup_printf("%.*s%.*s", replacement.len, replacement.s, word.len - prefix_len, word.s + prefix_len); */
 	g_ptr_array_add(deinfs, replstr);
 }
 
@@ -380,7 +377,7 @@ deinflect_one_iter(s8 word)
 s8**
 deinflect(s8 word)
 {
-	deinfs = g_ptr_array_new_with_free_func(g_free);
+	deinfs = g_ptr_array_new_with_free_func(free);
 
 	deinflect_one_iter(word);
 	for (u32 i = 0; i < deinfs->len; i++)

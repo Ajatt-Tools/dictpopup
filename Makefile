@@ -1,38 +1,47 @@
 .POSIX:
 .SUFFIXES:
+PREFIX = /usr/local
 IDIR=include
 SDIR=src
+LIBDIR=lib
 CC=gcc
-CFLAGS=-I$(IDIR) $(shell pkg-config --cflags gtk+-3.0) -Wall
-DEBUG_FLAGS=-g3 -Wextra -Wdouble-promotion -Wno-sign-conversion -Wno-unused-parameter -fsanitize=undefined -fsanitize-undefined-trap-on-error
-#-Wconversion ,address
+CFLAGS=-I$(IDIR) -isystem $(LIBDIR) $(shell pkg-config --cflags gtk+-3.0) -Wall -D_POSIX_C_SOURCE=200809L -std=c17
+DEBUG_FLAGS= -fsanitize=undefined,address -fsanitize-undefined-trap-on-error -g3 -Wextra -Wdouble-promotion -Wconversion -Wno-unused-parameter \
+	     -pedantic -Wno-sign-conversion 
 RELEASE_FLAGS=-O3 -flto
-LIBS = $(shell pkg-config --libs gtk+-3.0) -lcurl -lmecab -llmdb -pthread -lXfixes -lX11
-PREFIX = /usr/local
+LDLIBS = $(shell pkg-config --libs gtk+-3.0) -lcurl -lmecab -pthread -lXfixes -lX11
+LDLIBS_CREATE = -lzip $(shell pkg-config --libs gtk+-3.0)
 
-FILES = dictpopup.c popup.c util.c xlib.c deinflector.c settings.c dbreader.c unishox2.c ankiconnectc.c
-FILES_H = ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h xlib.h unishox2.h
+FILES = dictpopup.c popup.c util.c xlib.c deinflector.c settings.c dbreader.c ankiconnectc.c
+FILES_H = ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h xlib.h
+
+FILES_CREATE = dictpopup_create.c util.c dbwriter.c
+FILES_CREATE_H = dbwriter.h util.h
+
+LDLIBS += -llmdb
+LDLIBS_CREATE += -llmdb
+# LIB_SRC = lib/mdb.c lib/midl.c
+# LIB_SRC_H = lib/lmdb.h lib/midl.h
+
 SRC = $(addprefix $(SDIR)/,$(FILES))
 SRC_H = $(addprefix $(IDIR)/,$(FILES_H))
 
-FILES_CREATE = dictpopup_create.c unishox2.c util.c dbwriter.c
-FILES_CREATE_H = dbwriter.h unishox2.h util.h
-SRC_CREATE = $(addprefix $(SDIR)/,$(FILES_CREATE))
-SRC_CREATE_H = $(addprefix $(IDIR)/,$(FILES_CREATE_H))
+CREATE_SRC = $(addprefix $(SDIR)/,$(FILES_CREATE))
+CREATE_SRC_H = $(addprefix $(IDIR)/,$(FILES_CREATE_H))
 
 default: release
 
 release: dictpopup_release dictpopup-create_release
-dictpopup_release: $(SRC) $(SRC_H)
-	$(CC) -o dictpopup $(SRC) $(CFLAGS) $(RELEASE_FLAGS) $(LIBS)
-dictpopup-create_release: $(SRC_CREATE) $(SRC_CREATE_H)
-	$(CC) -o dictpopup-create $(SRC_CREATE) $(CFLAGS) $(RELEASE_FLAGS) $(LIBS)
+dictpopup_release: $(SRC) $(SRC_H) $(LIB_SRC) $(LIB_SRC_H)
+	$(CC) -o dictpopup $(CFLAGS) $(RELEASE_FLAGS) $(LDLIBS) $(SRC) $(LIB_SRC)
+dictpopup-create_release: $(CREATE_SRC) $(CREATE_SRC_H) $(LIB_SRC) $(LIB_SRC_H)
+	$(CC) -o dictpopup-create $(CFLAGS) $(RELEASE_FLAGS) $(LDLIBS_CREATE) $(CREATE_SRC) $(LIB_SRC)
 
 debug: dictpopup_debug dictpopup-create_debug
-dictpopup_debug: $(SRC) $(SRC_H)
-	$(CC) -o dictpopup $(SRC) $(CFLAGS) $(DEBUG_FLAGS) $(LIBS)
-dictpopup-create_debug: $(SRC_CREATE) $(SRC_CREATE_H)
-	$(CC) -o dictpopup-create $(SRC_CREATE) $(SRC_CREATE_H) $(CFLAGS) $(DEBUG_FLAGS) $(LIBS)
+dictpopup_debug: $(SRC) $(SRC_H) $(LIB_SRC) $(LIB_SRC_H)
+	$(CC) -o dictpopup $(CFLAGS) $(DEBUG_FLAGS) $(LDLIBS) $(SRC) $(LIB_SRC)
+dictpopup-create_debug: $(CREATE_SRC) $(CREATE_SRC_H) $(LIB_SRC) $(LIB_SRC_H)
+	$(CC) -o dictpopup-create $(CFLAGS) $(DEBUG_FLAGS) $(LDLIBS_CREATE) $(CREATE_SRC) $(CREATE_SRC_H) $(LIB_SRC)
 
 install:
 	mkdir -p ${DESTDIR}${PREFIX}/bin

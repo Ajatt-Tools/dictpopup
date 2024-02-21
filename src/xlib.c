@@ -13,10 +13,12 @@
 
 #include "util.h"
 
-int
-clipnotify()
+/*
+ * Waits for the next clipboard event. 
+ */
+i32
+clipnotify(void)
 {
-	/* Waits for the next clipboard event. */
 	Display *disp;
 	Window root;
 	Atom clip;
@@ -24,10 +26,7 @@ clipnotify()
 
 	disp = XOpenDisplay(NULL);
 	if (!disp)
-	{
-		fprintf(stderr, "ERROR: Can't open X display for clipnotify. Are you using Linux with X11?");
 		return 1;
-	}
 
 	root = DefaultRootWindow(disp);
 
@@ -43,11 +42,12 @@ clipnotify()
 	return 0;
 }
 
+/*
+ * Returns the window title of the currently active window 
+ */
 char*
-getwindowname()
+getwindowname(void)
 {
-	/* Returns the window title of the currently active window */
-	/* return string needs to be freed */
 	Display *dpy;
 	Window focused;
 	XTextProperty text_prop;
@@ -66,9 +66,9 @@ getwindowname()
 		fprintf(stderr, "ERROR: Could not obtain window name. \n");
 		return NULL;
 	}
-
-	char *wname = g_strdup((char *)text_prop.value);
-	XFree(text_prop.value);
 	XCloseDisplay(dpy);
-	return wname;
+
+	/* char *wname = g_strdup((char *)text_prop.value); */
+	/* XFree(text_prop.value); */
+	return (char*)text_prop.value;
 }

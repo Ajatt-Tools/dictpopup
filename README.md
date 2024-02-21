@@ -7,7 +7,7 @@ https://github.com/GenjiFujimoto/dictpopup/assets/50422430/4d22d4a2-e138-4bee-bc
 
 ## Current state
 This is still very much a work in progress.
-**It only works on Linux with X11** right now and the parser for the Yomichan dictionaries isn't fully implemented yet (for dictionaries with structured content).
+**It only works on the X window manager** right now (i.e. Linux with X11) and the parser for the Yomichan dictionaries isn't fully implemented yet (for dictionaries with structured content).
 See `TODO.txt` for more.
 
 ## List of features
@@ -46,7 +46,7 @@ The popup can be closed with `q` or `Esc`.
 The "+" sign (or Ctrl+s) adds the currently shown definition to Anki after prompting you to select a sentence.
 If there is a selection, it will be used instead as a definition.
 
-The green/red dot indicates wether the word is already present in your Anki collection.
-It displays an orange dot if there exist cards, but which are all suspended.
+The green/red dot indicates whether the word is already present in your Anki collection.
+It displays an orange dot if there exist corresponding cards, but which are all suspended.
 
 The sound symbol plays a pronunciation from a local database by calling [jppron](https://github.com/GenjiFujimoto/jppron).

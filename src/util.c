@@ -9,105 +9,191 @@
 
 #include "util.h"
 
-static void u8copy(u8 *dst, u8 *src, size n)
+void* _malloc(size_t size)
 {
-    assert(n >= 0);
-    for (; n; n--) {
-        *dst++ = *src++;
-    }
+	void* p = malloc(size);
+	if (!p)
+	{
+		perror("malloc");
+		abort();
+	}
+	return p;
 }
 
-s8*
-s8dup(s8 s)
+void* _calloc(size_t nmemb, size_t size)
 {
-    s8* r = g_new(s8, 1);
-    *r = (s8) {
-      .s = g_malloc(s.len),
-      .len = s.len
-    };
-    u8copy(r->s, s.s, s.len);
-    return r;
+	void* p = calloc(nmemb, size);
+	if (!p)
+	{
+		perror("calloc");
+		abort();
+	}
+	return p;
 }
 
-s8
-s8fromcstr(char *z)
+void* _realloc(void* ptr, size_t size)
 {
-    return (s8) {
-      .s = (u8 *)z,
-      .len = z ? strlen(z) : 0
-    };
+	void* p = realloc(ptr, size);
+	if (!p)
+	{
+		perror("realloc");
+		abort();
+	}
+	return p;
+}
+
+
+void
+u8copy(u8 *dst, u8 *src, size n)
+{
+	assert(n >= 0);
+	for (; n; n--)
+	{
+		*dst++ = *src++;
+	}
 }
 
 i32
 u8compare(u8 *a, u8 *b, size n)
 {
-    for (; n; n--) {
-        i32 d = *a++ - *b++;
-        if (d) return d;
-    }
-    return 0;
+	for (; n; n--)
+	{
+		i32 d = *a++ - *b++;
+		if (d)
+			return d;
+	}
+	return 0;
+}
+
+// Copy src into dst returning the remaining portion of dst.
+s8
+s8copy(s8 dst, s8 src)
+{
+	assert(dst.len >= src.len);
+
+	u8copy(dst.s, src.s, src.len);
+	dst.s += src.len;
+	dst.len -= src.len;
+	return dst;
+}
+
+s8
+s8dup(s8 s)
+{
+	s8 r = (s8) {
+		.s = _malloc(s.len),
+		.len = s.len
+	};
+	u8copy(r.s, s.s, s.len);
+	return r;
+}
+
+s8
+s8fromcstr(char *z)
+{
+	s8 r = (s8) {
+		.s = (u8*)z,
+		.len = z ? strlen(z) : 0
+	};
+
+	assert(r.len >= 0); // overflow check
+	return r;
 }
 
 i32
 s8equals(s8 a, s8 b)
 {
-    return a.len==b.len && !u8compare(a.s, b.s, a.len);
+	return a.len == b.len && !u8compare(a.s, b.s, a.len);
 }
 
-s8
-s8striputf8chr(s8 s)
+void
+s8striputf8chr(s8* s)
 {
 	// 0x80 = 10000000
 	// 0xC0 = 11000000
-	assert(s.len > 0);
-	s.len--;
-	while (s.len > 0 && (s.s[s.len] & 0x80) != 0x00 && (s.s[s.len] & 0xC0) != 0xC0)
-		s.len--;
-	return s;
+	assert(s->len > 0);
+	s->len--;
+	while (s->len > 0 && (s->s[s->len] & 0x80) != 0x00 && (s->s[s->len] & 0xC0) != 0xC0)
+		s->len--;
+}
+
+s8
+s8unescape(s8 str)
+{
+	size s = 0, e = 0;
+	while (e < str.len)
+	{
+		if (str.s[e] == '\\' && e + 1 < str.len)
+		{
+			switch (str.s[e + 1])
+			{
+			case 'n':
+				str.s[s++] = '\n';
+				e += 2;
+				break;
+			case '\\':
+				str.s[s++] = '\\';
+				e += 2;
+				break;
+			case '"':
+				str.s[s++] = '"';
+				e += 2;
+				break;
+			case 'r':
+				str.s[s++] = '\r';
+				e += 2;
+				break;
+			default:
+				str.s[s++] = str.s[e++];
+			}
+		}
+		else
+			str.s[s++] = str.s[e++];
+	}
+	str.len = s;
+
+	return str;
 }
 
 
-dictentry*
+dictentry
 dictentry_dup(dictentry de)
 {
-	dictentry* de_dup = g_new(dictentry, 1);
-	*de_dup = (dictentry){
-		.dictname = g_strdup(de.dictname),
-		.kanji = g_strdup(de.kanji),
-		.reading = g_strdup(de.reading),
-		.definition = g_strdup(de.definition)
+	return (dictentry){
+		       .dictname = g_strdup(de.dictname),
+		       .kanji = g_strdup(de.kanji),
+		       .reading = g_strdup(de.reading),
+		       .definition = g_strdup(de.definition)
 	};
-
-	return de_dup;
 }
 
 void
-dictentry_free(void *ptr)
+dictentry_free(void* ptr)
 {
-	dictentry *de = ptr;
-	g_free(de->dictname);
-	g_free(de->kanji);
-	g_free(de->reading);
-	g_free(de->definition);
-	g_free(de);
+	dictentry* de = ptr;
+	free(de->dictname);
+	free(de->kanji);
+	free(de->reading);
+	free(de->definition);
+	free(de);
 }
 
 void
-dictentry_print(dictentry *de)
+dictentry_print(dictentry de)
 {
 	printf("dictname: %s\n"
 	       "kanji: %s\n"
 	       "reading: %s\n"
-	       "definition: %s\n", 
-	       de->dictname, 
-	       de->kanji, 
-	       de->reading, 
-	       de->definition);
+	       "definition: %s\n",
+	       de.dictname,
+	       de.kanji,
+	       de.reading,
+	       de.definition);
 }
 
 
 dictionary*
-dictionary_new()
+dictionary_new(void)
 {
 	return g_ptr_array_new_with_free_func(dictentry_free);
 }
@@ -115,7 +201,8 @@ dictionary_new()
 void
 dictionary_copy_add(dictionary* dict, dictentry de)
 {
-	dictentry *de_dup = dictentry_dup(de);
+	dictentry* de_dup = new(dictentry, 1);
+	*de_dup = dictentry_dup(de);
 	g_ptr_array_add(dict, de_dup);
 }
 
@@ -125,10 +212,27 @@ dictionary_free(dictionary* dict)
 	g_ptr_array_free(dict, TRUE);
 }
 
-dictentry*
+dictentry
 dictentry_at_index(dictionary *dict, unsigned int index)
 {
-	return (dictentry*)g_ptr_array_index(dict, index);
+	dictentry* de = g_ptr_array_index(dict, index);
+	return *de;
+}
+
+DictComparer global_compare_func; // Looks very dagerous
+gint g_compare_func(gconstpointer a, gconstpointer b)
+{
+	dictentry* entry1 = *((dictentry **)a);
+	dictentry* entry2 = *((dictentry **)b);
+
+	return global_compare_func(entry1, entry2);
+}
+
+void
+dictionary_sort(dictionary* dict, DictComparer dict_compare_func)
+{
+	global_compare_func = dict_compare_func;
+	g_ptr_array_sort(dict, g_compare_func);
 }
 
 void
@@ -203,14 +307,6 @@ nuke_whitespace(char *str)
 	str_repl_by_char(str, "　", '\0');
 }
 
-char*
-read_cmd_sync(char** argv)
-{
-	char *standard_out = NULL;
-	g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &standard_out, NULL, NULL, NULL);
-	return standard_out;
-}
-
 int
 printf_cmd_async(char const *fmt, ...)
 {
@@ -220,16 +316,4 @@ printf_cmd_async(char const *fmt, ...)
 	va_end(argp);
 
 	return g_spawn_command_line_async(cmd, NULL);
-}
-
-int
-printf_cmd_sync(char const *fmt, ...)
-{
-	va_list argp;
-	va_start(argp, fmt);
-	g_autofree char* cmd = g_strdup_vprintf(fmt, argp);
-	va_end(argp);
-
-	return system(cmd);
-	/* return g_spawn_command_line_sync(cmd, NULL); */
 }

@@ -1,2 +1,2 @@
-int clipnotify();
-char* getwindowname();
+int clipnotify(void);
+char* getwindowname(void);

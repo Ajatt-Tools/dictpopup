@@ -13,7 +13,7 @@ static gboolean gtk_vars_set = 0;
 static gboolean dict_data_ready = 0;
 
 static dictionary* dict = NULL;
-static dictentry *cur_entry = NULL;
+static dictentry cur_entry = {0};
 static unsigned int cur_entry_num = 0;
 
 static GtkWidget *window = NULL;
@@ -56,7 +56,7 @@ check_if_exists()
 		return;
 
 	// exclude suspended cards
-	retval_s ac_resp = ac_search(false, cfg.deck, cfg.searchfield, cur_entry->kanji);
+	retval_s ac_resp = ac_search(false, cfg.deck, cfg.searchfield, cur_entry.kanji);
 	if (!check_ac_response(ac_resp))
 		return;
 
@@ -64,7 +64,7 @@ check_if_exists()
 	if (!word_exists_in_db)
 	{
 		// include suspended cards
-		ac_resp = ac_search(true, cfg.deck, cfg.searchfield, cur_entry->kanji);
+		ac_resp = ac_search(true, cfg.deck, cfg.searchfield, cur_entry.kanji);
 		if (!check_ac_response(ac_resp))
 			return;
 
@@ -78,7 +78,7 @@ check_if_exists()
 static void
 play_pronunciation()
 {
-	if (!printf_cmd_async("jppron '%s'", cur_entry->kanji))
+	if (!printf_cmd_async("jppron '%s'", cur_entry.kanji))
 		notify(1, "Error calling jppron. Is it installed?");
 }
 
@@ -107,7 +107,7 @@ on_draw_event(GtkWidget *widget, cairo_t *cr)
 static void
 update_buffer()
 {
-	gtk_text_buffer_set_text(dict_tw_buffer, cur_entry->definition, -1);
+	gtk_text_buffer_set_text(dict_tw_buffer, cur_entry.definition, -1);
 
 	GtkTextIter start, end;
 	gtk_text_buffer_get_bounds(dict_tw_buffer, &start, &end);
@@ -117,7 +117,7 @@ update_buffer()
 static void
 update_win_title()
 {
-	g_autofree char* title = g_strdup_printf("dictpopup - %s (%s)", cur_entry->kanji, cur_entry->dictname);
+	g_autofree char* title = g_strdup_printf("dictpopup - %s (%s)", cur_entry.kanji, cur_entry.dictname);
 	gtk_window_set_title(GTK_WINDOW(window), title);
 }
 
@@ -131,7 +131,7 @@ update_dictnum_info()
 static void
 update_dictname_info()
 {
-	gtk_label_set_text(GTK_LABEL(lbl_dictname), cur_entry->dictname);
+	gtk_label_set_text(GTK_LABEL(lbl_dictname), cur_entry.dictname);
 }
 
 static void
@@ -188,14 +188,14 @@ add_anki()
 		return FALSE;
 	g_mutex_unlock(&vars_mutex);
 
-	cur_entry = dictentry_dup(*cur_entry);
+	cur_entry = dictentry_dup(cur_entry);
 	dictionary_free(dict);
 
 	GtkTextIter start, end;
 	if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end)) // Use text selection if existing
 	{
-		g_free(cur_entry->definition);
-		cur_entry->definition = gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE);
+		g_free(cur_entry.definition);
+		cur_entry.definition = gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE);
 	}
 
 	close_window();
@@ -205,10 +205,10 @@ add_anki()
 static gboolean
 quit()
 {
-	cur_entry = NULL;
+	cur_entry = (dictentry){0};
 	dictionary_free(dict);
-	close_window();
 
+	close_window();
 	return TRUE;
 }
 
@@ -252,7 +252,7 @@ move_win_to_mouse_ptr()
 static void
 search_in_anki_browser()
 {
-	check_ac_response(ac_gui_search(cfg.deck, cfg.searchfield, cur_entry->kanji));
+	check_ac_response(ac_gui_search(cfg.deck, cfg.searchfield, cur_entry.kanji));
 }
 
 static void
@@ -264,7 +264,7 @@ button_press(GtkWidget *widget, GdkEventButton *event)
 		search_in_anki_browser();
 }
 
-dictentry*
+dictentry
 popup()
 {
 	gtk_init(NULL, NULL);

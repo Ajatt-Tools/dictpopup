@@ -10,9 +10,9 @@
  * 
  * Returns: TRUE if an Anki card should be made and FALSE otherwise.
  */
-dictentry* popup();
+dictentry popup(void);
 
 /*
  * Used to pass the dictionary data once it is ready
  */
-void dictionary_data_done(dictionary* passed_dict);
+void dictionary_data_done(dictionary* dict);

@@ -2,8 +2,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stddef.h>
 
-#include <lmdb.h>
+#include "lmdb.h"
+#include "util.h"
 
 int rc;
 #define MDB_CHECK(call) \
@@ -16,10 +18,7 @@ MDB_env *env;
 MDB_dbi dbi1, dbi2;
 MDB_txn *txn;
 
-MDB_env *env_tmp;
-MDB_txn *txn_tmp;
-MDB_dbi dbi_tmp;
-
+s8 last_val;
 uint32_t entry_number = 0;
 
 void
@@ -35,43 +34,36 @@ opendb(const char* path)
 
 	MDB_CHECK(mdb_dbi_open(txn, "db1", MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE, &dbi1)); // Can use MDB_GET_MULTIPLE and MDB_NEXT_MULTIPLE
 	MDB_CHECK(mdb_dbi_open(txn, "db2", MDB_INTEGERKEY | MDB_CREATE, &dbi2));
-
-	MDB_CHECK(mdb_env_create(&env_tmp));
-	mdb_env_set_maxdbs(env_tmp, 3);
-	MDB_CHECK(mdb_env_set_mapsize(env_tmp, mapsize));
-	MDB_CHECK(mdb_env_open(env_tmp, "/tmp", 0, 0664));
-	MDB_CHECK(mdb_txn_begin(env_tmp, NULL, 0, &txn_tmp));
-	MDB_CHECK(mdb_dbi_open(txn_tmp, "db_tmp", MDB_CREATE, &dbi_tmp));
 }
 
 void
-closedb()
+closedb(void)
 {
 	MDB_CHECK(mdb_txn_commit(txn));
 	mdb_dbi_close(env, dbi1);
 	mdb_dbi_close(env, dbi2);
-	mdb_dbi_close(env, dbi_tmp);
-
 	mdb_env_close(env);
-	mdb_env_close(env_tmp);
 
 	printf("Number of distinct entries: %i\n", entry_number);
 }
 
-void addtodb(char* key_str, unsigned int keylen, char* value_str, unsigned int vallen)
+void
+addtodb(unsigned char* key_str, ptrdiff_t keylen, unsigned char* value_str, ptrdiff_t vallen)
 {
-	entry_number++;
-
 	MDB_val key_s = { .mv_data = key_str, .mv_size = keylen };
 	MDB_val value_s = { .mv_data = value_str, .mv_size = vallen };
 	MDB_val id_s = { .mv_data = &entry_number, .mv_size = sizeof(entry_number) };
 
-	// check if definition is already present. If not add it with new id
-	rc = mdb_put(txn_tmp, dbi_tmp, &value_s, &id_s, MDB_NOOVERWRITE);
-	if (rc == MDB_KEYEXIST)
-		entry_number--;
-	else
+	s8 cur_val = (s8){ .s = value_str, .len = vallen };
+	if (!s8equals(cur_val, last_val))
+	{
+		entry_number++;
+		// Add dictionary entry with entry_number as id
 		MDB_CHECK(mdb_put(txn, dbi2, &id_s, &value_s, MDB_NOOVERWRITE | MDB_APPEND));
+
+		free(last_val.s);
+		last_val = s8dup(cur_val);
+	}
 
 	// Add key with corresponding id
 	mdb_put(txn, dbi1, &key_s, &id_s, MDB_NODUPDATA);

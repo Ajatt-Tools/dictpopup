@@ -32,12 +32,12 @@ typedef struct {
 /*
  * Returns: The null terminated list of decks in data.stringv
  */
-retval_s ac_get_decks();
+retval_s ac_get_decks(void);
 
 /*
- * Returns: The null terminated list of notetypes in data.stringv
+ * Returns: A null terminated list of notetypes in data.stringv
  */
-retval_s ac_get_notetypes();
+retval_s ac_get_notetypes(void);
 
 /* 
  * Search the Anki database for the entry @entry in the field @field and deck @deck.

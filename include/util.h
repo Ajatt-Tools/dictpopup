@@ -19,20 +19,31 @@ typedef ptrdiff_t size;
 	}
 
 #define assert(c)     while (!(c)) __builtin_unreachable()
+
+/*
+ * A malloc wrapper, which aborts on insufficient memory
+ */ 
+void* _malloc(size_t size);
+void* _calloc(size_t nmemb, size_t size);
+void* _realloc(void* ptr, size_t size);
+#define new(type, num) _calloc(num, sizeof(type))
+
 #define countof(a)    (size)(sizeof(a) / sizeof(*(a)))
 #define lengthof(s)   (countof("" s "") - 1)
 #define s8(s)         (s8){(u8 *)s, countof(s)-1}
-
 typedef struct {
     u8  *s;
     size len;
 } s8;
 
-s8* s8dup(s8 s);
+void u8copy(u8 *dst, u8 *src, size n);
 i32 u8compare(u8 *a, u8 *b, size n);
+s8 s8copy(s8 dst, s8 src);
+s8 s8dup(s8 s);
 s8 s8fromcstr(char *z);
 i32 s8equals(s8 a, s8 b);
-s8 s8striputf8chr(s8 s);
+void s8striputf8chr(s8* s);
+s8 s8unescape(s8 str);
 
 
 typedef struct {
@@ -42,17 +53,19 @@ typedef struct {
   char *definition;
 } dictentry;
 
-dictentry* dictentry_dup(dictentry de);
-void dictentry_free(void *ptr);
-void dictentry_print(dictentry *de);
+dictentry dictentry_dup(dictentry de);
+void dictentry_free(void* ptr);
+void dictentry_print(dictentry de);
 
 
 typedef GPtrArray dictionary;
 
-dictionary* dictionary_new();
+dictionary* dictionary_new(void);
 void dictionary_copy_add(dictionary* dict, dictentry de);
 void dictionary_free(dictionary* dict);
-dictentry* dictentry_at_index(dictionary *dict, unsigned int index);
+dictentry dictentry_at_index(dictionary *dict, unsigned int index);
+typedef int (*DictComparer)(dictentry* a, dictentry* b);
+void dictionary_sort(dictionary* dict, DictComparer compare_func);
 void dictionary_print(dictionary* dict);
 
 

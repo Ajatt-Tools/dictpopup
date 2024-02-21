@@ -2,6 +2,9 @@
 #define SETTINGS_H
 
 typedef struct {
+	// General
+	char* db_path;
+	char** sort_order;
 	// Anki
 	char* deck;
 	char* notetype;
@@ -13,8 +16,6 @@ typedef struct {
 	int win_width;
 	int win_height;
 	int win_margin;
-	// Database
-	char* db_path;
 	// Behaviour
 	unsigned int ankisupport : 1;
 	unsigned int checkexisting : 1;
@@ -24,12 +25,12 @@ typedef struct {
 	unsigned int mecabconversion : 1;
 	unsigned int substringsearch : 1;
 	unsigned int pronounceonstart : 1;
+	unsigned int sort : 1;
 } settings;
 
 extern settings cfg;
 
-void print_settings();
+void print_settings(void);
 void read_user_settings(int fieldmapping_max);
-void free_user_settings();
 
 #endif /* SETTINGS_H */

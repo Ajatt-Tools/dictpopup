@@ -12,14 +12,7 @@
 settings cfg = { 0 };
 
 void
-free_user_settings()
-{
-	// TODO: Implement
-	g_free(cfg.db_path);
-}
-
-void
-print_settings()
+print_settings(void)
 {
 	printf("[Anki]\n");
 	printf("Anki deck: \"%s\"\n", cfg.deck);
@@ -148,6 +141,31 @@ read_user_settings(int fieldmapping_max)
 	cfg.pronounceonstart = return_behaviour(kf, "PronounceOnStart", false) ? 1 : 0;
 	cfg.mecabconversion = return_behaviour(kf, "MecabConversion", false) ? 1 : 0;
 	cfg.substringsearch = return_behaviour(kf, "SubstringSearch", true) ? 1 : 0;
+	cfg.sort = return_behaviour(kf, "Sort", false) ? 1 : 0;
+
+	/* ----------- GENERAL ------------- */
+	// Database
+	cfg.db_path = g_key_file_get_string(kf, "General", "DatabasePath", &error);
+	if (!cfg.db_path || !*cfg.db_path)
+	{
+		// silently use the default path
+		const char* data_dir = g_get_user_data_dir();
+		cfg.db_path = g_build_filename(data_dir, "dictpopup", NULL);
+	}
+
+	// SortOrder
+	if (cfg.sort)
+	{
+		cfg.sort_order = g_key_file_get_string_list(kf, "General", "DictSortOrder", NULL, &error);
+		if (error)
+		{
+			error_msg("%s. No Sort order found. Not sorting.", error->message);
+			cfg.sort = 0;
+			g_error_free(error);
+			error = NULL;
+		}
+	}
+	/* -------------------------------- */
 
 	fill_anki_string(kf, &(cfg.deck), "Deck");
 	fill_anki_string(kf, &(cfg.notetype), "NoteType");
@@ -202,15 +220,6 @@ read_user_settings(int fieldmapping_max)
 		check_fieldmapping(num_fieldmappings, cfg.fieldmapping, fieldmapping_max);
 
 		Stopif(num_fieldnames != num_fieldmappings, exit(1), "Error: Number of fieldnames does not match number of fieldmappings in config.");
-	}
-
-	// Database
-	cfg.db_path = g_key_file_get_string(kf, "Database", "Path", &error);
-	if (!cfg.db_path || !*cfg.db_path)
-	{
-		// silently use the default path
-		const char* data_dir = g_get_user_data_dir();
-		cfg.db_path = g_build_filename(data_dir, "dictpopup", NULL);
 	}
 
 	// Popup

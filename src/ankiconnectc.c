@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <curl/curl.h>
 #include <glib.h>
@@ -9,7 +10,170 @@
 #define AC_API_URL_EVAR "ANKICONNECT_API_URL"
 #define DEFAULT_AC_API_URL "http://localhost:8765"
 
-#define assert(c)  while (!(c)) __builtin_unreachable()
+/* START UTILS */
+typedef uint8_t   u8;
+typedef int32_t   i32;
+typedef uint32_t  u32;
+typedef ptrdiff_t size;
+
+#define assert(c)     while (!(c)) __builtin_unreachable()
+#define countof(a)    (size)(sizeof(a) / sizeof(*(a)))
+#define lengthof(s)   (countof("" s "") - 1)
+#define s8(s)         (s8){(u8 *)s, countof(s)-1}
+
+typedef struct {
+    u8  *s;
+    size len;
+} s8;
+
+static s8
+s8fromcstr(char *z)
+{
+	s8 r = (s8) {
+		.s = (u8*)z,
+		.len = z ? strlen(z) : 0
+	};
+
+	if (r.len < 0) // overflow check
+		abort();
+	return r;
+}
+
+typedef struct {
+    u8 *data;
+    size len;
+    size cap;
+} stringbuilder_s;
+
+static void
+sb_init(stringbuilder_s *b, size_t init_cap)
+{
+    b->len = 0;
+    b->cap = init_cap;
+    b->data = calloc(b->cap, 1);
+
+    if (!b->data)
+	abort();
+}
+
+static void
+sb_append(stringbuilder_s* b, s8 str)
+{
+    if (b->cap < b->len + str.len)
+    {
+	  while (b->cap < b->len + str.len)
+	  {
+		b->cap *= 2;
+
+		if (b->cap < 0)
+		      abort();
+	  }
+
+	  b->data = realloc(b->data, b->cap);
+	  if (!b->data)
+		abort();
+    }
+
+    memcpy(b->data + b->len, str.s, str.len);
+    b->len += str.len;
+}
+
+static void
+sb_append_c(stringbuilder_s* b, char c)
+{
+    if (b->cap < b->len + 1)
+    {
+	  while (b->cap < b->len + 1)
+	  {
+		b->cap *= 2;
+
+		if (b->cap < 0)
+		      abort();
+	  }
+
+	  b->data = realloc(b->data, b->cap);
+	  if (!b->data)
+		abort();
+    }
+
+    b->data[b->len++] = c;
+}
+
+static s8
+sb_steal_s8(stringbuilder_s* sb)
+{
+    s8 r = (s8) { .s = sb->data, .len = sb->len };
+    *sb = (stringbuilder_s) {0};
+    return r;
+}
+
+char*
+sb_steal_str(stringbuilder_s* sb) 
+{
+    char* r = (char*)sb->data;
+    if (sb->cap < sb->len + 1)
+	  r = g_realloc(r, sb->len + 1);
+    r[sb->len] = '\0';
+
+    *sb = (stringbuilder_s) {0};
+    return r;
+}
+
+/*
+ * @str: The str to be escaped
+ *
+ * Returns: A json escaped copy of @str
+ */
+static char*
+json_escape_str(char const* str)
+{
+	if (!str)
+		return NULL;
+
+	/* Best would be to use something like glibs g_strescape, but
+	it appears that ankiconnect can't handle unicode escape sequences */
+
+	stringbuilder_s sb;
+	sb_init(&sb, strlen(str) + 20); // 20 is random
+
+	while(*str)
+	{
+		switch (*str)
+		{
+		case '\b':
+			sb_append(&sb, s8("\\b"));
+			break;
+		case '\f':
+			sb_append(&sb, s8("\\f"));
+			break;
+		case '\n':
+			sb_append(&sb, s8("<br>"));
+			break;
+		case '\r':
+			sb_append(&sb, s8("\\r"));
+			break;
+		case '\t':
+			sb_append(&sb, s8("\\t"));
+			break;
+		case '\v':
+			sb_append(&sb, s8("\\v"));
+			break;
+		case '"':
+			sb_append(&sb, s8("\\\""));
+			break;
+		case '\\':
+			sb_append(&sb, s8("\\\\"));
+			break;
+		default:
+			sb_append_c(&sb, *str);
+		}
+
+		str++;
+	}
+
+	return sb_steal_str(&sb);
+}
+/* END UTILS */
 
 typedef size_t (*ResponseFunc)(char *ptr, size_t size, size_t nmemb, void *userdata);
 
@@ -25,7 +189,7 @@ ankicard_free(ankicard ac)
 }
 
 static retval_s
-sendRequest(char *request, ResponseFunc response_checker)
+sendRequest(s8 request, ResponseFunc response_checker)
 {
 	CURL *curl = curl_easy_init();
 	if (!curl)
@@ -43,7 +207,8 @@ sendRequest(char *request, ResponseFunc response_checker)
 
 	curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request.len);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.s);
 	
 	retval_s ret = { .ok = true }; // Maybe add a generic checker instead of defaulting to true
 	if (response_checker)
@@ -88,7 +253,7 @@ ac_search(bool include_suspended, const char* deck, const char* field, const cha
 	    "{ \"action\": \"findCards\", \"version\": 6, \"params\": { \"query\" : \"\\\"%s%s\\\" \\\"%s:%s\\\" %s\" } }",
 		 deck ? "deck:" : "", deck ? deck : "", field, entry, include_suspended ? "" : "-is:suspended");
 
-	return sendRequest(request, search_checker);
+	return sendRequest(s8fromcstr(request), search_checker);
 }
 
 retval_s
@@ -98,7 +263,7 @@ ac_gui_search(const char* deck, const char* field, const char* entry)
 	    "{ \"action\": \"guiBrowse\", \"version\": 6, \"params\": { \"query\" : \"\\\"%s%s\\\" \\\"%s:%s\\\"\" } }",
 		 deck ? "deck:" : "", deck ? deck : "", field, entry);
 
-	return sendRequest(request, NULL);
+	return sendRequest(s8fromcstr(request), NULL);
 }
 
 retval_s
@@ -119,50 +284,7 @@ ac_store_file(char const* filename, char const* path)
 	    "{ \"action\": \"storeMediaFile\", \"version\": 6, \"params\": { \"filename\" : \"%s\", \"path\": \"%s\", \"deleteExisting\": false } }",
 		 filename, path);
 
-	return sendRequest(request, NULL); // TODO: Error response cheking
-}
-
-/*
- * @str: The str to be escaped
- *
- * Returns: A json escaped copy of @str
- */
-static char*
-json_escape_str(const char *str)
-{
-	if (!str)
-		return NULL;
-
-	/* Best would be to use glibs g_strescape, but
-	it appears that ankiconnect can't handle unicode escape sequences */
-
-	GString *gstr = g_string_sized_new(strlen(str) * 2);
-
-	do{
-		switch (*str)
-		{
-		case '\n':
-			g_string_append(gstr, "<br>");
-			break;
-
-		case '\t':
-			g_string_append(gstr, "\\\\t");
-			break;
-
-		case '"':
-			g_string_append(gstr, "\\\"");
-			break;
-
-		case '\\':
-			g_string_append(gstr, "\\\\");
-			break;
-
-		default:
-			g_string_append_c(gstr, *str);
-		}
-	} while (*str++);
-
-	return g_string_free_and_steal(gstr);
+	return sendRequest(s8fromcstr(request), NULL); // TODO: Error response cheking
 }
 
 // Non-macro version:
@@ -174,14 +296,6 @@ get_array_len(char* array[static 1])
 	    n++;
       return n;
 }
-
-// Expects array to be non-null
-/* #define get_array_len(len, array) \ */
-/*       {				  \ */
-/* 	    len = 0;		  \ */
-/*       	    while(array[len++])	  \ */
-/* 		    ;		  \ */
-/*       } */
 
 /*
  * @array: An array of strings to be json escaped
@@ -212,6 +326,7 @@ ankicard_dup_json_esc(ankicard const ac)
 	return (ankicard) {
 	      .deck = json_escape_str(ac.deck),
 	      .notetype = json_escape_str(ac.notetype),
+	      .num_fields = num_fields,
 	      .fieldnames = json_escape_str_array(num_fields, ac.fieldnames),
 	      .fieldentries = json_escape_str_array(num_fields, ac.fieldentries),
 	      .tags = ac.tags ? json_escape_str_array(-1, ac.tags) : NULL
@@ -251,61 +366,79 @@ ac_addNote(ankicard const ac)
 
 	ankicard ac_je = ankicard_dup_json_esc(ac);
 
-	g_autoptr(GString) request = g_string_sized_new(500);
-	g_string_printf(request,
+	stringbuilder_s sb;
+	sb_init(&sb, 1<<9);
+
+	sb_append(&sb,
+	  s8(
 	  "{"
-	     "\"action\" : \"addNote\","
+	     "\"action\": \"addNote\","
 	     "\"version\": 6,"
-	     "\"params\" : {"
+	     "\"params\": {"
 			    "\"note\": {"
-			                "\"deckName\": \"%s\","
-			                "\"modelName\": \"%s\","
-			                "\"fields\": {",
-			                ac_je.deck,
-			                ac_je.notetype
+			                "\"deckName\": \""
+	    )
+	);
+	sb_append(&sb, s8fromcstr(ac_je.deck));
+	sb_append(&sb, 
+	  s8(
+			                              "\","
+			                "\"modelName\": \""     
+	    )
+	);
+	sb_append(&sb, s8fromcstr(ac_je.notetype));
+	sb_append(&sb,
+	  s8(
+			                               "\","     
+			                "\"fields\": {"
+	    )
 	);
 
-	bool first = 1;
-	for (int i = 0; ac_je.fieldnames[i]; i++)
+	for (int i = 0; i < ac_je.num_fields; i++)
 	{
-		if (!first) g_string_append_c(request, ',');
-		else first = 0;
-
-		g_string_append_printf(request,
-			     "\"%s\": \"%s\"",
-			     ac_je.fieldnames[i],
-			     ac_je.fieldentries[i] ? ac_je.fieldentries[i] : ""
-		);
+	      if(i)
+		    sb_append(&sb, s8(","));
+	      sb_append(&sb, s8("\""));
+	      sb_append(&sb, s8fromcstr(ac_je.fieldnames[i]));
+	      sb_append(&sb, s8("\" : \""));
+	      sb_append(&sb, s8fromcstr(ac_je.fieldentries[i] ? ac_je.fieldentries[i] : ""));
+	      sb_append(&sb, s8("\""));
 	}
-
-	g_string_append(request,
+	
+	sb_append(&sb, 
+	    s8(
 			                            "},"
 			               "\"options\": {"
 			                              "\"allowDuplicate\": true"
 			                            "},"
 	                               "\"tags\": ["
+	      )
 	);
 
 	if (ac_je.tags)
 	{
-	      first = 1;
-	      for (char **ptr = ac_je.tags; *ptr; ptr++)
+	      for (size_t i = 0; ac_je.tags[i]; i++)
 	      {
-		      if (!first) g_string_append_c(request, ',');
-		      else first = 0;
-
-		      g_string_append_printf(request, "\"%s\"", *ptr);
+		      if (i)
+			    sb_append(&sb, s8(","));
+		      sb_append(&sb, s8("\""));
+		      sb_append(&sb, s8fromcstr(ac_je.tags[i]));
+		      sb_append(&sb, s8("\""));
 	      }
 	}
 
-	g_string_append(request,
+	sb_append(&sb,
+	    s8(
 			                         "]"
 			              "}"
 			  "}"
 	  "}"
+	      )
 	);
- 
-	retval_s ret = sendRequest(request->str, check_add_response);
+
+	s8 request = sb_steal_s8(&sb);
+	retval_s ret = sendRequest(request, check_add_response);
+	free(request.s);
 	ankicard_free(ac_je);
 	return ret;
 }
