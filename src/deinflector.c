@@ -142,7 +142,7 @@ add_replace_suffix(s8 word, s8 replacement, ptrdiff_t suffix_len)
 
 	s8* replstr = new(s8, 1);
 	replstr->len = word.len - suffix_len + replacement.len;
-	replstr->s = _malloc((gsize)replstr->len);
+	replstr->s = new(u8, replstr->len);
 
 	memcpy(replstr->s, word.s, (size_t)(word.len - suffix_len));
 	if (replacement.len)
@@ -160,7 +160,7 @@ add_replace_prefix(s8 word, s8 replacement, ptrdiff_t prefix_len)
 
 	s8* replstr = new(s8, 1);
 	replstr->len = word.len - prefix_len + replacement.len;
-	replstr->s = _malloc((gsize)replstr->len);
+	replstr->s = new(u8, replstr->len);
 
 	if (replacement.len)
 		memcpy(replstr->s, replacement.s, (size_t)replacement.len);
@@ -180,10 +180,9 @@ add_replace_prefix(s8 word, s8 replacement, ptrdiff_t prefix_len)
 static void
 atou_form(s8 word, ptrdiff_t len_ending)
 {
-	IF_ENDSWITH_REPLACE("", "る");
-
 	word.len -= len_ending;
 
+	IF_ENDSWITH_REPLACE("", "る");
 	IF_ENDSWITH_REPLACE("さ", "す");
 	IF_ENDSWITH_REPLACE("か", "く");
 	IF_ENDSWITH_REPLACE("が", "ぐ");
@@ -208,11 +207,9 @@ atou_form(s8 word, ptrdiff_t len_ending)
 static void
 itou_form(s8 word, ptrdiff_t len_ending)
 {
-	/* Word can alway be a る-verb, e.g. 生きます */
-	IF_ENDSWITH_REPLACE("", "る");
-
 	word.len -= len_ending;
 
+	IF_ENDSWITH_REPLACE("", "る"); // Word can alway be a る-verb, e.g. 生きます
 	IF_ENDSWITH_REPLACE("し", "す");
 	IF_ENDSWITH_REPLACE("き", "く");
 	IF_ENDSWITH_REPLACE("ぎ", "ぐ");
@@ -289,6 +286,7 @@ check_shimau(s8 word)
 	IF_ENDSWITH_REPLACE("いじゃう", "ぐ");
 	IF_ENDSWITH_REPLACE("いちゃう", "く");
 	IF_ENDSWITH_REPLACE("しちゃう", "す");
+	IF_ENDSWITH_REPLACE("んじゃう", "む");
 }
 
 static void
@@ -310,7 +308,7 @@ check_adjective(s8 word)
 	IF_ENDSWITH_REPLACE("そう", "い");
 	IF_ENDSWITH_REPLACE("さ", "い");
 	IF_ENDSWITH_REPLACE("げ", "い");
-	IF_ENDSWITH_REPLACE("しく", "しい"); //FIXME
+	IF_ENDSWITH_REPLACE("く", "い");
 }
 
 static void
@@ -322,8 +320,10 @@ check_volitional(s8 word)
 static void
 check_negation(s8 word)
 {
+	IF_EQUALS_ADD("ない", "ある");
 	IF_ENDSWITH_CONVERT_ATOU("ない");
 	IF_ENDSWITH_CONVERT_ATOU("ねぇ");
+	IF_ENDSWITH_CONVERT_ATOU("ず");
 }
 
 static void
@@ -359,6 +359,12 @@ check_conditional(s8 word)
 }
 
 static void
+check_concurrent(s8 word)
+{
+	IF_ENDSWITH_CONVERT_ITOU("ながら");
+}
+
+static void
 deinflect_one_iter(s8 word)
 {
 	check_shimau(word);
@@ -371,6 +377,7 @@ deinflect_one_iter(s8 word)
 	check_past(word);
 	check_potential(word);
 	check_conditional(word);
+	check_concurrent(word);
 	kanjify(word);
 }
 
@@ -385,8 +392,11 @@ deinflect(s8 word)
 		s8* entry = g_ptr_array_index(deinfs, i);
 		deinflect_one_iter(*entry);
 	}
-
-	itou_form(word, 0);
+	
+	// Checking for stem form
+	// TODO: Is there a stem form which gets wrongly deinflected above?
+	if (deinfs->len == 0)
+		itou_form(word, 0);
 
 	g_ptr_array_add(deinfs, NULL);  /* Add NULL terminator */
 	return (s8**)g_ptr_array_steal(deinfs, NULL);

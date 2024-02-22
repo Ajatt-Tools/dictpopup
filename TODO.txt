@@ -22,6 +22,7 @@ Low priority
 - Refactor settings.c
 - Refactor popup.c
 - Add correct feature test macros
+- Could split Mecab conversion and kata -> hira conversion into separate configuration options
 - Improve portability of non-popup code
 - Don't call the shell for jppron
   - merge code into this repo?
@@ -40,10 +41,15 @@ Low priority
   - Questionable if this makes sense, as it's already pretty fast and would make the code more complicated
 
 ## Known problems:
+### Misc
 - There might be "duplicate" entries especially when looking up hiragana strings, since the corresponding kanji writing is different.
   This is also unnecessary duplication in the database. Currently the only way of knowing under which kanji writing the entry is added, is the title bar.
   - Probably need to add another bar above the textview to display current kanji and reading
     - This bar could also be used to quickly switch between different writings. Maybe even use tabs?
+- If there is a dictionary entry for 恭しく but only 恭しい present in the collection, then a red dot will be shown
+### Deinflection
+- やった gets deinflected to やつ
+- に looks broken
 
 Possible ideas:
 - Use zstd to compress database file
@@ -54,6 +60,7 @@ Possible ideas:
 - Support hyper links?
   - Could use gtk_label_set_markup, but would need to switch to a label instead of a textview
 - Make dictionary numbers (①, ②, ...) clickable for adding to Anki
+- Add a button with a pencil to allow manually editing the lookup string in the popup
 
 To check:
 - definflector assumes that constant strings given in the code are utf8 encoded. This could be wrong if compiled on Windows for example.
