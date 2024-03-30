@@ -1,229 +1,321 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include <glib.h>
 
-#include "util.h"
 #include "settings.h"
+#include "util.h"
+#include "messages.h"
 
-#define printbool(boolean) \
-	(boolean ? "true" : "false")
+static settings const default_cfg = {
+    .general.sort = 0,
+    .general.dictSortOrder = NULL,
+    .general.dbpth = NULL, // Set by set_runtime_defaults()
+    .general.nukeWhitespaceLookup = 1,
+    .general.mecab = 0,
+    .general.substringSearch = 1,
+    //
+    .anki.enabled = 0,
+    .anki.deck = NULL, // Don't even try to guess
+    .anki.notetype = "Japanese sentences",
+    .anki.fieldnames = (char*[]){ "SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes" },
+    .anki.numFields = 0,
+    .anki.copySentence = 1,
+    .anki.nukeWhitespaceSentence = 1,
+    .anki.fieldMapping = (u32[]){ 3, 4, 7, 6, 8 },
+    .anki.checkExisting = 0,
+    //
+    .popup.width = 600,
+    .popup.height = 400,
+    .popup.margin = 5,
+    //
+    .pron.displayButton = 0,
+    .pron.onStart = 0,
+    .pron.dirPath = NULL, // Don't guess
+};
+settings cfg = default_cfg;
 
-settings cfg = { 0 };
+static void
+set_runtime_defaults()
+{
+    if (!cfg.general.dbpth)
+    {
+	cfg.general.dbpth = (char*)buildpath(fromcstr_((char*)g_get_user_data_dir()), S("dictpopup")).s;
+	debug_msg("Using default database path: '%s'", cfg.general.dbpth);
+    }
+}
+
+void
+parse_cmd_line_opts(int argc_addr[static 1], char** argv_addr[static 1])
+{
+    assert(argv_addr);
+    int argc = *argc_addr;
+    char** argv = *argv_addr;
+
+    for (int i = 0; i < argc; i++)
+    {
+	if (strcmp(argv[i], "-d") == 0)
+	{
+	    cfg.args.debug = 1;
+
+	    if (i == 1)             // Should be enough for now
+	    {
+		(*argv_addr)++;
+		(*argc_addr)--;
+	    }
+	}
+    }
+}
+
+#define printyn(boolean) \
+	(boolean ? "yes" : "no")
+
+// Expected to be null-terminated
+static void
+print_array(char** arr)
+{
+    putchar('[');
+    if (arr)
+    {
+	for (char** p = arr; *p; p++)
+	{
+	    if (p != arr)
+		putchar(',');
+	    printf("\"%s\"", *p);
+	}
+    }
+    putchar(']');
+    putchar('\n');
+}
 
 void
 print_settings(void)
 {
-	printf("[Anki]\n");
-	printf("Anki deck: \"%s\"\n", cfg.deck);
-	printf("Anki Notetype: \"%s\"\n", cfg.notetype);
-	printf("Fields: [");
-	for (size_t i = 0; i < cfg.num_fields; i++)
-	{
-		printf("\"%s\"", cfg.fieldnames[i]);
-		if (i != cfg.num_fields - 1)
-			printf(",");
-		else
-			printf("]\n");
-	}
-	printf("Mappings : [");
-	for (size_t i = 0; i < cfg.num_fields; i++)
-	{
-		printf("%i", cfg.fieldmapping[i]);
-		if (i != cfg.num_fields - 1)
-			printf(",");
-		else
-			printf("]\n");
-	}
-	printf("\n");
-	printf("[Behaviour]\n");
-	printf("Anki support: %s\n", printbool(cfg.ankisupport));
-	printf("Check if existing: %s\n", printbool(cfg.checkexisting));
-	printf("Copy sentence: %s\n", printbool(cfg.copysentence));
-	printf("Nuke whitespace: %s\n", printbool(cfg.nukewhitespace));
+    // TODO: Finish implementing
+    puts("Settings:");
+    puts("[General]");
+    printf("Database path: '%s'\n", cfg.general.dbpth);
+    printf("Sort: %s\n", printyn(cfg.general.sort));
+    printf("Dictionary sort order: ");
+    print_array(cfg.general.dictSortOrder);
+    printf("Remove whitespace from lookup: %s\n", printyn(cfg.general.nukeWhitespaceLookup));
+    printf("Fall back to hiragana conversion using MeCab: %s\n", printyn(cfg.general.mecab));
+    printf("Decrese length until match: %s\n", printyn(cfg.general.substringSearch));
+    putchar('\n');
+
+    puts("[Anki]");
+    printf("Anki support enabled: %s\n", printyn(cfg.anki.enabled));
+    printf("Anki deck: \"%s\"\n", cfg.anki.deck);
+    printf("Anki notetype: \"%s\"\n", cfg.anki.notetype);
+    printf("Prompt to copy sentence: %s\n", printyn(cfg.anki.copySentence));
+    printf("Remove whitespace from sentence: %s\n", printyn(cfg.anki.nukeWhitespaceSentence));
+    printf("Fields: ");
+    print_array(cfg.anki.fieldnames);
+    printf("Mappings : [");
+    for (size_t i = 0; i < cfg.anki.numFields; i++)
+    {
+	if (i)
+	    putchar(',');
+	printf("%i", cfg.anki.fieldMapping[i]);
+    }
+    printf("]\n");
+    putchar('\n');
+
+    puts("[Popup]");
+    printf("Width: %i\n", cfg.popup.width);
+    printf("Height: %i\n", cfg.popup.height);
+    printf("Margin: %i\n", cfg.popup.margin);
+    putchar('\n');
+
+    puts("[Pronunciation]");
+    printf("Display Button: %s\n", printyn(cfg.pron.displayButton));
+    printf("Pronounce on start: %s\n", printyn(cfg.pron.onStart));
+    printf("Audio file directory: %s\n", cfg.pron.dirPath ? cfg.pron.dirPath : "empty");
+    putchar('\n');
+
+    puts("Command line options:");
+    printf("Debug output: %s\n", printyn(cfg.args.debug));
+
+    putchar('\n');
 }
 
-// TODO: Only notification on critical warning
+/*
+ * Read key @key from group @group into memory pointed to by @dest if exists and non-negative.
+ * On error it will print a debug message and not write anything to @dest
+ */
 static void
-error_msg(char const *fmt, ...)
+read_uint(GKeyFile* kf, const char* group, const char* key, u32 dest[static 1])
 {
-	va_list argp;
-	va_start(argp, fmt);
-	g_autofree char* msg = g_strdup_vprintf(fmt, argp);
-	va_end(argp);
-
-	notify(1, "WARNING: (Config) %s", msg);
-	g_warning("(Config) %s", msg);
+    GError* error = NULL;
+    int val = g_key_file_get_integer(kf, group, key, &error);
+    if (error)
+    {
+	debug_msg("%s", error->message);
+	g_error_free(error);
+    }
+    else if (val < 0)
+	error_msg("Expected a positive value in key: '%s' and group '%s', but received negative.", key, group);
+    else
+	*dest = (u32)val;
 }
 
-void
-check_fieldmapping(size_t num, int fieldmapping[num], int max_value)
+/*
+ * Read key @key from group @group and return the read value.
+ * Returns @default_val on error
+ */
+static void
+read_bool(GKeyFile* kf, const char* group, const char* key, bool dest[static 1])
 {
-	for (size_t i = 0; i < num; i++)
-	{
-		if (fieldmapping[i] >= max_value)
-		{
-			error_msg("Found a field mapping outside of the defined range. Setting to 0");
-			fieldmapping[i] = 0;
-		}
-	}
+    GError* error = NULL;
+    gboolean value = g_key_file_get_boolean(kf, group, key, &error);
+    if (error)
+    {
+	debug_msg("%s", error->message);
+	g_error_free(error);
+    }
+    else
+	*dest = value;
 }
 
 static void
-fill_anki_string(GKeyFile* kf, char **cfg_option, const char* entry)
+read_string(GKeyFile* kf, const char* group, const char* key, char* dest[static 1])
 {
-	if (cfg.ankisupport)
-	{
-		g_autoptr(GError) error = NULL;
-		char *value = g_key_file_get_string(kf, "Anki", entry, &error);
-		if (value == NULL || !*value)
-		{
-			if (error)
-				error_msg("%s. Disabling Anki support.", error->message);
-			else
-				error_msg("Missing entry \"%s\" in settings file. Disabling Anki support", entry);
+    GError* error = NULL;
+    char *value = g_key_file_get_string(kf, group, key, &error);
+    if (error)
+    {
+	debug_msg("%s", error->message);
+	g_error_free(error);
+    }
+    else
+	*dest = value;
+}
 
-			cfg.ankisupport = 0;
-		}
-		else
-			*cfg_option = value;
+static void
+read_string_list(GKeyFile* kf, const char* group, const char* key, char** dest[static 1], gsize* length)
+{
+    GError* error = NULL;
+    char** value = g_key_file_get_string_list(kf, group, key, length ? length : NULL, &error);
+    if (error)
+    {
+	debug_msg("%s", error->message);
+	g_error_free(error);
+    }
+    else
+	*dest = value;
+}
+
+static void
+read_uint_list(GKeyFile* kf, const char* group, const char* key, u32* dest[static 1], gsize length[static 1])
+{
+    GError* error = NULL;
+    int* val = g_key_file_get_integer_list(kf, group, key, length, &error);
+    if (error)
+    {
+	debug_msg("%s", error->message);
+	g_error_free(error);
+	return;
+    }
+
+    for (gsize i = 0; i < *length; i++)
+    {
+	if (val[i] < 0)
+	{
+	    error_msg("Received a negative value at index '%li' in key: '%s' and group '%s' when expecting a positive.",
+		      i, key, group);
+	    return;
 	}
+    }
+
+    *dest = (u32*)val;
 }
 
 
-static bool
-return_behaviour(GKeyFile* kf, const char* entry, bool defaultv)
+static void
+read_general(GKeyFile* kf)
 {
-	g_autoptr(GError) error = NULL;
-	gboolean value = g_key_file_get_boolean(kf, "Behaviour", entry, &error);
-	if (error)
-	{
-		error_msg("%s. Setting \"%s\" to \"%s\".", error->message, entry, printbool(defaultv));
-		return defaultv;
-	}
-
-	return value;
+    read_string(kf, "General", "DatabasePath", &cfg.general.dbpth);
+    read_bool(kf, "General", "Sort", &cfg.general.sort);
+    if (cfg.general.sort)
+	read_string_list(kf, "General", "DictSortOrder", &cfg.general.dictSortOrder, NULL);
+    read_bool(kf, "General", "NukeWhitespaceLookup", &cfg.general.nukeWhitespaceLookup);
+    read_bool(kf, "General", "MecabConversion", &cfg.general.mecab);
+    read_bool(kf, "General", "SubstringSearch", &cfg.general.substringSearch);
 }
 
-static int
-return_popup(GKeyFile* kf, const char* entry, int defaultv)
+static void
+read_anki(GKeyFile* kf)
 {
-	g_autoptr(GError) error = NULL;
-	int value = g_key_file_get_integer(kf, "Popup", entry, &error);
+    read_bool(kf, "Anki", "Enabled", &cfg.anki.enabled);
+    if (cfg.anki.enabled)
+    {
+	read_string(kf, "Anki", "Deck", &cfg.anki.deck);
+	read_string(kf, "Anki", "NoteType", &cfg.anki.notetype);
 
-	return error ? defaultv : value;
+	size_t n_fields = 0;
+	read_string_list(kf, "Anki", "FieldNames", &cfg.anki.fieldnames, &n_fields);
+
+	read_bool(kf, "Anki", "CopySentence", &cfg.anki.copySentence);
+	read_bool(kf, "Anki", "NukeWhitespaceSentence", &cfg.anki.nukeWhitespaceSentence);
+
+	size_t n_fieldmap = 0;
+	read_uint_list(kf, "Anki", "FieldMapping", &cfg.anki.fieldMapping, &n_fieldmap);
+
+	if (n_fieldmap != n_fields)
+	{
+	    error_msg("Number of fieldnames does not match number of fieldmappings in config. Disabling Anki support..");
+	    cfg.anki.enabled = 0;
+	}
+	else
+	    cfg.anki.numFields = n_fields;
+
+	read_bool(kf, "Anki", "CheckIfExists", &cfg.anki.checkExisting);
+	read_string(kf, "Anki", "SearchField", &cfg.anki.searchField);
+    }
+}
+
+static void
+read_popup(GKeyFile* kf)
+{
+    read_uint(kf, "Popup", "Width", &cfg.popup.width);
+    read_uint(kf, "Popup", "Height", &cfg.popup.height);
+    read_uint(kf, "Popup", "Margin", &cfg.popup.margin);
+}
+
+static void
+read_pronunciation(GKeyFile* kf)
+{
+    read_bool(kf, "Pronunciation", "DisplayButton", &cfg.pron.displayButton);
+    read_bool(kf, "Pronunciation", "PronounceOnStart", &cfg.pron.onStart);
+    read_string(kf, "Pronunciation", "FolderPath", &cfg.pron.dirPath);
 }
 
 void
 read_user_settings(int fieldmapping_max)
 {
-	const char* config_dir = g_get_user_config_dir();
-	g_autofree gchar *config_fn = g_build_filename(config_dir, "dictpopup", "config.ini", NULL);
+    g_autoptr(GKeyFile) kf = g_key_file_new();
+    GError *error = NULL;
+    s8 cfgpth = buildpath(fromcstr_((char*)g_get_user_config_dir()), S("dictpopup"), S("config.ini"));
+    if (!g_key_file_load_from_file(kf, (char*)cfgpth.s, G_KEY_FILE_NONE, &error))
+    {
+	if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
+	    error_msg("Could not find a config file in: \"%s\". Falling back to default config.", cfgpth.s);
+	else
+	    error_msg("Error opening \"%s\": %s. Falling back to default config.", cfgpth.s, error->message);
 
-	GError *error = NULL;
-	g_autoptr(GKeyFile) kf = g_key_file_new();
-	if (!g_key_file_load_from_file(kf, config_fn, G_KEY_FILE_NONE, &error))
-	{
-		if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
-			error_msg("Could not find config file: \"%s\"", config_fn);
-		else
-			error_msg("Error opening \"%s\": %s.", config_fn, error->message);
+	g_error_free(error);
+	error = NULL;
+	return;
+    }
+    else
+    {
+	read_general(kf);
+	read_anki(kf);
+	read_popup(kf);
+	read_pronunciation(kf);
+    }
+    frees8(&cfgpth);
 
-		g_error_free(error);
-		exit(1); // TODO: default config
-	}
-
-	cfg.ankisupport = return_behaviour(kf, "AnkiSupport", false) ? 1 : 0;
-	cfg.checkexisting = return_behaviour(kf, "CheckIfExists", false) ? 1 : 0;
-	cfg.copysentence = return_behaviour(kf, "CopySentence", false) ? 1 : 0;
-	cfg.nukewhitespace = return_behaviour(kf, "NukeWhitespace", true) ? 1 : 0;
-	cfg.pronunciationbutton = return_behaviour(kf, "PronunciationButton", false) ? 1 : 0;
-	cfg.pronounceonstart = return_behaviour(kf, "PronounceOnStart", false) ? 1 : 0;
-	cfg.mecabconversion = return_behaviour(kf, "MecabConversion", false) ? 1 : 0;
-	cfg.substringsearch = return_behaviour(kf, "SubstringSearch", true) ? 1 : 0;
-	cfg.sort = return_behaviour(kf, "Sort", false) ? 1 : 0;
-
-	/* ----------- GENERAL ------------- */
-	// Database
-	cfg.db_path = g_key_file_get_string(kf, "General", "DatabasePath", &error);
-	if (!cfg.db_path || !*cfg.db_path)
-	{
-		// silently use the default path
-		const char* data_dir = g_get_user_data_dir();
-		cfg.db_path = g_build_filename(data_dir, "dictpopup", NULL);
-	}
-
-	// SortOrder
-	if (cfg.sort)
-	{
-		cfg.sort_order = g_key_file_get_string_list(kf, "General", "DictSortOrder", NULL, &error);
-		if (error)
-		{
-			error_msg("%s. No Sort order found. Not sorting.", error->message);
-			cfg.sort = 0;
-			g_error_free(error);
-			error = NULL;
-		}
-	}
-	/* -------------------------------- */
-
-	fill_anki_string(kf, &(cfg.deck), "Deck");
-	fill_anki_string(kf, &(cfg.notetype), "NoteType");
-	if (cfg.ankisupport && cfg.checkexisting)
-	{
-		char *value = g_key_file_get_string(kf, "Anki", "SearchField", &error);
-		if (value == NULL || !*value)
-		{
-			if (error)
-			{
-				error_msg("%s. Disabling existence searching.", error->message);
-				g_error_free(error);
-				error = NULL;
-			}
-			else
-				error_msg("Missing entry \"SearchField\" in settings file. Disabling existence searching.");
-
-			cfg.checkexisting = 0;
-		}
-		else
-			cfg.searchfield = value;
-	}
-
-	// Fieldnames
-	gsize num_fieldnames = 0;
-	if (cfg.ankisupport)
-	{
-		cfg.fieldnames = g_key_file_get_string_list(kf, "Anki", "FieldNames", &num_fieldnames, &error);
-		cfg.num_fields = num_fieldnames;
-		if (error)
-		{
-			error_msg("%s. Disabling Anki support.", error->message);
-			cfg.ankisupport = FALSE;
-			g_error_free(error);
-			error = NULL;
-		}
-	}
-
-	// Fieldmappings
-	size_t num_fieldmappings = 0;
-	if (cfg.ankisupport)
-	{
-		// Negative values are changed to positive ones, but then set to 0, as they will be out of range
-		cfg.fieldmapping = g_key_file_get_integer_list(kf, "Anki", "FieldMapping", &num_fieldmappings, &error);
-		if (error)
-		{
-			error_msg("%s. Disabling Anki support.", error->message);
-			cfg.ankisupport = FALSE;
-			g_error_free(error);
-			error = NULL;
-		}
-		check_fieldmapping(num_fieldmappings, cfg.fieldmapping, fieldmapping_max);
-
-		Stopif(num_fieldnames != num_fieldmappings, exit(1), "Error: Number of fieldnames does not match number of fieldmappings in config.");
-	}
-
-	// Popup
-	cfg.win_height = return_popup(kf, "Height", 350);
-	cfg.win_width = return_popup(kf, "Width", 500);
-	cfg.win_margin = return_popup(kf, "Margin", 5);
+    set_runtime_defaults();
 }

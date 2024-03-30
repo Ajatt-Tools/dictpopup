@@ -1,225 +1,238 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h> // fork
 
 #include <glib.h>
-#include <gio/gio.h>
-#include <gtk/gtk.h>
 
-#include <pthread.h>
-
-#include "xlib.h"
-#include "popup.h"
-#include "ankiconnectc.h"
 #include "settings.h"
-#include "deinflector.h"
 #include "dbreader.h"
+#include "deinflector.h"
+#include "ankiconnectc.h"
 #include "util.h"
+#include "platformdep.h"
+#include "popup.h"
+#include "messages.h"
 
-static int const number_of_possible_entries = 9;
+#define POSSIBLE_ENTRIES_S_NMEMB 9
 typedef struct possible_entries_s {
-	char* lookup;
-	char* copiedsentence;
-	char* boldsentence;
-	char* dictkanji;
-	char* dictreading;
-	char* dictdefinition;
-	char* furigana;
-	char* windowname;
-	char* dictname;
+    s8 lookup;
+    s8 copiedsent;
+    s8 boldsent;
+    s8 dictkanji;
+    s8 dictreading;
+    s8 dictdefinition;
+    s8 furigana;
+    s8 windowname;
+    s8 dictname;
 } possible_entries_s;
 
 static char*
 map_entry(possible_entries_s pe, int i)
 {
-	// A safer way would be switching to strings, but I feel like that's
-	// not very practical to configure
-	return i == 0 ? NULL
+    // A safer way would be switching to strings, but I feel like that's
+    // not very practical to configure
+    // TODO: s8 implemenation?
+    // TODO: Warning if unknown number encountered
+    s8 ret = i == 0 ? (s8){ 0 }
 	     : i == 1 ? pe.lookup
-	     : i == 2 ? pe.copiedsentence
-	     : i == 3 ? pe.boldsentence
+	     : i == 2 ? pe.copiedsent
+	     : i == 3 ? pe.boldsent
 	     : i == 4 ? pe.dictkanji
 	     : i == 5 ? pe.dictreading
 	     : i == 6 ? pe.dictdefinition
 	     : i == 7 ? pe.furigana
 	     : i == 8 ? pe.windowname
 	     : i == 9 ? pe.dictname
-	     : NULL;
+	     : (s8){ 0 };
+
+    assert(ret.s == NULL || ret.s[ret.len] == '\0');
+    return (char*)ret.s;
 }
 
-char*
-get_selection(void)
+static s8
+add_bold_tags(s8 sent, s8 word)
 {
-	GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
-	return gtk_clipboard_wait_for_text(clipboard);
+    s8 bdword = concat(S("<b>"), word, S("</b>"));
+
+    GString* bdsent = g_string_new_len((gchar*)sent.s, (gssize)sent.len);
+    assert(word.s[word.len] == '\0');
+    assert(bdword.s[bdword.len] == '\0');
+    g_string_replace(bdsent, (char*)word.s, (char*)bdword.s, 0);
+
+    frees8(&bdword);
+
+    s8 ret = { 0 };
+    ret.len = bdsent->len;
+    ret.s = (u8*)g_string_free_and_steal(bdsent);
+    return ret;
 }
 
-//TODO: Reimplement in a portable way without glib
-static char*
-boldWord(char sent[static 1], char* word)
+static s8
+create_furigana(s8 kanji, s8 reading)
 {
-	gchar   *bdword = g_strdup_printf("<b>%s</b>", word);
-	GString *bdsent = g_string_new(sent);
-
-	g_string_replace(bdsent, word, bdword, 0);
-
-	free(bdword);
-	return g_string_free_and_steal(bdsent);
-}
-
-static char*
-create_furigana(char *kanji, char* reading)
-{
-	assert(kanji || reading);
-
-	return !kanji || !*kanji ? g_strdup(reading)
-	     : !reading || !*reading ? NULL // Leave it to Anki
-	     : !strcmp(kanji, reading) ? g_strdup(reading)
-	     : g_strdup_printf("%s[%s]", kanji, reading); // TODO: Obviously not enough if kanji contains hiragana
+    return !kanji.len && !reading.len ? (s8){ 0 }
+	     : !reading.len ? (s8){ 0 } // Leave it to AJT Japanese
+	     : !kanji.len ? s8dup(reading)
+	     : s8equals(kanji, reading) ? s8dup(reading)
+	     : concat(kanji, S("["), reading, S("]")); // TODO: Obviously not enough if kanji contains hiragana
 }
 
 static void
 fill_entries(possible_entries_s pe[static 1], dictentry const de)
 {
-	if (cfg.copysentence)
-	{
-		notify(0, "Please select the context.");
-		clipnotify(); // waits for clipboard change
-		pe->copiedsentence = get_selection();
-		if (cfg.nukewhitespace)
-			nuke_whitespace(pe->copiedsentence);
+    if (cfg.anki.copySentence)
+    {
+	msg("Please select the context.");
+	pe->copiedsent = get_sentence();
+	if (cfg.anki.nukeWhitespaceSentence)
+	    pe->copiedsent = nuke_whitespace(pe->copiedsent);
 
-		pe->boldsentence = boldWord(pe->copiedsentence, pe->lookup);
-	}
+	pe->boldsent = add_bold_tags(pe->copiedsent, pe->lookup);
+    }
 
-	pe->dictdefinition = g_strdup(de.definition);
-	pe->dictkanji = g_strdup(de.kanji ? de.kanji : de.reading);
-	pe->dictreading = g_strdup(de.reading ? de.reading: de.kanji);
-	pe->furigana = create_furigana(de.kanji, de.reading);
-	pe->dictname = de.dictname;
+    pe->dictdefinition = s8dup(de.definition);
+    pe->dictkanji = s8dup(de.kanji.len > 0 ? de.kanji : de.reading);
+    pe->dictreading = s8dup(de.reading.len > 0 ? de.reading : de.kanji);
+    pe->furigana = create_furigana(de.kanji, de.reading);
+    pe->dictname = de.dictname;
 }
 
 
 static void
-add_deinflections_to_dict(dictionary dict[static 1], s8 word)
+add_deinflections_to_dict(dictentry* dict[static 1], s8 word)
 {
-	s8** deinflections = deinflect(word);
-
-	assert(deinflections != NULL);
-	for (s8** ptr = deinflections; *ptr; ptr++)
-		add_word_to_dict(dict, **ptr);
-	// TODO: deinflections isn't freed properly anymore
-	// Though might not be worth bothering
+    s8* deinfs_b = deinflect(word);
+    for (size_t i = 0; i < buf_size(deinfs_b); i++)
+	add_word_to_dict(dict, deinfs_b[i]);
+    frees8buffer(&deinfs_b);
 }
 
-int
-indexof(char* str, char** strarr)
+static int
+indexof(char* str, char* arr[])
 {
-	for (int i = 0; strarr[i]; i++)
+    if (str && arr)
+    {
+	for (int i = 0; arr[i]; i++)
 	{
-		if (strcmp(str, strarr[i]) == 0)
-			return i;
+	    if (strcmp(str, arr[i]) == 0)
+		return i;
 	}
-	return INT_MAX;
+    }
+    return INT_MAX;
 }
 
-int
-dictentry_comparer(dictentry* a, dictentry* b)
+static int
+dictentry_comparer(void const* voida, void const* voidb)
 {
-	assert(a && b);
+    dictentry* a = (dictentry*)voida;
+    dictentry* b = (dictentry*)voidb;
+    assert(a && b);
 
-	int indexa = indexof(a->dictname, cfg.sort_order);
-	int indexb = indexof(b->dictname, cfg.sort_order);
-	return indexa < indexb ? -1
+    assert(a->dictname.s[a->dictname.len] == '\0');
+    assert(b->dictname.s[b->dictname.len] == '\0');
+    int indexa = indexof((char*)a->dictname.s, cfg.general.dictSortOrder);
+    int indexb = indexof((char*)b->dictname.s, cfg.general.dictSortOrder);
+
+    return indexa < indexb ? -1
 	   : indexa == indexb ? 0
 	   : 1;
 }
 
 static void
-fill_dictionary_with(dictionary dict[static 1], s8 word)
+fill_dictionary_with(dictentry* dict[static 1], s8 word)
 {
-	add_word_to_dict(dict, word);
-	add_deinflections_to_dict(dict, word);
+    add_word_to_dict(dict, word);
+    add_deinflections_to_dict(dict, word);
 
-	if (cfg.sort)
-		dictionary_sort(dict, dictentry_comparer);
+    if (cfg.general.sort && *dict)
+	qsort(*dict, dictlen(*dict), sizeof(dictentry), dictentry_comparer);
 }
 
 static void*
 create_dictionary(void* voidin)
 {
-	s8 lookup = s8fromcstr((char*)voidin);
+    s8* lookup_ptr = (s8*)voidin;
+    assert(lookup_ptr);
+    s8 lookup = *lookup_ptr;
 
-	dictionary* dict = dictionary_new();
+    dictentry* dict = NULL;
 
-	/* clock_t begin = clock(); */
-	open_database();
-	fill_dictionary_with(dict, lookup);
-	if (dict->len == 0 && cfg.mecabconversion)
+    /* clock_t begin = clock(); */
+    open_database();
+    fill_dictionary_with(&dict, lookup);
+    if (dictlen(dict) == 0 && cfg.general.mecab)
+    {
+	s8 hira = kanji2hira(lookup);
+	fill_dictionary_with(&dict, hira);
+	frees8(&hira);
+    }
+    if (dictlen(dict) == 0 && cfg.general.substringSearch)
+    {
+	while (dictlen(dict) == 0 && lookup.len > 3)
 	{
-		char* hira = kanji2hira(lookup);
-		fill_dictionary_with(dict, s8fromcstr(hira));
-		free(hira);
+	    lookup = s8striputf8chr(lookup);
+	    fill_dictionary_with(&dict, lookup);
 	}
-	if (dict->len == 0 && cfg.substringsearch)
-	{
-		while (dict->len == 0 && lookup.len > 3) //FIXME: magic number. Change to > one UTF-8 character
-		{
-			s8striputf8chr(&lookup);
-			fill_dictionary_with(dict, lookup);
-		}
-	}
-	close_database();
-	/* clock_t end = clock(); */
-	/* printf("lookup time: %f sec\n", (double)(end - begin) / CLOCKS_PER_SEC); */
+    }
+    close_database();
+    /* clock_t end = clock(); */
+    /* printf("lookup time: %f sec\n", (double)(end - begin) / CLOCKS_PER_SEC); */
 
-	Stopif(dict->len == 0, dictionary_free(dict); exit(1), "No dictionary entry found.");
+    if (dictlen(dict) == 0)
+	fatal("No dictionary entry found");
 
-	lookup.s[lookup.len] = '\0';
-	dictionary_data_done(dict);
-	return NULL;
+    lookup.s[lookup.len] = '\0';
+    dictionary_data_done(dict);
+    return NULL;
 }
 
 static void
-send_ankicard(possible_entries_s pe)
+send_ankicard(possible_entries_s p)
 {
-	ankicard ac = (ankicard) {
-		.deck = cfg.deck,
-		.notetype = cfg.notetype,
-		.num_fields = (signed int)cfg.num_fields,
-		.fieldnames = cfg.fieldnames,
-		.fieldentries = alloca(cfg.num_fields * sizeof(char *))
-	};
+    ankicard ac = (ankicard) {
+	.deck = cfg.anki.deck,
+	.notetype = cfg.anki.notetype,
+	.num_fields = cfg.anki.numFields,
+	.fieldnames = cfg.anki.fieldnames,
+	.fieldentries = alloca(cfg.anki.numFields * sizeof(char*))
+    };
 
-	for (int i = 0; i < ac.num_fields; i++)
-		ac.fieldentries[i] = map_entry(pe, cfg.fieldmapping[i]);
+    for (int i = 0; i < ac.num_fields; i++)
+	ac.fieldentries[i] = map_entry(p, cfg.anki.fieldMapping[i]);
 
-	if (check_ac_response(ac_addNote(ac)))
-		notify(0, "Successfully added card.");
+    retval_s ac_resp = ac_addNote(ac);
+    if (ac_resp.ok)
+	msg("Successfully added card.");
+    else
+	error_msg("Error adding card: %s", ac_resp.data.string);
 }
 
 int
-main(int argc, char**argv)
+main(int argc, char** argv)
 {
-	read_user_settings(number_of_possible_entries);
+    parse_cmd_line_opts(&argc, &argv);
+    read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
+    if (cfg.args.debug) print_settings();
 
-	gtk_init(&argc, &argv);
+    possible_entries_s p = { 0 };
+    p.windowname = get_windowname();
+    p.lookup = argc > 1 ? fromcstr_(argv[1]) : get_selection();
+    if (p.lookup.len == 0)
+	fatal("No selection and no argument provided. Exiting.");
+    if (!g_utf8_validate((char*)p.lookup.s, p.lookup.len, NULL))
+	fatal("Lookup is not a valid UTF-8 string");
+    if (cfg.general.nukeWhitespaceLookup)
+	nuke_whitespace(p.lookup);
 
-	possible_entries_s p = { 0 };
-	p.windowname = getwindowname();
-	p.lookup = argc > 1 ? argv[1] : get_selection();
-	Stopif(!p.lookup || !*p.lookup, return 1, "No selection and no argument provided. Exiting.");
+    pthread_t thread;
+    pthread_create(&thread, NULL, create_dictionary, &p.lookup);
+    pthread_detach(thread);
 
-	if (cfg.nukewhitespace)
-		nuke_whitespace(p.lookup);
-
-	pthread_t thread;
-	pthread_create(&thread, NULL, create_dictionary, p.lookup);
-
-	dictentry chosen_entry = popup();
-	if (chosen_entry.definition && cfg.ankisupport)
-	{
-		fill_entries(&p, chosen_entry);
-		send_ankicard(p);
-	}
+    dictentry chosen_entry = popup();
+    if (chosen_entry.definition.len && cfg.anki.enabled)
+    {
+	fill_entries(&p, chosen_entry);
+	send_ankicard(p);
+    }
 }

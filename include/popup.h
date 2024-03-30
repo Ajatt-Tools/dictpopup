@@ -15,4 +15,4 @@ dictentry popup(void);
 /*
  * Used to pass the dictionary data once it is ready
  */
-void dictionary_data_done(dictionary* dict);
+void dictionary_data_done(dictentry* dict);

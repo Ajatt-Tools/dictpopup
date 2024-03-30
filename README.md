@@ -15,27 +15,45 @@ See `TODO.txt` for more.
  * Kanjify e.g. お前 -> 御前
  * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
  * Fall back to a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
- * Play a pronunciation on lookup / button press (requires setup as for now)
+ * Play a pronunciation on lookup / button press (requires files see #pronunciation)
  * Add word with selected definition to Anki
  * Indicator showing if a word already exists in your Anki deck / collection. Orange if existing cards are suspended. Anki browser search on press.
  * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain the book title)
  * Fast and memory efficient
 
 ## Dependencies
-x11, gtk3, [lmdb](https://www.symas.com/lmdb) (Arch package `lmdb`), mecab
+x11, gtk3, [lmdb](https://www.symas.com/lmdb) (Arch package `lmdb`), mecab, ffplay (optional, for pronunciation)
 
 ## Installation
 Download the repository with `git clone "https://github.com/GenjiFujimoto/dictpopup.git"`, change directory `cd dictpopup` and then install with `make && sudo make install`.
 
 After the program installation you need to create a database where the dictionary entries are read from.
 This is done via `dictpopup_create` which takes all Yomichan dictionaries in the current directory and puts them into a database.
-Without arguments it stores the database in the default location `~/.local/share/dictpopup`.
+Without arguments it stores the database in the default location `~/.local/share/dictpopup` which is also the default search path.
 
 ## Configuration
 Copy the example config `config.ini` of the repo to `~/.config/dictpopup/config.ini` and configure it according to your setup. 
 The syntax follows the [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec).
 
 Be careful to not include trailing spaces after your variables (for now).
+
+## Pronunciation
+To enable pronunciation, simply download some pronunciation indices from Ajatt-Tools (such as [NHK 2016](https://github.com/Ajatt-Tools/nhk_2016_pronunciations_index))
+and specify the path to the directory containing the downloaded folders in the config file. The expected folder structure looks as follows:
+```
+ ├── ajt_japanese_audio
+ │   ├── daijisen_pronunciations_index
+ │   │   ├── index.json
+ │   │   ├── media
+ │   ├── nhk_1998_pronunciations_index
+ │   │   ├── index.json
+ │   │   ├── media
+ │   │   └── release_info.conf
+ │   ├── nhk_2016_pronunciations_index
+ │   │   ├── index.json
+```
+On the first run it will automatically create an index which might take up some space (up to 200M if you have many indices like I do).
+This will allow for a faster lookup.
 
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.

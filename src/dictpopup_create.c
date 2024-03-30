@@ -33,7 +33,7 @@ typedef struct {
 ds8
 ds8_new(size cap)
 {
-	return (ds8) { .s = _malloc(cap), .len = 0, .cap = cap };
+	return (ds8) { .s = new(u8, cap), .len = 0, .cap = cap };
 }
 
 bool
@@ -53,7 +53,7 @@ void
 ds8_appendc(ds8* str, int c)
 {
 	if (str->len + 1 > str->cap)
-		str->s = g_realloc(str->s, (size_t)(str->cap *= 2));
+		str->s = xrealloc(str->s, (size_t)(str->cap *= 2));
 
 	(str->s)[(str->len)++] = (u8)c;
 }
@@ -67,7 +67,7 @@ ds8_appendstr(ds8* a, ds8 b)
 	if (a->len + b.len > a->cap)
 	{
 		a->cap = a->len + b.len;
-		a->s = g_realloc(a->s, (size_t)(a->cap));
+		a->s = xrealloc(a->s, (size_t)(a->cap));
 	}
 
 	u8copy(a->s + a->len, b.s, b.len);
@@ -81,24 +81,28 @@ ds8free(ds8* str)
 	str->s = NULL;
 }
 
-bool
-_isspace(u8 c)
+static b32 
+digit(u8 c)
 {
-	return(c == ' ' || c == '\t' || c == '\n' || c == '\r');
+    return c>='0' && c<='9';
 }
 
-bool
-_isdigit(u8 c)
+static b32
+whitespace(u8 c)
 {
-	return c >= '0' && c <= '9';
+    switch (c) {
+    case '\t': case '\n': case '\b': case '\f': case '\r': case ' ':
+        return 1;
+    }
+    return 0;
 }
 
 s8
 s8trim(s8 str)
 {
-	while (str.len && _isspace(str.s[str.len - 1]))
+	while (str.len && whitespace(str.s[str.len - 1]))
 		str.len--;
-	while (str.len && _isspace(*str.s))
+	while (str.len && whitespace(*str.s))
 	{
 		str.s++;
 		str.len--;
@@ -108,7 +112,7 @@ s8trim(s8 str)
 }
 
 
-#define INITIAL_SIZE 1 << 17
+#define INITIAL_SIZE 1 << 14
 ds8 entry_buffer[6] = { 0 };
 
 // Debug code
@@ -134,28 +138,10 @@ ds8 entry_buffer[6] = { 0 };
 /* 	printf("\n"); */
 /* } */
 
-/* static ds8 */
-/* compress_dictentry(dictentry_s de) */
-/* { */
-/* 	// TODO: Use string array compression from unishox2 instead */
-
-/* 	ds8 cstr = ds8_new(data_str_len + 5); */
-/* 	cstr.len = unishox2_compress(data_str, (int)data_str_len, */
-/* 				     UNISHOX_API_OUT_AND_LEN((char*)cstr.s, (int)cstr.cap), USX_PSET_FAVOR_SYM); */
-/* 	while (cstr.len > cstr.cap) */
-/* 	{ */
-/* 		cstr.cap += 20; */
-/* 		cstr.s = g_realloc(cstr.s, (gsize)(cstr.cap)); */
-/* 		cstr.len = unishox2_compress(data_str, (int)data_str_len, */
-/* 					     UNISHOX_API_OUT_AND_LEN((char*)cstr.s, (int)cstr.cap), USX_PSET_FAVOR_SYM); */
-/* 	} */
-/* 	return cstr; */
-/* } */
-
 static void
 add_dictentry(s8dictentry de)
 {
-	de.definition = s8unescape(s8trim(de.definition));
+	de.definition = unescape(s8trim(de.definition));
 
 	if (de.definition.len == 0)
 	{
@@ -172,23 +158,15 @@ add_dictentry(s8dictentry de)
 	}
 	else
 	{
-		s8 datastr = {0};
-		datastr.len = de.dictname.len + 1 + de.kanji.len + 1 + de.reading.len + 1 + de.definition.len + 1;
-		datastr.s = alloca(datastr.len);
-
-		s8 end = s8copy(datastr, de.dictname);
-		end = s8copy(end, s8("\0"));
-		end = s8copy(end, de.kanji);
-		end = s8copy(end, s8("\0"));
-		end = s8copy(end, de.reading);
-		end = s8copy(end, s8("\0"));
-		end = s8copy(end, de.definition);
-		s8copy(end, s8("\0"));
+		s8 sep = S("\0");
+		s8 datastr = concat(de.dictname, sep, de.kanji, sep, de.reading, sep, de.definition);
 
 		if (de.kanji.len > 0)
-			addtodb(de.kanji.s, de.kanji.len, datastr.s, datastr.len);
+			addtodb(de.kanji, datastr);
 		if (de.reading.len > 0) // Let the db figure out duplicates
-			addtodb(de.reading.s, de.reading.len, datastr.s, datastr.len);
+			addtodb(de.reading, datastr);
+		
+		frees8(&datastr);
 	}
 }
 
@@ -223,7 +201,7 @@ read_string_into(ds8* buffer, Parser* p)
 static void
 read_number_into(ds8* buffer, Parser* p)
 {
-	for (p->ptr++; _isdigit(*p->ptr); p->ptr++)
+	for (p->ptr++; digit(*p->ptr); p->ptr++)
 		ds8_appendc(buffer, *p->ptr);
 	p->ptr--;
 }
@@ -233,10 +211,10 @@ static void
 read_next_entry_into(ds8* buf, Parser* p, i32 ul)
 {
 	/* Skip to start */
-	for (p->ptr++; *p->ptr == ':' || _isspace(*p->ptr); p->ptr++)
+	for (p->ptr++; *p->ptr == ':' || whitespace(*p->ptr); p->ptr++)
 		;
 
-	if (_isdigit(*p->ptr) || *p->ptr == '-') // Interpret - as negative sign
+	if (digit(*p->ptr) || *p->ptr == '-') // Interpret - as negative sign
 	{
 		ds8_appendc(buf, *p->ptr);
 		read_number_into(buf, p);
@@ -262,7 +240,7 @@ read_next_entry_into(ds8* buf, Parser* p, i32 ul)
 					stop = true;
 					break;
 				}
-				assert(_isspace(*p->ptr));
+				assert(whitespace(*p->ptr));
 			}
 		}
 
@@ -427,7 +405,7 @@ read_from_zip(char* filename)
 		if (strncmp(finfo.name, "term_bank_", lengthof("term_bank_")) == 0)
 		{
 			s8 txt = (s8) { .len = finfo.size + 1 };
-			txt.s = _malloc(finfo.size + 1);
+			txt.s = new(u8, finfo.size + 1);
 
 			zip_file_t* f = zip_fopen_index(archive, i, 0);
 			zip_fread(f, txt.s, finfo.size);
@@ -468,13 +446,13 @@ main(int argc, char * argv[])
 	DIR *dir = opendir(".");
 	if (dir == NULL)
 	{
-		perror("Error opening current directory");
-		exit(1);
+	    perror("Opening current directory");
+	    abort();
 	}
 
 	for (int i = 0; i < countof(entry_buffer); i++)
 	{
-		entry_buffer[i] = (ds8){ .s = _malloc(INITIAL_SIZE), .cap = INITIAL_SIZE };
+		entry_buffer[i] = (ds8){ .s = new(u8, INITIAL_SIZE), .cap = INITIAL_SIZE };
 	}
 
 	struct dirent *entry;
@@ -489,7 +467,4 @@ main(int argc, char * argv[])
 
 	char* lock_file = g_build_filename(db_path, "lock.mdb", NULL);
 	remove(lock_file);
-	//FIXME
-	remove("/tmp/data.mdb");
-	remove("/tmp/lock.mdb");
 }

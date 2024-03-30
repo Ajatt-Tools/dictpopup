@@ -1,0 +1,106 @@
+## dictpopup
+High priority
+- rewrite dictpopup_create.c using json library
+- Implement frequency dicts
+  - Sort dictionary entries by frequency + use score provided in the 5th entry in a Yomichan term-bank, which says:
+    "Score used to determine popularity. Negative values are more rare and positive values are more frequent. 
+    This score is also used to sort search results."
+- Implement the reading label as a text view to allow for editing -> initiate new search on Enter press
+- proper command line args parsing
+
+- Fix "Error obtaining window name" on recursive lookup
+  - The problem is, that dictpopup creates a "child window" (?) with id one more which does not have a name
+  - This affects all programs which create a child without own title name
+
+Mid priority
+- Group terms by reading, allow for switching between different readings
+- Deinflector should not check for verb stem when some (non 記号 and Japanese) characters where already truncated
+- Implement a small window to manually enter a search string instead of selecting
+- Expand deinflection list
+- Kanjify the word in the copied sentence according to the dictionary entry
+- Remove trailing spaces from user settings
+- write a gui config tool
+  - Select dictionaries
+  - Choose dictionary sort order
+  - build database
+  - change general config
+- Need some check when looking up a hiragana conversion to prevent things like 賢人会 -> 県人会
+- Don't show circle indicator if Anki is not running / on error
+
+Low priority
+- Allow defining own keybindings
+- Allow resizing the window and remember the size on close (write to config.ini)
+- Support for pictures
+- Move all Japanese specific things into deinflector.c, choose more language agnostic function names in all other places
+- Adds tags to the Anki card, similiar to mpvacious
+- Allow canceling selecting a sentence with Esc
+- Allow changing AnkiConnect API address in config.ini
+- Switch dictionary implementation to growable buffers (buf.h)
+- Fix Makefile to only rebuild necessary parts
+- Don't call jppron through the shell
+- Refactor settings.c
+- Refactor popup.c
+- Add correct feature test macros
+- Could split Mecab conversion and kata -> hira conversion into separate configuration options
+- Improve portability of non-popup code
+- Don't call the shell for jppron
+  - merge code into this repo?
+- Add command line options for verbosity (esp. showing warnings in dictpopup-create)
+- Skip certain lines on definition add (without selection), e.g.:
+  - しず か （しづ—） [1]【静か・▽閑か】
+  -（形動）〔文〕ナリ
+- Add unit tests and do fuzzy testing
+- Put length of longest entry into the database under LENGTH_OF_LONGEST_ENTRY. Then limit the lookup by that length
+  - Only important for an auto scan implementation though
+
+## dictpopup-create
+- fix duplicate entries
+- Add loading percentage
+- Process every dictionary in a different thread?
+  - Questionable if this makes sense, as it's already pretty fast and would make the code more complicated
+
+## Known problems:
+### Misc
+- There might be "duplicate" entries especially when looking up hiragana strings, since the corresponding kanji writing is different.
+  This is also unnecessary duplication in the database. Currently the only way of knowing under which kanji writing the entry is added, is the title bar.
+- If there is a dictionary entry for 恭しく "even though" 恭しい is present in the collection, then a red dot will be shown
+- ことぼ [辞] (spaces)
+### Deinflection
+- やった gets deinflected to やつ
+  - This can be fixed by reading in the 4th string of a Yomichan term-bank entry, which is:
+    "String of space-separated rule identifiers for the definition which is used to validate deinflection.
+    An empty string should be used for words which aren't inflected."
+- たいそう gets deinflected to たいい
+- 白けた gets deinflected to 白い
+- 目した only gets deinflected to 目す
+- はたきながら (should become はたく)
+- 挿げ(変わる)
+- に looks broken
+
+Possible ideas:
+- A (very small) optimization would be to sort the dictSortOrder string and then use binary search or sth in indexof()
+- Right click on audio button -> open some menu with "copy file to clipboard", ...
+- Consider using an Input Method Framework to draw the popup (to allow mouse pointer positioning for WMs other than X11)
+  - Relevant discussion: https://discourse.gnome.org/t/spawning-window-at-mouse-pointer-using-gtk4/19446/6
+  - But I think this won't allow moving / resizing the window
+  - Another approach might be using an invisible (transparent) fullscreen window with a popover / popup menu at the mouse pointer
+  - Need to look into how goldendict's move() function is implemented (Probably using Qt)
+- Use zstd to compress database file
+  - It reduces filesize by more than 100%, but impact on performance needs to be tested
+- Write a browser addon which enables using dictpopup just by pressing Shift (like yomichan)
+  - It simply needs to pass the next 50 characters starting from the current mouse position as an argument to dictpopup
+  - However I strongly doubt that an extension can execute some program, even if it's a local copy
+- Display a vertical bar to the right for quickly switching between different dictionaries (similar to goldendict's popup)
+- Support hyper links?
+  - Could use gtk_label_set_markup, but would need to switch to a label instead of a textview
+- Make dictionary numbers (①, ②, ...) clickable for adding to Anki
+- Implement a dbus service mode
+  - Keep window in the background and just hide on close
+
+To check:
+- definflector.c assumes that constant strings given in the code are utf8 encoded. I don't know if this always has to be true (on Windows)
+
+Test results for compressed dictionary entries:
+- Snappy: 840M -> 734M
+- zstd (without dict, clvl: 10): 840M -> 691M
+- zstd (with dict, clvl: 20): 840M -> 544M

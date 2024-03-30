@@ -9,4 +9,4 @@ void close_database(void);
  *
  * @word is copied if used in a dictionary entry.
  */
-void add_word_to_dict(dictionary *dict, s8 word);
+void add_word_to_dict(dictentry* dict[static 1], s8 word);
