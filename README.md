@@ -15,7 +15,7 @@ See `TODO.txt` for more.
  * Kanjify e.g. お前 -> 御前
  * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
  * Fall back to a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
- * Play a pronunciation on lookup / button press (requires files see #pronunciation)
+ * Play a pronunciation on lookup / button press (requires files see [Pronuncation](#pronunciation))
  * Add word with selected definition to Anki
  * Indicator showing if a word already exists in your Anki deck / collection. Orange if existing cards are suspended. Anki browser search on press.
  * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain the book title)
