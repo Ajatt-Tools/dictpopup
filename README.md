@@ -58,13 +58,18 @@ This will allow for a faster lookup.
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.
 
-You can switch between dictionary entries by clicking the arrow keys or by pressing the shortcuts `n` (next) and `p` (previous).
-The popup can be closed with `q` or `Esc`.
-
-The "+" sign (or Ctrl+s) adds the currently shown definition to Anki after prompting you to select a sentence.
+The "+" sign adds the currently shown definition to Anki after prompting you to select a sentence.
 If there is a selection, it will be used instead as a definition.
 
 The green/red dot indicates whether the word is already present in your Anki collection.
 It displays an orange dot if there exist corresponding cards, but which are all suspended.
 
-The sound symbol plays a pronunciation from a local database by calling [jppron](https://github.com/GenjiFujimoto/jppron).
+The popup can be closed with `q` or `Esc`.
+
+## Keybindings
+
+- Next entry: `n`, `s`
+- Previous entry: `p`, `a`
+- Create an Anki card: `<Ctrl>+s`
+- Play audio: `r`
+- Exit: `q`, `<Esc>`
