@@ -13,7 +13,7 @@ DEBUG_FLAGS= -DDEBUG -fsanitize=undefined,address -fsanitize-undefined-trap-on-e
 # -Wconversion 
 RELEASE_FLAGS=-O3 -flto
 LDLIBS = $(shell pkg-config --libs gtk+-3.0) -lcurl -lmecab -pthread -lXfixes -lX11 $(shell pkg-config --libs libnotify)
-LDLIBS_CREATE = -lzip $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify) -lzstd
+LDLIBS_CREATE = -lzip $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify)
 
 FILES = popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
 FILES_H = ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
