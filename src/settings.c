@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h> // getopt
 
 #include <glib.h>
 
@@ -46,26 +47,26 @@ set_runtime_defaults()
     }
 }
 
-void
-parse_cmd_line_opts(int argc_addr[static 1], char** argv_addr[static 1])
+int
+parse_cmd_line_opts(int argc, char** argv)
 {
-    assert(argv_addr);
-    int argc = *argc_addr;
-    char** argv = *argv_addr;
+    int c;
+    opterr = 0;
 
-    for (int i = 0; i < argc; i++)
-    {
-	if (strcmp(argv[i], "-d") == 0)
+    while ((c = getopt(argc, argv, "d")) != -1)
+	switch (c)
 	{
+	case 'd':
 	    cfg.args.debug = 1;
-
-	    if (i == 1)             // Should be enough for now
-	    {
-		(*argv_addr)++;
-		(*argc_addr)--;
-	    }
+	    break;
+	case '?':
+	    fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+	    exit(EXIT_FAILURE);
+	default:
+	    abort();
 	}
-    }
+
+    return optind;
 }
 
 #define printyn(boolean) \
