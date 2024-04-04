@@ -80,7 +80,7 @@ addtodb(s8 key, s8 val)
     }
 
     // Add key with corresponding id
-    MDB_CHECK(mdb_put(txn, dbi1, &key_mdb, &id_mdb, MDB_NODUPDATA));
+    mdb_put(txn, dbi1, &key_mdb, &id_mdb, MDB_NODUPDATA);
 }
 
 void

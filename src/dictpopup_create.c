@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <unistd.h> // access
+#include <sys/stat.h> // mkdir
 
 #include <dirent.h>
 #include <zip.h>
@@ -541,20 +543,41 @@ askyn(const char* msg)
     return true;
 }
 
+static void
+check_file_existing(s8 dbpath)
+{
+    s8 data_fp = buildpath(dbpath, S("data.mdb"));
+    if (access((char*)data_fp.s, R_OK))
+    {
+	if (askyn("A database file already exists. Would you like to delete the old one?")) // Maybe allow creating a backup
+	    remove((char*)data_fp.s);
+	else
+	    exit(EXIT_FAILURE);
+    }
+    frees8(&data_fp);
+}
+
+static void
+check_path_existing(s8 dbpath)
+{
+    char* dbpath_c = (char*)dbpath.s;
+    if (access(dbpath_c, R_OK))
+    {
+	if (mkdir(dbpath_c, S_IRWXU | S_IRWXG | S_IXOTH))
+	    fatal_perror("mkdir");
+    }
+}
+
 int
 main(int argc, char* argv[])
 {
-    parse_cmd_line_opts(argc, argv);
+    int nextarg = parse_cmd_line_opts(argc, argv);
 
-    s8 dbpath = argc > 1 ? fromcstr_(argv[1]) : get_default_path();
+    s8 dbpath = argc - nextarg > 0 ? fromcstr_(argv[nextarg]) : get_default_path();
     debug_msg("Using database path: %s", dbpath.s);
 
-    s8 data_fp = buildpath(dbpath, S("data.mdb"));
-    if (askyn("A database file already exists. Would you like to delete the old one?")) // Maybe allow creating a backup
-	remove((char*)data_fp.s);
-    else
-	return 1;
-    frees8(&data_fp);
+    check_path_existing(dbpath);
+    check_file_existing(dbpath);
 
     opendb((char*)dbpath.s);
     DIR *dir;
