@@ -223,26 +223,24 @@ fill_dictionary_with(dictentry* dict[static 1], s8 word)
 static void*
 create_dictionary(void* voidin)
 {
-    s8* lookup_ptr = (s8*)voidin;
-    assert(lookup_ptr);
-    s8 lookup = *lookup_ptr;
+    s8* lookup = (s8*)voidin;
 
     dictentry* dict = NULL;
 
     open_database();
-    fill_dictionary_with(&dict, lookup);
+    fill_dictionary_with(&dict, *lookup);
     if (dictlen(dict) == 0 && cfg.general.mecab)
     {
-	s8 hira = kanji2hira(lookup);
+	s8 hira = kanji2hira(*lookup);
 	fill_dictionary_with(&dict, hira);
 	frees8(&hira);
     }
     if (dictlen(dict) == 0 && cfg.general.substringSearch)
     {
-	while (dictlen(dict) == 0 && lookup.len > 3)
+	while (dictlen(dict) == 0 && lookup->len > 3)
 	{
-	    lookup = s8striputf8chr(lookup);
-	    fill_dictionary_with(&dict, lookup);
+	    *lookup = s8striputf8chr(*lookup);
+	    fill_dictionary_with(&dict, *lookup);
 	}
     }
     close_database();
@@ -256,7 +254,7 @@ create_dictionary(void* voidin)
     if (cfg.general.sort)
 	qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
 
-    lookup.s[lookup.len] = '\0';
+    lookup->s[lookup->len] = '\0';
     dictionary_data_done(dict);
     return NULL;
 }
