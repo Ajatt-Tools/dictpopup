@@ -25,7 +25,7 @@ See `TODO.txt` for more.
 x11, gtk3, mecab, ffplay (optional, for pronunciation)
 
 ## Installation
-Download the repository with `git clone "https://github.com/GenjiFujimoto/dictpopup.git"`, change directory `cd dictpopup` and then install with `make && sudo make install`.
+Download the repository with `git clone --recursive "https://github.com/GenjiFujimoto/dictpopup.git"` (note the `--recursive`), change directory `cd dictpopup` and then install with `make && sudo make install`.
 
 After the program installation you need to create a database where the dictionary entries are read from.
 This is done via `dictpopup_create` which creates the database from all Yomichan dictionaries in the current directory.
