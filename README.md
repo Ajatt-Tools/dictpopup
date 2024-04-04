@@ -3,7 +3,7 @@
 This is a lightweight popup for searching selected text in your yomichan dictionaries with support for creating Anki cards.
 The look of the popup will depend on your gtk3 settings.
 
-https://github.com/GenjiFujimoto/dictpopup/assets/50422430/4d22d4a2-e138-4bee-bc98-df93ce650e28
+https://github.com/GenjiFujimoto/dictpopup/assets/50422430/80e8020f-7d35-4894-a689-905cd3f39045
 
 ## Current state
 This is still very much a work in progress.
