@@ -48,6 +48,6 @@ extern settings cfg;
 
 void print_settings(void);
 void read_user_settings(int fieldmapping_max);
-void parse_cmd_line_opts(int argc[static 1], char** argv[static 1]);
+int parse_cmd_line_opts(int argc, char** argv);
 
 #endif /* SETTINGS_H */

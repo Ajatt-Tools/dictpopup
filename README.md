@@ -22,13 +22,13 @@ See `TODO.txt` for more.
  * Fast and memory efficient
 
 ## Dependencies
-x11, gtk3, [lmdb](https://www.symas.com/lmdb) (Arch package `lmdb`), mecab, ffplay (optional, for pronunciation)
+x11, gtk3, mecab, ffplay (optional, for pronunciation)
 
 ## Installation
 Download the repository with `git clone "https://github.com/GenjiFujimoto/dictpopup.git"`, change directory `cd dictpopup` and then install with `make && sudo make install`.
 
 After the program installation you need to create a database where the dictionary entries are read from.
-This is done via `dictpopup_create` which takes all Yomichan dictionaries in the current directory and puts them into a database.
+This is done via `dictpopup_create` which creates the database from all Yomichan dictionaries in the current directory.
 Without arguments it stores the database in the default location `~/.local/share/dictpopup` which is also the default search path.
 
 ## Configuration
@@ -57,6 +57,7 @@ This will allow for a faster lookup.
 
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.
+If something is not working as expected, you can add the command line argument `-d` to receive debug messages on standard output.
 
 The "+" sign adds the currently shown definition to Anki after prompting you to select a sentence.
 If there is a selection, it will be used instead as a definition.

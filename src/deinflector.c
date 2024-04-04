@@ -11,14 +11,14 @@
 
 s8* deinfs;
 
-#define startswith(str, prefix)                                                           \
-	(str.len >= lengthof(prefix) && !u8compare(str.s, (u8*)prefix, lengthof(prefix)))
+/* #define startswith(str, prefix)                                                           \ */
+/* 	(str.len >= lengthof(prefix) && !u8compare(str.s, (u8*)prefix, lengthof(prefix))) */
 
-#define endswith(str, suffix)                                                                                     \
-	(str.len >= lengthof(suffix) && !u8compare(str.s + str.len - lengthof(suffix), (u8*)suffix, lengthof(suffix)))
+/* #define endswith(str, suffix)                                                                                     \ */
+/* 	(str.len >= lengthof(suffix) && !u8compare(str.s + str.len - lengthof(suffix), (u8*)suffix, lengthof(suffix))) */
 
 #define IF_STARTSWITH_REPLACE(prefix, replacement)                                 \
-	if (startswith(word, prefix))                                              \
+	if (startswith(word, S(prefix)))                                              \
 	{                                                                          \
 	    add_replace_prefix(word, S(replacement), lengthof(replacement));  \
 	}
@@ -26,7 +26,7 @@ s8* deinfs;
 // TODO: Would be cool if the for loop could expand at compile time, so S(..) can be used
 // 	 Or just use multiple with different arguement length
 #define IF_ENDSWITH_REPLACE(ending, ...)                                                      \
-	if (endswith(word, ending))                                                           \
+	if (endswith(word, S(ending)))                                                           \
 	{                                                                                     \
 	    for (char **iterator = (char*[]){ __VA_ARGS__, NULL }; *iterator; iterator++) \
 	    {                                                                             \
@@ -35,13 +35,13 @@ s8* deinfs;
 	}
 
 #define IF_ENDSWITH_CONVERT_ATOU(ending)           \
-	if (endswith(word, ending))                \
+	if (endswith(word, S(ending)))                \
 	{                                          \
 	    atou_form(word, lengthof(ending)); \
 	}
 
 #define IF_ENDSWITH_CONVERT_ITOU(ending)           \
-	if (endswith(word, ending))                \
+	if (endswith(word, S(ending)))                \
 	{                                          \
 	    itou_form(word, lengthof(ending)); \
 	}

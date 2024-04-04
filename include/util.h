@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "buf.h" // Growable buffer implementation
+#include "buf.h" // growable buffer implementation
 
 #ifndef __PTRDIFF_TYPE__  // not GCC-like?
 #  include <stddef.h>
@@ -67,7 +67,8 @@ s8 cuthead(s8 s, size off);
 s8 takehead(s8 s, size len);
 s8 cuttail(s8 s, size len);
 s8 taketail(s8 s, size len);
-b32 s8endswith(s8 s, s8 suffix);
+b32 startswith(s8 s, s8 prefix);
+b32 endswith(s8 s, s8 suffix);
 
 /*
  * Returns s with the last UTF-8 character removed
@@ -115,7 +116,7 @@ typedef struct {
 stringbuilder_s sb_init(size_t init_cap);
 void sb_append(stringbuilder_s* b, s8 str);
 s8 sb_gets8(stringbuilder_s sb);
-void sb_free(stringbuilder_s* sb);
+void sb_free(stringbuilder_s sb[static 1]);
 /* ------------------------------------------------------------------_ */
 
 
@@ -126,10 +127,12 @@ typedef struct {
   s8 kanji;
   s8 reading;
   s8 definition;
+  int frequency;
 } dictentry;
 
 dictentry dictentry_dup(dictentry de);
-/* void dictentry_print(dictentry de); */
+void dictentry_free(dictentry de[static 1]);
+void dictentry_print(dictentry de);
 void dictionary_add(dictentry* dict[static 1], dictentry de);
 size dictlen(dictentry* dict);
 void dictionary_free(dictentry* dict[static 1]);

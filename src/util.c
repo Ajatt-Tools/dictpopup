@@ -56,6 +56,24 @@ void* xrealloc(void* ptr, size_t nbytes)
     }
     return p;
 }
+/* --------------- Start arena ----------------- */
+
+typedef struct {
+    byte *beg;
+    byte *end;
+} arena;
+
+arena
+newarena_(void)
+{
+    arena a = {0};
+    size cap = 1<<22;
+    a.beg = (byte*)xmalloc(cap);
+    a.end = a.beg + cap;
+    return a;
+}
+
+/* --------------------------------------------- */
 
 /* --------------- Start s8 utils -------------- */
 void
@@ -161,7 +179,13 @@ taketail(s8 s, size len)
 }
 
 b32
-s8endswith(s8 s, s8 suffix)
+startswith(s8 s, s8 prefix)
+{
+    return s.len>=prefix.len && s8equals(takehead(s, prefix.len), prefix);
+}
+
+b32
+endswith(s8 s, s8 suffix)
 {
     return s.len >= suffix.len && s8equals(taketail(s, suffix.len), suffix);
 }
@@ -292,18 +316,18 @@ dictentry_dup(dictentry de)
     };
 }
 
-/* void */
-/* dictentry_print(dictentry de) */
-/* { */
-/*     printf("dictname: %s\n" */
-/* 	   "kanji: %s\n" */
-/* 	   "reading: %s\n" */
-/* 	   "definition: %s\n", */
-/* 	   de.dictname, */
-/* 	   de.kanji, */
-/* 	   de.reading, */
-/* 	   de.definition); */
-/* } */
+void
+dictentry_print(dictentry de)
+{
+    printf("dictname: %s\n"
+	   "kanji: %s\n"
+	   "reading: %s\n"
+	   "definition: %s\n",
+	   de.dictname.s,
+	   de.kanji.s,
+	   de.reading.s,
+	   de.definition.s);
+}
 
 void
 dictionary_add(dictentry* dict[static 1], dictentry de)
@@ -317,7 +341,7 @@ dictlen(dictentry* dict)
     return buf_size(dict);
 }
 
-static void
+void
 dictentry_free(dictentry de[static 1])
 {
     frees8(&de->dictname);
@@ -355,6 +379,7 @@ sb_init(size_t init_cap)
 void
 sb_append(stringbuilder_s* b, s8 str)
 {
+    assert(b->cap > 0);
     if (b->cap < b->len + str.len)
     {
 	while (b->cap < b->len + str.len)
@@ -362,15 +387,17 @@ sb_append(stringbuilder_s* b, s8 str)
 	    b->cap *= 2;
 
 	    if (b->cap < 0)
+	    {
+		fputs("Integer Overflow in sb_append()", stderr);
 		abort();
+	    }
 	}
 
 	b->data = xrealloc(b->data, b->cap);
-	if (!b->data)
-	    abort();
     }
 
-    memcpy(b->data + b->len, str.s, str.len);
+    for (int i = 0; i < str.len; i++)
+	  b->data[b->len + i] = str.s[i];
     b->len += str.len;
 }
 
@@ -381,7 +408,7 @@ sb_gets8(stringbuilder_s sb)
 }
 
 void
-sb_free(stringbuilder_s* sb)
+sb_free(stringbuilder_s sb[static 1])
 {
     free(sb->data);
     *sb = (stringbuilder_s) { 0 };

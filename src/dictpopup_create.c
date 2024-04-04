@@ -1,470 +1,576 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdarg.h>
 
 #include <dirent.h>
 #include <zip.h>
-#include <glib.h>
-/* #include "unishox2.h" */
+#include <glib.h> // for g_get_user_data_dir()
 
-#include "dbwriter.h"
 #include "util.h"
+#include "pdjson.h"
+#include "dbwriter.h"
+#include "settings.h"
+#include "messages.h"
 
-typedef struct {
-	u8* ptr;
-} Parser;
+#define error_return(retval, ...)   \
+	do {                        \
+	    error_msg(__VA_ARGS__); \
+	    return retval;          \
+	} while (0)
 
-#define ds8(s)  (ds8){ (u8*)s, lengthof(s), 0 }
-typedef struct {
-	uint8_t* s;
-	ptrdiff_t len;
-	ptrdiff_t cap;
-} ds8;
+const char json_typename[][16] = {
+    [JSON_ERROR] = "ERROR",
+    [JSON_DONE] = "DONE",
+    [JSON_OBJECT] = "OBJECT",
+    [JSON_OBJECT_END] = "OBJECT_END",
+    [JSON_ARRAY] = "ARRAY",
+    [JSON_ARRAY_END] = "ARRAY_END",
+    [JSON_STRING] = "STRING",
+    [JSON_NUMBER] = "NUMBER",
+    [JSON_TRUE] = "TRUE",
+    [JSON_FALSE] = "FALSE",
+    [JSON_NULL] = "NULL",
+};
 
-typedef struct {
-	s8 dictname;
-	s8 kanji;
-	s8 reading;
-	s8 definition;
-} s8dictentry;
+static void append_definition(json_stream s[static 1], stringbuilder_s sb[static 1], s8 liststyle, i32 listdepth);
 
-ds8
-ds8_new(size cap)
+static s8
+get_default_path() // Where db is stored
 {
-	return (ds8) { .s = new(u8, cap), .len = 0, .cap = cap };
-}
-
-bool
-ds8_equals(ds8 a, ds8 b)
-{
-	if (a.len != b.len)
-		return false;
-
-	for (ptrdiff_t i = 0; i < a.len; i++)
-		if (a.s[i] != b.s[i])
-			return false;
-
-	return true;
-}
-
-void
-ds8_appendc(ds8* str, int c)
-{
-	if (str->len + 1 > str->cap)
-		str->s = xrealloc(str->s, (size_t)(str->cap *= 2));
-
-	(str->s)[(str->len)++] = (u8)c;
-}
-
-void
-ds8_appendstr(ds8* a, ds8 b)
-{
-	assert(a);
-	assert(b.len >= 0);
-
-	if (a->len + b.len > a->cap)
-	{
-		a->cap = a->len + b.len;
-		a->s = xrealloc(a->s, (size_t)(a->cap));
-	}
-
-	u8copy(a->s + a->len, b.s, b.len);
-	a->len += b.len;
-}
-
-void
-ds8free(ds8* str)
-{
-	free(str->s);
-	str->s = NULL;
-}
-
-static b32 
-digit(u8 c)
-{
-    return c>='0' && c<='9';
-}
-
-static b32
-whitespace(u8 c)
-{
-    switch (c) {
-    case '\t': case '\n': case '\b': case '\f': case '\r': case ' ':
-        return 1;
-    }
-    return 0;
+    return buildpath(fromcstr_((char*)g_get_user_data_dir()), S("dictpopup"));
 }
 
 s8
-s8trim(s8 str)
+unzip_file(zip_t* archive, const char* filename)
 {
-	while (str.len && whitespace(str.s[str.len - 1]))
-		str.len--;
-	while (str.len && whitespace(*str.s))
-	{
-		str.s++;
-		str.len--;
-	}
+    struct zip_stat finfo;
+    zip_stat_init(&finfo);
+    if (zip_stat(archive, filename, 0, &finfo) == -1)
+	error_return((s8){ 0 }, "Error stat'ing file '%s': %s\n", filename, zip_strerror(archive));
 
-	return str;
+    s8 buffer = news8(finfo.size);     // automatically null-terminated
+
+    struct zip_file* index_file = zip_fopen(archive, filename, 0);
+    if (!index_file)
+	error_return((s8){ 0 }, "Error opening file '%s': %s\n", filename, zip_strerror(archive));
+
+    buffer.len = zip_fread(index_file, buffer.s, buffer.len);
+    if (buffer.len == -1)
+	error_return((s8){ 0 }, "Could not read file '%s': %s", filename, zip_strerror(archive));
+    if ((size_t)buffer.len != finfo.size)
+	debug_msg("Did not read all of %s!", filename);
+
+    zip_fclose(index_file);
+    return buffer;
 }
 
 
-#define INITIAL_SIZE 1 << 14
-ds8 entry_buffer[6] = { 0 };
-
-// Debug code
-/* static char */
-/* _fgetc(FILE* fp) */
-/* { */
-/* 	int c = fgetc(fp); */
-/* 	putchar(c); */
-/* 	return c; */
-/* } */
-
-/* #define _assert(expr) \ */
-/* 	if (!(expr))             \ */
-/* 	{               \ */
-/* 		exit(0);      \ */
-/* 	} */
-
-/* static void */
-/* dump_ds8v(int len, ds8 stringv[len]) */
-/* { */
-/* 	for (int i = 0; i < len; i++) */
-/* 		printf("[%i]: %.*s\n", i, (int)stringv[i].len, stringv[i].s); */
-/* 	printf("\n"); */
-/* } */
-
-static void
-add_dictentry(s8dictentry de)
+static s8
+json_get_string_(json_stream* json)
 {
-	de.definition = unescape(s8trim(de.definition));
-
-	if (de.definition.len == 0)
-	{
-		fprintf(stderr, "Warning: Could not parse a definition for entry with kanji: \"%.*s\" and reading: \"%.*s\". In dictionary: \"%.*s\"\n",
-			(int)de.kanji.len, de.kanji.s,
-			(int)de.reading.len, de.reading.s,
-			(int)de.dictname.len, de.dictname.s);
-	}
-	else if (de.kanji.len == 0 && de.reading.len == 0)
-	{
-		fprintf(stderr, "Warning: Could not obtain kanji nor reading for entry with definition: \"%.*s\", in dictionary: \"%.*s\"\n",
-			(int)de.definition.len, de.definition.s,
-			(int)de.dictname.len, de.dictname.s);
-	}
-	else
-	{
-		s8 sep = S("\0");
-		s8 datastr = concat(de.dictname, sep, de.kanji, sep, de.reading, sep, de.definition);
-
-		if (de.kanji.len > 0)
-			addtodb(de.kanji, datastr);
-		if (de.reading.len > 0) // Let the db figure out duplicates
-			addtodb(de.reading, datastr);
-		
-		frees8(&datastr);
-	}
+    size_t slen = 0;
+    s8 r = { 0 };
+    r.s = (u8*)json_get_string(json, &slen);
+    r.len = slen > 0 ? (size)(slen - 1) : 0;  // API includes terminating 0 in length
+    return r;
 }
 
-#define ds8_reset_entries(array)                 \
-	for (int i = 0; i < countof(array); i++) \
-	      array[i].len = 0;
-
-/*
- * Supposes p points to the starting '"'
- * Stops parsing on last "
- */
 static void
-read_string_into(ds8* buffer, Parser* p)
+add_dictent_to_db(dictentry de)
 {
-	bool prev_slash = false;
-	while (*(++p->ptr))
-	{
-		if (*p->ptr == '"' && !prev_slash)
-			break;
+    if (de.definition.len == 0)
+	debug_msg("Could not parse a definition for entry with kanji: \"%s\" and reading: \"%s\". In dictionary: \"%s\"",
+		  de.kanji.s, de.reading.s, de.dictname.s);
+    else if (de.kanji.len == 0 && de.reading.len == 0)
+	debug_msg("Could not obtain kanji nor reading for entry with definition: \"%s\", in dictionary: \"%s\"",
+		  de.definition.s, de.dictname.s);
+    else
+    {
+	s8 sep = S("\0");
+	s8 datastr = concat(de.dictname, sep, de.kanji, sep, de.reading, sep, de.definition);
 
-		if (prev_slash && *p->ptr == 'n')
-			buffer->s[buffer->len - 1] = '\n';
+	if (de.kanji.len > 0)
+	    addtodb(de.kanji, datastr);
+	if (de.reading.len > 0)         // Let the db figure out duplicates
+	    addtodb(de.reading, datastr);
+
+	frees8(&datastr);
+    }
+}
+
+static s8
+parse_liststyletype(s8 lst)
+{
+    if (startswith(lst, S("\"")) && endswith(lst, S("\"")))
+	return s8dup(cuttail(cuthead(lst, 1), 1));
+    else if (s8equals(lst, S("circle")))
+	return S("◦");
+    else if (s8equals(lst, S("square")))
+	return S("▪");
+    else if (s8equals(lst, S("none")))
+	return S(" ");
+    else
+	return s8dup(lst); // そのまま
+}
+
+enum tag_type { TAG_UNKNOWN, TAG_DIV, TAG_SPAN, TAG_UL, TAG_OL, TAG_LI };
+
+static void
+append_structured_content(json_stream* s, stringbuilder_s sb[static 1], s8 liststyle, i32 listdepth)
+{
+    enum json_type type;
+    enum tag_type tag;
+    for (;;)
+    {
+	type = json_next(s);
+
+	if (type == JSON_OBJECT_END || type == JSON_DONE)
+	    break;
+	else if (type == JSON_ERROR)
+	{
+	    error_msg("%s", json_get_error(s));
+	    break;
+	}
+	else if (type == JSON_STRING)
+	{
+	    s8 value = json_get_string_(s);
+
+	    if (s8equals(value, S("tag")))
+	    {
+		type = json_next(s);
+		assert(type == JSON_STRING);
+		value = json_get_string_(s);
+
+		// Content needs to come last for this to work
+		if (s8equals(value, S("div")))
+		    tag = TAG_DIV;
+		else if (s8equals(value, S("ul")))
+		{
+		    tag = TAG_UL;
+		    listdepth++;
+
+		    liststyle = S("•"); //default
+		}
+		else if (s8equals(value, S("ol")))
+		{
+		    tag = TAG_OL;
+		    listdepth++;
+		}
+		else if (s8equals(value, S("li")))
+		{
+		    tag = TAG_LI;
+		    //TODO: Default numbers for tag ol
+		}
 		else
-			ds8_appendc(buffer, *p->ptr);
+		    tag = TAG_UNKNOWN;
+	    }
+	    else if ((tag == TAG_UL || tag == TAG_LI) && s8equals(value, S("style")))
+	    {
+		//TODO: json_peek for the very unlikely event that there is an array
+		type = json_next(s);
 
-		prev_slash = (*p->ptr == '\\' && !prev_slash); // Don't count escaped slashes
-	}
-
-	assert(*p->ptr == '"');
-}
-
-static void
-read_number_into(ds8* buffer, Parser* p)
-{
-	for (p->ptr++; digit(*p->ptr); p->ptr++)
-		ds8_appendc(buffer, *p->ptr);
-	p->ptr--;
-}
-
-
-static void
-read_next_entry_into(ds8* buf, Parser* p, i32 ul)
-{
-	/* Skip to start */
-	for (p->ptr++; *p->ptr == ':' || whitespace(*p->ptr); p->ptr++)
-		;
-
-	if (digit(*p->ptr) || *p->ptr == '-') // Interpret - as negative sign
-	{
-		ds8_appendc(buf, *p->ptr);
-		read_number_into(buf, p);
-	}
-	else if (*p->ptr == '"')
-		read_string_into(buf, p);
-	else if (*p->ptr == '[')
-	{       /* read all entries contained in [] into str */
-		bool stop = false;
-		while (!stop)
+		if (type == JSON_OBJECT)
 		{
-			read_next_entry_into(buf, p, ul);
-
-			// Check if this was the last entry
-			while (*(++p->ptr))
+		    type = json_next(s);
+		    while (type != JSON_OBJECT_END && type != JSON_DONE && type != JSON_ERROR)
+		    {
+			if (type == JSON_STRING && s8equals(json_get_string_(s), S("listStyleType")))
 			{
-				if (*p->ptr == ',')
-				{       // Next incoming
-					break;
-				}
-				else if (*p->ptr == ']')
-				{
-					stop = true;
-					break;
-				}
-				assert(whitespace(*p->ptr));
+			    type = json_next(s);
+			    assert(type == JSON_STRING);
+			    liststyle = parse_liststyletype(json_get_string_(s));
 			}
+			else
+			    json_skip(s);
+
+			type = json_next(s);
+		    }
+		}
+		else if (type == JSON_ARRAY)
+		    assert(0);
+		else
+		    debug_msg("Could not parse style of list. Skipping..");
+	    }
+	    else if (s8equals(value, S("content")))
+	    {
+		if (tag == TAG_DIV || tag == TAG_LI)
+		{
+		    if (sb->len != 0 && sb->data[sb->len - 1] != '\n')
+			sb_append(sb, S("\n"));
 		}
 
-		assert(*p->ptr == ']');
-	}
-	else if (*p->ptr == '{')
-	{
-		ds8 json_entry = ds8_new(50); // I think using the stack would be cleaner, but requires rewrite of read_string_into
-		ds8 tag = ds8_new(50);
-		int cbracket_lvl = 1;
-
-		for (p->ptr++; *p->ptr; p->ptr++)
+		if (tag == TAG_LI)
 		{
-			if (*p->ptr == '"' && cbracket_lvl == 1)
-			{
-				read_string_into(&json_entry, p);
-
-				if (ds8_equals(json_entry, ds8("tag"))) // Expects "tag" to appear before "content"
-				{
-					read_next_entry_into(&tag, p, ul);
-
-					if (ds8_equals(tag, ds8("ul")))
-						ul++;
-					else if (ds8_equals(tag, ds8("li")))
-					{
-						if (buf->len == 0 || buf->s[buf->len - 1] != '\n')
-							ds8_appendc(buf, '\n');
-						for (i32 i = 0; i < ul - 1; i++)
-							ds8_appendc(buf, '\t');
-						ds8_appendstr(buf, ds8("• "));
-					}
-					else if (ds8_equals(tag, ds8("div")))
-					{
-						if (buf->len == 0 || buf->s[buf->len - 1] != '\n')
-							ds8_appendc(buf, '\n');
-					}
-
-					tag.len = 0;
-				}
-				else if (ds8_equals(json_entry, ds8("content")))
-					read_next_entry_into(buf, p, ul);
-
-				json_entry.len = 0;
-			}
-			else if (*p->ptr == '{')
-				cbracket_lvl++;
-			else if (*p->ptr == '}')
-			{
-				if (--cbracket_lvl <= 0)
-				      break;
-			}
+		    for (i32 i = 0; i < listdepth - 1; i++)
+			sb_append(sb, S("\t"));
+		    sb_append(sb, liststyle);
+		    sb_append(sb, S(" "));
 		}
-		ds8free(&json_entry);
-		ds8free(&tag);
 
-		assert(*p->ptr == '}');
-	}
-	else if (*p->ptr == ',' || *p->ptr == ']' || *p->ptr == '}')
-		p->ptr--;
-	else if (*p->ptr == 'n')
-	{
-		assert(u8compare((u8*)p->ptr, (u8*)"null", lengthof("null")) == 0);
-		p->ptr += lengthof("ull");
-
-		assert(*p->ptr == 'l');
+		append_definition(s, sb, liststyle, listdepth);
+	    }
+	    else
+		json_skip(s);
 	}
 	else
-		assert(false);
-}
-
-/*
- * Advances the pointer to the next ocurrence of @skip_c
- */
-static void
-skip_to(char skip_c, Parser* p)
-{
-	for (p->ptr++; *p->ptr && *p->ptr != skip_c; p->ptr++)
-		;
-}
-
-static void
-read_from_str(s8 dictname, Parser* p)
-{
-	if (*p->ptr != '[')
-		skip_to('[', p);
-	while (true)
 	{
-		skip_to('[', p);
-		if (!*p->ptr)
-			break;
-
-		for (int i = 0; i < countof(entry_buffer); i++)
-		{
-			read_next_entry_into(&entry_buffer[i], p, 0);
-			if (i != countof(entry_buffer) - 1)
-				skip_to(',', p);
-		}
-
-		add_dictentry((s8dictentry) {
-			.dictname = dictname,
-			.kanji = (s8) { .s = entry_buffer[0].s, .len = entry_buffer[0].len },
-			.reading = (s8) { .s = entry_buffer[1].s, .len = entry_buffer[1].len },
-			.definition = (s8) { .s = entry_buffer[5].s, .len = entry_buffer[5].len }
-		});
-
-		/* dump_ds8v(countof(entry_buffer), entry_buffer); */
-
-		ds8_reset_entries(entry_buffer);
-
-		skip_to(']', p);
+	    debug_msg("Encountered unknown type '%s' in structured content. Skipping..", json_typename[type]);
+	    json_skip(s);
 	}
+    }
+
+    /* if (list) frees8(&liststyle); */
+    assert(type == JSON_OBJECT_END);
+}
+
+static void
+append_definition(json_stream s[static 1], stringbuilder_s sb[static 1], s8 liststyle, i32 listdepth)
+{
+    enum json_type type = json_next(s);
+
+    if (type == JSON_ARRAY)
+    {
+	type = json_next(s);
+
+	while (type != JSON_ARRAY_END
+	       && type != JSON_ERROR
+	       && type != JSON_DONE)
+	{
+	    if (type == JSON_STRING)
+		sb_append(sb, json_get_string_(s));
+	    else if (type == JSON_OBJECT)
+		append_structured_content(s, sb, liststyle, listdepth);
+	    else
+		debug_msg("Encountered unknown type '%s' within definition.", json_typename[type]);
+
+	    type = json_next(s);
+	}
+
+	assert(type == JSON_ARRAY_END);
+    }
+    else if (type == JSON_STRING)
+	sb_append(sb, json_get_string_(s));
+    else if (type == JSON_OBJECT)
+	append_structured_content(s, sb, liststyle, listdepth);
+    else
+	debug_msg("Encountered unknown type '%s' at start of definition.", json_typename[type]);
+}
+
+static void
+freedictentry_(dictentry de[static 1])
+{
+    // dictname will be reused
+    frees8(&de->kanji);
+    frees8(&de->reading);
+    frees8(&de->definition);
+}
+
+static void
+add_dictionary(s8 buffer, s8 dictname)
+{
+    /* printf("Buffer: %.*s", (int)buffer.len, (char*)buffer.s); */
+    json_stream s[1];
+    json_open_buffer(s, buffer.s, buffer.len);
+
+    enum json_type type;
+    type = json_next(s);
+    if (type != JSON_ARRAY)
+    {
+	error_msg("Dictionary format not supported.");
+	return;
+    }
+
+    for (;;)
+    {
+	type = json_next(s);
+
+	if (type == JSON_DONE)
+	    break;
+	else if (type == JSON_ERROR)
+	{
+	    error_msg("%s", json_get_error(s));
+	    break;
+	}
+	else if (type == JSON_ARRAY)
+	{
+	    dictentry de = { .dictname = dictname };
+
+	    /* first entry */
+	    type = json_next(s);
+	    assert(type == JSON_STRING);
+	    de.kanji = s8dup(json_get_string_(s));
+	    /* ----------- */
+
+	    /* second entry */
+	    type = json_next(s);
+	    assert(type == JSON_STRING);
+	    de.reading = s8dup(json_get_string_(s));
+	    /* ----------- */
+
+	    /* third entry */
+	    type = json_next(s);
+	    assert(type == JSON_STRING || type == JSON_NULL);
+	    // Skip
+	    /* ----------- */
+
+	    /* fourth entry */
+	    type = json_next(s);
+	    assert(type == JSON_STRING);
+	    // Skip
+	    /* ----------- */
+
+	    /* fifth entry */
+	    type = json_next(s);
+	    assert(type == JSON_NUMBER);
+	    // Skip
+	    /* ----------- */
+
+	    /* sixth entry */
+	    stringbuilder_s sb = sb_init(100);
+	    append_definition(s, &sb, (s8){ 0 }, 0);
+	    de.definition = sb_gets8(sb);
+	    /* ----------- */
+
+	    /* seventh entry */
+	    type = json_next(s);
+	    assert(type == JSON_NUMBER);
+	    // Skip
+	    /* ----------- */
+
+	    /* eighth entry */
+	    type = json_next(s);
+	    assert(type == JSON_STRING);
+	    // Skip
+	    /* ----------- */
+
+	    add_dictent_to_db(de);
+	    freedictentry_(&de);
+	    json_skip_until(s, JSON_ARRAY_END);
+	}
+    }
+
+    json_close(s); // TODO: json_reset instead of close
+}
+
+static void
+add_freq_to_db(s8 word, s8 reading, int freq)
+{
+    s8 data = concat(word, S("\0"), reading);
+    addtodb3(data, freq);
+    frees8(&data);
+}
+
+static void
+add_frequency(s8 buffer)
+{
+    json_stream s[1];
+    json_open_buffer(s, buffer.s, buffer.len);
+
+    enum json_type type;
+    type = json_next(s);
+    if (type != JSON_ARRAY)
+    {
+	fprintf(stderr, "Error: Format not supported.");
+	return;
+    }
+
+    for (;;)
+    {
+	type = json_next(s);
+
+	if (type == JSON_ARRAY_END || type == JSON_DONE)
+	    break;
+	else if (type == JSON_ERROR)
+	{
+	    error_msg("%s", json_get_error(s));
+	    break;
+	}
+	else if (type == JSON_ARRAY)
+	{
+	    /* first entry */
+	    type = json_next(s);
+	    assert(type == JSON_STRING);
+	    s8 word = s8dup(json_get_string_(s));
+	    /* ----------- */
+
+	    /* second entry */
+	    type = json_next(s);
+	    assert(type == JSON_STRING);
+	    if (!s8equals(json_get_string_(s), S("freq")))
+	    {
+		debug_msg("Entry is not a frequency");
+		json_skip_until(s, JSON_ARRAY); // Doesn't work with embedded arrays
+		continue;
+	    }
+	    /* ----------- */
+
+	    /* third entry */
+	    s8 reading = { 0 };
+	    int freq = -1;
+
+	    type = json_next(s);
+	    if (type == JSON_OBJECT)
+	    {
+		type = json_next(s);
+		while (type != JSON_OBJECT_END && type != JSON_DONE && type != JSON_ERROR)
+		{
+		    if (type == JSON_STRING && s8equals(json_get_string_(s), S("reading")))
+		    {
+			type = json_next(s);
+			assert(type == JSON_STRING);
+			reading = s8dup(json_get_string_(s));
+		    }
+		    else if (type == JSON_STRING && s8equals(json_get_string_(s), S("frequency")))
+		    {
+			type = json_next(s);
+			assert(type == JSON_NUMBER);
+			freq = atoi(json_get_string(s, NULL)); // TODO: Error handling
+		    }
+		    else
+			json_skip(s);
+
+		    type = json_next(s);
+		}
+	    }
+	    else if (type == JSON_NUMBER)
+		freq = atoi(json_get_string(s, NULL));     // TODO: Error handling
+	    else
+		assert(0);
+	    /* ----------- */
+
+	    add_freq_to_db(word, reading, freq);
+	    frees8(&reading);
+	    frees8(&word);
+
+	    json_skip_until(s, JSON_ARRAY);
+	}
+	else
+	    assert(0);
+    }
+
+    json_close(s);
 }
 
 s8
 extract_dictname(zip_t* archive)
 {
-	struct zip_stat finfo;
-	zip_stat_init(&finfo);
+    s8 buffer = unzip_file(archive, "index.json");
 
-	zip_stat(archive, "index.json", 0, &finfo);
-	s8 index_txt = { .s = alloca(finfo.size + 1), .len = finfo.size };
+    json_stream s[1];
+    json_open_buffer(s, buffer.s, buffer.len);
 
-	struct zip_file* index_file = zip_fopen(archive, "index.json", 0);
-	zip_fread(index_file, index_txt.s, index_txt.len);
-	zip_fclose(index_file);
-
-	// TODO: Write this properly
-	char* search_string = "\"title\"";
-	char* title_start = strstr((char*)index_txt.s, search_string);
-	if (!title_start)
-		return (s8){ 0 }
-	;
-	title_start += strlen(search_string);
-	title_start = strstr(title_start, "\"") + 1; // No error handling
-
-	char* title_end = strstr(title_start, "\"");
-
-	assert(title_end - title_start >= 0);
-	s8 r = { 0 };
-	r.len = title_end - title_start,
-	r.s = (u8*)g_strndup(title_start, r.len);
-	return r;
-}
-
-static int
-read_from_zip(char* filename)
-{
-	if (!fopen(filename, "r"))
-		return -2;
-
-	int errorp = 0;
-	zip_t* archive = zip_open(filename, 0, &errorp);
-
-	s8 dictname = extract_dictname(archive);
-
-	printf("Processing dictionary: %s\n", dictname.s);
-
-	struct zip_stat finfo;
-	zip_stat_init(&finfo);
-	for (int i = 0; (zip_stat_index(archive, i, 0, &finfo)) == 0; i++)
+    s8 dictname = { 0 };
+    enum json_type type;
+    for (;;)
+    {
+	type = json_next(s);
+	s8 value = { 0 };
+	if (type == JSON_STRING)
 	{
-		if (strncmp(finfo.name, "term_bank_", lengthof("term_bank_")) == 0)
-		{
-			s8 txt = (s8) { .len = finfo.size + 1 };
-			txt.s = new(u8, finfo.size + 1);
-
-			zip_file_t* f = zip_fopen_index(archive, i, 0);
-			zip_fread(f, txt.s, finfo.size);
-
-			/* ds8_unescape(&txt); */
-
-			Parser p = { .ptr = txt.s };
-			read_from_str(dictname, &p);
-
-			free(txt.s);
-		}
+	    value = json_get_string_(s);
+	    if (s8equals(value, S("title")))
+	    {
+		json_next(s);
+		dictname = s8dup(json_get_string_(s));
+		break;
+	    }
+	    else
+		json_skip(s);
 	}
-	return 0;
+    }
+
+    json_close(s);
+    frees8(&buffer);
+    return dictname;
 }
 
+static zip_t*
+open_zip(char* filename)
+{
+    int err = 0;
+    zip_t* za;
+    if ((za = zip_open(filename, 0, &err)) == NULL)
+    {
+	zip_error_t error;
+	zip_error_init_with_code(&error, err);
+	error_msg("Cannot open zip archive '%s': %s\n", filename, zip_error_strerror(&error));
+	zip_error_fini(&error);
+	return NULL;
+    }
+
+    return za;
+}
+
+static void
+add_from_zip(char* filename)
+{
+    zip_t* za;
+    if (!(za = open_zip(filename)))
+	return;
+
+    s8 dictname = extract_dictname(za);
+    printf("Processing dictionary: %s\n", dictname.s);
+
+    struct zip_stat finfo;
+    zip_stat_init(&finfo);
+    for (int i = 0; (zip_stat_index(za, i, 0, &finfo)) == 0; i++)
+    {
+	s8 fn = fromcstr_((char*)finfo.name); // Warning: Casts away const!
+	if (startswith(fn, S("term_bank_")))
+	{
+	    s8 buffer = unzip_file(za, finfo.name); // Stats again, but anyway
+	    add_dictionary(buffer, dictname);
+	    frees8(&buffer);
+	}
+	else if (startswith(fn, S("term_meta_bank")))
+	{
+	    s8 buffer = unzip_file(za, finfo.name); // Stats again, but anyway
+	    add_frequency(buffer);
+	    frees8(&buffer);
+	}
+    }
+
+    frees8(&dictname);
+}
+
+/*
+ * Dialog which asks the user for confirmation (Yes/No)
+ */
+static bool
+askyn(const char* msg)
+{
+    // TODO: Implement
+    return true;
+}
 
 int
-main(int argc, char * argv[])
+main(int argc, char* argv[])
 {
-	char* db_path = NULL;
+    parse_cmd_line_opts(argc, argv);
 
-	if (argc > 1)
-		db_path = argv[1];
-	else
-	{
-		char const* data_dir = g_get_user_data_dir();
-		db_path = g_build_filename(data_dir, "dictpopup", NULL);
-		printf("Using default path: %s\n", db_path);
-	}
+    s8 dbpath = argc > 1 ? fromcstr_(argv[1]) : get_default_path();
+    debug_msg("Using database path: %s", dbpath.s);
 
-	//TODO: Ask for confirmation first
-	char* data_fp = g_build_filename(db_path, "data.mdb", NULL);
-	remove(data_fp);
-	free(data_fp);
+    s8 data_fp = buildpath(dbpath, S("data.mdb"));
+    if (askyn("A database file already exists. Would you like to delete the old one?")) // Maybe allow creating a backup
+	remove((char*)data_fp.s);
+    else
+	return 1;
+    frees8(&data_fp);
 
-	opendb(db_path);
+    opendb((char*)dbpath.s);
+    DIR *dir;
+    if (!(dir = opendir(".")))
+	fatal_perror("Opening current directory");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+	s8 fn = fromcstr_(entry->d_name);
+	if (endswith(fn, S(".zip")))
+	    add_from_zip((char*)fn.s);
+    }
+    closedir(dir);
+    closedb();
 
-	DIR *dir = opendir(".");
-	if (dir == NULL)
-	{
-	    perror("Opening current directory");
-	    abort();
-	}
-
-	for (int i = 0; i < countof(entry_buffer); i++)
-	{
-		entry_buffer[i] = (ds8){ .s = new(u8, INITIAL_SIZE), .cap = INITIAL_SIZE };
-	}
-
-	struct dirent *entry;
-	while ((entry = readdir(dir)) != NULL)
-	{
-		size_t len = strlen(entry->d_name);
-		if (len > 4 && strcmp(entry->d_name + len - 4, ".zip") == 0)
-			read_from_zip(entry->d_name);
-	}
-	closedir(dir);
-	closedb();
-
-	char* lock_file = g_build_filename(db_path, "lock.mdb", NULL);
-	remove(lock_file);
+    s8 lockfile = buildpath(dbpath, S("lock.mdb"));
+    remove((char*)lockfile.s);
+    frees8(&lockfile);
 }

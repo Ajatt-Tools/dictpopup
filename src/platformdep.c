@@ -1,7 +1,7 @@
 #include "util.h"
-/* #include <glib.h> */
-
 #include <libnotify/notify.h>
+#include <gtk/gtk.h>
+
 void
 notify(char* title, _Bool urgent, char const* fmt, ...)
 {
@@ -9,7 +9,8 @@ notify(char* title, _Bool urgent, char const* fmt, ...)
     va_start(argp, fmt);
     char* txt = g_strdup_vprintf(fmt, argp);
     va_end(argp);
-    if (!txt) return;
+    if (!txt)
+	return;
 
     notify_init("dictpopup");
     NotifyNotification* n = notify_notification_new(title, txt, NULL);
@@ -17,18 +18,18 @@ notify(char* title, _Bool urgent, char const* fmt, ...)
     notify_notification_set_timeout(n, 10000);
 
     GError* err = NULL;
-    if (!notify_notification_show (n, &err)) {
-	    fprintf (stderr, "Failed to send notification: %s\n", err->message);
-	    g_error_free(err);
+    if (!notify_notification_show(n, &err))
+    {
+	fprintf(stderr, "Failed to send notification: %s\n", err->message);
+	g_error_free(err);
     }
-    g_object_unref (G_OBJECT (n));
+    g_object_unref(G_OBJECT(n));
     g_free(txt);
 }
 
 #include "messages.h"
 
 // Alternatively one could use: https://github.com/jtanx/libclipboard
-#include <gtk/gtk.h>
 s8
 get_selection(void)
 {
@@ -59,7 +60,8 @@ get_sentence(void)
 {
     Display* disp = XOpenDisplay(NULL);
     if (!disp)
-	return (s8){0};
+	return (s8){ 0 }
+    ;
     Window root = DefaultRootWindow(disp);
     Atom clip = XInternAtom(disp, "CLIPBOARD", False);
     XFixesSelectSelectionInput(disp, root, clip,
@@ -108,7 +110,7 @@ get_windowname(void)
     if (!dpy)
     {
 	error_msg("ERROR: Can't open X display for retrieving the window title. Are you using Linux with X11?");
-	return (s8){0};
+	return (s8){ 0 };
     }
 
     Window foc_win;
@@ -133,18 +135,35 @@ get_windowname(void)
     return fromcstr_(wname);
 }
 
+// using gtk4:
+/* static void */
+/* ended (GObject *object) */
+/* { */
+/*   g_object_unref (object); */
+/* } */
+/* void */
+/* play_audio(char* path) */
+/* { */
+/*     GtkMediaStream *stream; */
+/*     stream = gtk_media_file_new_for_filename(path); */
+/*     gtk_media_stream_set_volume(stream, 1.0); */
+/*     gtk_media_stream_play(stream); */
+/*     g_signal_connect(stream, "notify::ended", G_CALLBACK(ended), NULL); */
+/* } */
+
 void
-play_audio(int len, char filepath[len])
+play_audio(s8 filepath)
 {
-    g_autofree char* cmd = g_strdup_printf("ffplay -nodisp -nostats -hide_banner -autoexit '%.*s'", len, filepath);
+    s8 cmd = concat(S("ffplay -nodisp -nostats -hide_banner -autoexit '"), filepath, S("'"));
 
     GError* error = NULL;
-    g_spawn_command_line_sync(cmd, NULL, NULL, NULL, &error);
+    g_spawn_command_line_sync((char*)cmd.s, NULL, NULL, NULL, &error);
     if (error)
     {
-	error_msg("Failed to play file: %.*s. Error message: %s", len, filepath, error->message);
+	error_msg("Failed to play file %s: %s", filepath.s, error->message);
 	g_error_free(error);
     }
+    frees8(&cmd);
 }
 
 /* char* */

@@ -98,13 +98,80 @@ fill_entries(possible_entries_s pe[static 1], dictentry const de)
     pe->dictname = de.dictname;
 }
 
+static int
+getfreq(s8 kanji, s8 reading)
+{
+      s8 key = concat(kanji, S("\0"), reading);
+      int freq = db_getfreq(key);
+      frees8(&key);
+      if (freq == -1)
+      {
+	key = concat(kanji, S("\0"));
+	freq = db_getfreq(key);
+	frees8(&key);
+      }
+      if (freq == -1) freq = INT_MAX;
+
+      return freq;
+}
+
+/*
+ * Returns: dictentry with newly allocated strings parsed from @data
+ */ 
+static dictentry
+data_to_dictent(s8 data)
+{
+    s8 d = data;
+
+    s8 data_split[4] = { 0 };
+    for (int i = 0; i < countof(data_split) && d.len > 0; i++)
+    {
+	size len = 0;
+	for (; len < d.len; len++)
+	{
+	    if (d.s[len] == '\0')
+		break;
+	}
+	data_split[i] = news8(len);
+	u8copy(data_split[i].s, d.s, data_split[i].len);
+
+	d.s += data_split[i].len + 1;
+	d.len -= data_split[i].len + 1;
+    }
+
+    return (dictentry) {
+	.dictname = data_split[0],
+	.kanji = data_split[1],
+	.reading = data_split[2],
+	.definition = data_split[3],
+	.frequency = getfreq(data_split[1], data_split[2])
+    };
+}
+
+static void
+lookup_add_to_dict(dictentry* dict[static 1], s8 word)
+{
+    debug_msg("Looking up: %.*s", (int)word.len, word.s);
+
+    size_t n_ids = 0;
+    u32* ids = db_getids(word, &n_ids);
+    if (ids)
+    {
+	for (size_t i = 0; i < n_ids; i++)
+	{
+	    s8 de_data = db_getdata(ids[i]);
+	    dictentry de = data_to_dictent(de_data);
+	    dictionary_add(dict, de);
+	}
+    }
+}
 
 static void
 add_deinflections_to_dict(dictentry* dict[static 1], s8 word)
 {
     s8* deinfs_b = deinflect(word);
     for (size_t i = 0; i < buf_size(deinfs_b); i++)
-	add_word_to_dict(dict, deinfs_b[i]);
+	lookup_add_to_dict(dict, deinfs_b[i]);
     frees8buffer(&deinfs_b);
 }
 
@@ -129,24 +196,28 @@ dictentry_comparer(void const* voida, void const* voidb)
     dictentry* b = (dictentry*)voidb;
     assert(a && b);
 
-    assert(a->dictname.s[a->dictname.len] == '\0');
-    assert(b->dictname.s[b->dictname.len] == '\0');
-    int indexa = indexof((char*)a->dictname.s, cfg.general.dictSortOrder);
-    int indexb = indexof((char*)b->dictname.s, cfg.general.dictSortOrder);
+    int inda = 0, indb = 0;
+    if (s8equals(a->dictname, b->dictname))
+    {
+	inda = a->frequency;
+	indb = b->frequency;
+    }
+    else
+    {
+	inda = indexof((char*)a->dictname.s, cfg.general.dictSortOrder);
+	indb = indexof((char*)b->dictname.s, cfg.general.dictSortOrder);
+    }
 
-    return indexa < indexb ? -1
-	   : indexa == indexb ? 0
+    return inda < indb ? -1
+	   : inda == indb ? 0
 	   : 1;
 }
 
 static void
 fill_dictionary_with(dictentry* dict[static 1], s8 word)
 {
-    add_word_to_dict(dict, word);
+    lookup_add_to_dict(dict, word);
     add_deinflections_to_dict(dict, word);
-
-    if (cfg.general.sort && *dict)
-	qsort(*dict, dictlen(*dict), sizeof(dictentry), dictentry_comparer);
 }
 
 static void*
@@ -158,7 +229,6 @@ create_dictionary(void* voidin)
 
     dictentry* dict = NULL;
 
-    /* clock_t begin = clock(); */
     open_database();
     fill_dictionary_with(&dict, lookup);
     if (dictlen(dict) == 0 && cfg.general.mecab)
@@ -176,11 +246,15 @@ create_dictionary(void* voidin)
 	}
     }
     close_database();
-    /* clock_t end = clock(); */
-    /* printf("lookup time: %f sec\n", (double)(end - begin) / CLOCKS_PER_SEC); */
 
     if (dictlen(dict) == 0)
-	fatal("No dictionary entry found");
+    {
+	msg("No dictionary entry found");
+	exit(EXIT_FAILURE);
+    }
+    
+    if (cfg.general.sort)
+	qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
 
     lookup.s[lookup.len] = '\0';
     dictionary_data_done(dict);
@@ -198,7 +272,7 @@ send_ankicard(possible_entries_s p)
 	.fieldentries = alloca(cfg.anki.numFields * sizeof(char*))
     };
 
-    for (int i = 0; i < ac.num_fields; i++)
+    for (size_t i = 0; i < ac.num_fields; i++)
 	ac.fieldentries[i] = map_entry(p, cfg.anki.fieldMapping[i]);
 
     retval_s ac_resp = ac_addNote(ac);
@@ -211,13 +285,14 @@ send_ankicard(possible_entries_s p)
 int
 main(int argc, char** argv)
 {
-    parse_cmd_line_opts(&argc, &argv);
+    int nextarg = parse_cmd_line_opts(argc, argv);
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
-    if (cfg.args.debug) print_settings();
+    if (cfg.args.debug)
+	print_settings();
 
     possible_entries_s p = { 0 };
     p.windowname = get_windowname();
-    p.lookup = argc > 1 ? fromcstr_(argv[1]) : get_selection();
+    p.lookup = argc - nextarg > 0 ? fromcstr_(argv[nextarg]) : get_selection();
     if (p.lookup.len == 0)
 	fatal("No selection and no argument provided. Exiting.");
     if (!g_utf8_validate((char*)p.lookup.s, p.lookup.len, NULL))

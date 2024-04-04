@@ -130,7 +130,7 @@ on_draw_event(GtkWidget *widget, cairo_t *cr)
 static void
 update_buffer()
 {
-    gtk_text_buffer_set_text(dict_tw_buffer, (char*)curent.definition.s, curent.definition.len);
+    gtk_text_buffer_set_text(dict_tw_buffer, (char*)curent.definition.s, (gint)curent.definition.len);
 
     GtkTextIter start, end;
     gtk_text_buffer_get_bounds(dict_tw_buffer, &start, &end);
@@ -396,6 +396,7 @@ activate(GtkApplication* app, gpointer user_data)
     gtk_text_view_set_editable(GTK_TEXT_VIEW(dict_tw), FALSE);
     gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(dict_tw), GTK_WRAP_CHAR);
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tw), FALSE);
+    /* gtk_text_view_set_indent(GTK_TEXT_VIEW(dict_tw), -2); */
 
     set_margins();
     /* ------------------------------------- */
