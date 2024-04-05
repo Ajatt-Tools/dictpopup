@@ -135,6 +135,21 @@ get_windowname(void)
     return fromcstr_(wname);
 }
 
+void
+play_audio(s8 filepath)
+{
+    s8 cmd = concat(S("ffplay -nodisp -nostats -hide_banner -autoexit '"), filepath, S("'"));
+
+    GError* error = NULL;
+    g_spawn_command_line_sync((char*)cmd.s, NULL, NULL, NULL, &error);
+    if (error)
+    {
+	error_msg("Failed to play file %s: %s", filepath.s, error->message);
+	g_error_free(error);
+    }
+    frees8(&cmd);
+}
+
 // using gtk4:
 /* static void */
 /* ended (GObject *object) */
@@ -151,21 +166,6 @@ get_windowname(void)
 /*     g_signal_connect(stream, "notify::ended", G_CALLBACK(ended), NULL); */
 /* } */
 
-void
-play_audio(s8 filepath)
-{
-    s8 cmd = concat(S("ffplay -nodisp -nostats -hide_banner -autoexit '"), filepath, S("'"));
-
-    GError* error = NULL;
-    g_spawn_command_line_sync((char*)cmd.s, NULL, NULL, NULL, &error);
-    if (error)
-    {
-	error_msg("Failed to play file %s: %s", filepath.s, error->message);
-	g_error_free(error);
-    }
-    frees8(&cmd);
-}
-
 /* char* */
 /* get_user_data_dir(void) */
 /* { */
@@ -174,16 +174,16 @@ play_audio(s8 filepath)
 
 /*     if (data_dir_env && *data_dir_env) */
 /* 	data_dir = strdup(data_dir_env); */
-/* #ifdef G_OS_WIN32 */
+/* #ifdef _WIN32 */
 /*     else */
 /* 	data_dir = get_special_folder(&FOLDERID_LocalAppData); */
 /* #endif */
 /*     if (!data_dir || !data_dir[0]) */
 /*     { */
-/* 	gchar *home_dir = g_build_home_dir(); */
-/* 	g_free(data_dir); */
-/* 	data_dir = g_build_filename(home_dir, ".local", "share", NULL); */
-/* 	g_free(home_dir); */
+/* 	free(data_dir); */
+/* 	s8 home_dir = get_home_dir(); */
+/* 	data_dir = buildpath(home_dir, ".local", "share"); */
+/* 	frees8(&home_dir); */
 /*     } */
 
 /*     return data_dir; */

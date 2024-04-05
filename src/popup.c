@@ -5,6 +5,7 @@
 #include "ankiconnectc.h"
 #include "util.h"
 #include "jppron.h"
+#include "dictlookup.h"
 
 #include "messages.h"
 #define CHECK_AC_RESP(retval)                       \
@@ -13,8 +14,6 @@
 	    error_msg("%s", ac_resp.data.string);   \
 	    return;                                 \
 	}
-
-// TODO: Remove globals or store in struct
 
 static GMutex vars_mutex;
 static GCond vars_set_condition;
@@ -25,21 +24,98 @@ static dictentry* dict = NULL;
 static dictentry curent = { 0 };
 static size curent_num = 0;
 
-static GtkWidget *window = NULL;
-static GtkWidget *dict_tw;
-static GtkTextBuffer *dict_tw_buffer;
-static GtkWidget *lbl_dictnum;
-static GtkWidget *lbl_dictname;
-static GtkWidget *lbl_cur_reading;
-static GtkWidget *exists_dot;
+static GtkWidget* window = NULL;
+static GtkWidget* dict_tv;
+static GtkTextBuffer* dict_tv_buffer;
+static GtkWidget* lbl_dictnum;
+static GtkWidget* lbl_dictname;
+static GtkWidget* lbl_cur_reading;
+static GtkWidget* exists_dot;
 
 static int exists_in_anki = 0;
 gint64 time_last_pron = 0;
 
+static void update_window(void);
+static void check_if_exists(void);
+static void play_pronunciation(void);
+static void move_win_to_mouse_ptr(void);
 
-static void update_window();
-static void check_if_exists();
-static void play_pronunciation();
+/* ---------------------------------------------------------------------------------------------------- */
+static GDBusNodeInfo *introspection_data = NULL;
+/* Introspection data for the service we are exporting */
+static const gchar introspection_xml[] =
+    "<node>"
+    "  <interface name='org.gtk.GDBus.TestInterface'>"
+    "    <annotation name='org.gtk.GDBus.Annotation' value='OnInterface'/>"
+    "    <annotation name='org.gtk.GDBus.Annotation' value='AlsoOnInterface'/>"
+    "    <method name='Lookup'>"
+    "      <annotation name='org.gtk.GDBus.Annotation' value='OnMethod'/>"
+    "      <arg type='s' name='greeting' direction='in'/>"
+    "      <arg type='s' name='response' direction='out'/>"
+    "    </method>"
+    "  </interface>"
+    "</node>";
+
+static void
+handle_method_call(GDBusConnection       *connection,
+		   const gchar           *sender,
+		   const gchar           *object_path,
+		   const gchar           *interface_name,
+		   const gchar           *method_name,
+		   GVariant              *parameters,
+		   GDBusMethodInvocation *invocation,
+		   gpointer user_data)
+{
+    if (g_strcmp0(method_name, "Lookup") == 0)
+    {
+	gchar* received;
+	g_variant_get(parameters, "(&s)", &received);
+	g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", "Ok!"));
+
+	s8 lookup = fromcstr_(received);
+	create_dictionary(&lookup);
+	gtk_widget_show(window);
+	move_win_to_mouse_ptr();
+    }
+    else
+	puts("Unknown method_name");
+}
+
+static const GDBusInterfaceVTable interface_vtable = { handle_method_call };
+
+static void
+on_bus_acquired (GDBusConnection *connection,
+                 const gchar     *name,
+                 gpointer         user_data)
+{
+  guint registration_id;
+
+  registration_id = g_dbus_connection_register_object (connection,
+                                                       "/org/gtk/GDBus/TestObject",
+                                                       introspection_data->interfaces[0],
+                                                       &interface_vtable,
+                                                       NULL,  /* user_data */
+                                                       NULL,  /* user_data_free_func */
+                                                       NULL); /* GError** */
+  g_assert (registration_id > 0);
+}
+
+static void
+on_name_acquired (GDBusConnection *connection,
+                  const gchar     *name,
+                  gpointer         user_data)
+{
+}
+
+static void
+on_name_lost (GDBusConnection *connection,
+              const gchar     *name,
+              gpointer         user_data)
+{
+    g_print("Lost\n");
+    exit (1);
+}
+/* ---------------------------------------------------------------------------------------------------- */
 
 void
 dictionary_data_done(dictentry* passed_dict)
@@ -130,11 +206,11 @@ on_draw_event(GtkWidget *widget, cairo_t *cr)
 static void
 update_buffer()
 {
-    gtk_text_buffer_set_text(dict_tw_buffer, (char*)curent.definition.s, (gint)curent.definition.len);
+    gtk_text_buffer_set_text(dict_tv_buffer, (char*)curent.definition.s, (gint)curent.definition.len);
 
     GtkTextIter start, end;
-    gtk_text_buffer_get_bounds(dict_tw_buffer, &start, &end);
-    gtk_text_buffer_apply_tag_by_name(dict_tw_buffer, "x-large", &start, &end);
+    gtk_text_buffer_get_bounds(dict_tv_buffer, &start, &end);
+    gtk_text_buffer_apply_tag_by_name(dict_tv_buffer, "x-large", &start, &end);
 }
 
 static void
@@ -221,7 +297,7 @@ change_de_down()
 static void
 close_window()
 {
-    gtk_widget_destroy(window);
+    gtk_widget_hide(window);
 }
 
 static gboolean
@@ -236,10 +312,10 @@ add_anki()
     dictionary_free(&dict);
 
     GtkTextIter start, end;
-    if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end))     // Use text selection if existing
+    if (gtk_text_buffer_get_selection_bounds(dict_tv_buffer, &start, &end))     // Use text selection if existing
     {
 	frees8(&curent.definition);
-	curent.definition = fromcstr_(gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE));
+	curent.definition = fromcstr_(gtk_text_buffer_get_text(dict_tv_buffer, &start, &end, FALSE));
     }
 
     close_window();
@@ -278,12 +354,12 @@ key_press_on_win(GtkWidget *widget, GdkEventKey *event)
 }
 
 static void
-set_margins()
+set_margins(GtkWidget* tv)
 {
-    gtk_text_view_set_top_margin(GTK_TEXT_VIEW(dict_tw), cfg.popup.margin);
-    gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(dict_tw), cfg.popup.margin);
-    gtk_text_view_set_left_margin(GTK_TEXT_VIEW(dict_tw), cfg.popup.margin);
-    gtk_text_view_set_right_margin(GTK_TEXT_VIEW(dict_tw), cfg.popup.margin);
+    gtk_text_view_set_top_margin(GTK_TEXT_VIEW(tv), cfg.popup.margin);
+    gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(tv), cfg.popup.margin);
+    gtk_text_view_set_left_margin(GTK_TEXT_VIEW(tv), cfg.popup.margin);
+    gtk_text_view_set_right_margin(GTK_TEXT_VIEW(tv), cfg.popup.margin);
 }
 
 static void
@@ -345,7 +421,7 @@ activate(GtkApplication* app, gpointer user_data)
     if (cfg.anki.enabled)
     {
 	GtkWidget* btn_add_anki = gtk_button_new_from_icon_name("list-add-symbolic", 2);
-	g_signal_connect(btn_add_anki, "clicked", G_CALLBACK(add_anki), dict_tw);
+	g_signal_connect(btn_add_anki, "clicked", G_CALLBACK(add_anki), dict_tv);
 	gtk_box_pack_start(GTK_BOX(top_bar), btn_add_anki, FALSE, FALSE, 0);
     }
 
@@ -386,19 +462,17 @@ activate(GtkApplication* app, gpointer user_data)
     GtkWidget* swindow = gtk_scrolled_window_new(NULL, NULL);
     gtk_box_pack_start(GTK_BOX(main_vbox), swindow, TRUE, TRUE, 0);
 
-    dict_tw = gtk_text_view_new();
-    dict_tw_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(dict_tw));
-    gtk_text_buffer_set_text(dict_tw_buffer, "loading...", -1);
-    gtk_text_buffer_create_tag(dict_tw_buffer, "x-large", "scale", PANGO_SCALE_X_LARGE, NULL);
+    dict_tv = gtk_text_view_new();
+    dict_tv_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(dict_tv));
+    gtk_text_buffer_set_text(dict_tv_buffer, "loading...", -1);
+    gtk_text_buffer_create_tag(dict_tv_buffer, "x-large", "scale", PANGO_SCALE_X_LARGE, NULL);
 
-    gtk_container_add(GTK_CONTAINER(swindow), dict_tw);
+    gtk_container_add(GTK_CONTAINER(swindow), dict_tv);
 
-    gtk_text_view_set_editable(GTK_TEXT_VIEW(dict_tw), FALSE);
-    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(dict_tw), GTK_WRAP_CHAR);
-    gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tw), FALSE);
-    /* gtk_text_view_set_indent(GTK_TEXT_VIEW(dict_tw), -2); */
-
-    set_margins();
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(dict_tv), FALSE);
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(dict_tv), GTK_WRAP_CHAR);
+    gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tv), FALSE);
+    set_margins(dict_tv);
     /* ------------------------------------- */
 
     /* --------------------------- */
@@ -418,9 +492,24 @@ activate(GtkApplication* app, gpointer user_data)
 dictentry
 popup()
 {
+    /* ----------- Setup GDbus --------------- */
+    introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
+    guint owner_id = g_bus_own_name(G_BUS_TYPE_SESSION,
+			      "org.gtk.GDBus.TestServer",
+			      G_BUS_NAME_OWNER_FLAGS_NONE,
+			      on_bus_acquired,
+			      on_name_acquired,
+			      on_name_lost,
+			      NULL,
+			      NULL);
+
+    /* --------------------------------------- */
     GtkApplication* app = gtk_application_new("com.github.GenjiFujimoto.dictpopup", G_APPLICATION_NON_UNIQUE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
     g_application_run(G_APPLICATION(app), 0, NULL);
     g_object_unref(app);
+
+    g_bus_unown_name (owner_id);
+    g_dbus_node_info_unref (introspection_data);
     return curent;
 }

@@ -1,18 +1,10 @@
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <unistd.h> // fork
-
-#include <glib.h>
-
+#include <pthread.h>
 #include "settings.h"
-#include "dbreader.h"
-#include "deinflector.h"
-#include "ankiconnectc.h"
 #include "util.h"
-#include "platformdep.h"
-#include "popup.h"
+#include "ankiconnectc.h"
 #include "messages.h"
+#include "dictlookup.h"
+#include "popup.h"
 
 #define POSSIBLE_ENTRIES_S_NMEMB 9
 typedef struct possible_entries_s {
@@ -50,6 +42,7 @@ map_entry(possible_entries_s pe, int i)
     return (char*)ret.s;
 }
 
+#include <glib.h>
 static s8
 add_bold_tags(s8 sent, s8 word)
 {
@@ -100,6 +93,34 @@ send_ankicard(possible_entries_s p)
 	error_msg("Error adding card: %s", ac_resp.data.string);
 }
 
+static void
+fill_entries(possible_entries_s pe[static 1], dictentry const de)
+{
+    if (cfg.anki.copySentence)
+    {
+	msg("Please select the context.");
+	pe->copiedsent = get_sentence();
+	if (cfg.anki.nukeWhitespaceSentence)
+	    pe->copiedsent = nuke_whitespace(pe->copiedsent);
+
+	pe->boldsent = add_bold_tags(pe->copiedsent, pe->lookup);
+    }
+
+    pe->dictdefinition = s8dup(de.definition);
+    pe->dictkanji = s8dup(de.kanji.len > 0 ? de.kanji : de.reading);
+    pe->dictreading = s8dup(de.reading.len > 0 ? de.reading : de.kanji);
+    pe->furigana = create_furigana(de.kanji, de.reading);
+    pe->dictname = de.dictname;
+}
+
+void*
+create_dictionary_caller(void* voidin)
+{
+   s8* lookup = (s8*)voidin;
+   create_dictionary(lookup);
+   return NULL;
+}
+
 int
 main(int argc, char** argv)
 {
@@ -119,7 +140,7 @@ main(int argc, char** argv)
 	nuke_whitespace(p.lookup);
 
     pthread_t thread;
-    pthread_create(&thread, NULL, create_dictionary, &p.lookup);
+    pthread_create(&thread, NULL, create_dictionary_caller, &p.lookup);
     pthread_detach(thread);
 
     dictentry chosen_entry = popup();

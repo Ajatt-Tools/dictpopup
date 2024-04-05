@@ -11,12 +11,6 @@
 
 s8* deinfs;
 
-/* #define startswith(str, prefix)                                                           \ */
-/* 	(str.len >= lengthof(prefix) && !u8compare(str.s, (u8*)prefix, lengthof(prefix))) */
-
-/* #define endswith(str, suffix)                                                                                     \ */
-/* 	(str.len >= lengthof(suffix) && !u8compare(str.s + str.len - lengthof(suffix), (u8*)suffix, lengthof(suffix))) */
-
 #define IF_STARTSWITH_REPLACE(prefix, replacement)                                 \
 	if (startswith(word, S(prefix)))                                              \
 	{                                                                          \

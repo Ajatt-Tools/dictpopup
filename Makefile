@@ -18,21 +18,24 @@ RELEASE_CFLAGS=-O3 -flto -march=native
 LDLIBS=-ffunction-sections -fdata-sections -Wl,--gc-sections \
        -lcurl -lmecab -pthread -lXfixes -lX11 $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify)
 
-FILES=popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
-FILES_H=ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
+FILES=popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c dictlookup.c
+FILES_H=ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h dictlookup.h
 
 LMDB_FILES = $(LIBDIR)/lmdb/libraries/liblmdb/mdb.c $(LIBDIR)/lmdb/libraries/liblmdb/midl.c
 SRC=$(addprefix $(SDIR)/,$(FILES)) $(LMDB_FILES)
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
 
-default: release
+default: release client
 release: dictpopup_release dictpopup-create_release
 debug: dictpopup_debug dictpopup-create_debug
 
 dictpopup_release: $(SRC) $(SRC_H)
-	$(CC) -o dictpopup src/dictpopup.c $(CFLAGS) $(RELEASE_CFLAGS) $(LDLIBS) $(SRC)
+	$(CC) -o dictpopup src/main.c $(CFLAGS) $(RELEASE_CFLAGS) $(LDLIBS) $(SRC)
 dictpopup_debug: $(SRC) $(SRC_H)
-	$(CC) -o dictpopup src/dictpopup.c $(CFLAGS) $(DEBUG_CFLAGS) $(LDLIBS) $(SRC)
+	$(CC) -o dictpopup src/main.c $(CFLAGS) $(DEBUG_CFLAGS) $(LDLIBS) $(SRC)
+
+client:
+	$(CC) -o client src/client.c $(CFLAGS) $(RELEASE_CFLAGS) $(LDLIBS) $(SRC)
 
 
 CFLAGS_CREATE=-I$(IDIR) $(shell pkg-config --cflags glib-2.0)
