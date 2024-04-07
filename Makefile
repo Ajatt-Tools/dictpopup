@@ -6,17 +6,18 @@ IDIR=include
 SDIR=src
 LIBDIR=lib
 CC=gcc
-CFLAGS=-D_POSIX_C_SOURCE=200809L -DNOTIFICATIONS \
-       -I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb \
+CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNOTIFICATIONS
+CFLAGS= ${CPPFLAGS} -I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb \
        $(shell pkg-config --cflags gtk+-3.0) $(shell pkg-config --cflags libnotify)
-DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wdouble-promotion \
+DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wdouble-promotion \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function \
 	     -fsanitize=undefined,address -fsanitize-undefined-trap-on-error
-	     #-Wconversion
+# DEBUG_CFLAGS+=-Wconversion
+# DEBUG_CFLAGS+=-fanalyzer
 RELEASE_CFLAGS=-O3 -flto -march=native
 
 LDLIBS=-ffunction-sections -fdata-sections -Wl,--gc-sections \
-       -lcurl -lmecab -pthread -lXfixes -lX11 $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify)
+       -lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify)
 
 FILES=popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
 FILES_H=ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
@@ -24,6 +25,12 @@ FILES_H=ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h platfo
 LMDB_FILES = $(LIBDIR)/lmdb/libraries/liblmdb/mdb.c $(LIBDIR)/lmdb/libraries/liblmdb/midl.c
 SRC=$(addprefix $(SDIR)/,$(FILES)) $(LMDB_FILES)
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
+
+O_HAVEX11 := 1  # X11 integration
+ifeq ($(strip $(O_HAVEX11)),1)
+	CPPFLAGS += -DHAVEX11
+	LDLIBS += -lXfixes -lX11
+endif
 
 default: release
 release: dictpopup_release dictpopup-create_release
@@ -35,7 +42,7 @@ dictpopup_debug: $(SRC) $(SRC_H)
 	$(CC) -o dictpopup src/dictpopup.c $(CFLAGS) $(DEBUG_CFLAGS) $(LDLIBS) $(SRC)
 
 
-CFLAGS_CREATE=-I$(IDIR) $(shell pkg-config --cflags glib-2.0)
+CFLAGS_CREATE=-I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb -D_POSIX_C_SOURCE=200809L $(shell pkg-config --cflags glib-2.0)
 LDLIBS_CREATE=-ffunction-sections -fdata-sections -Wl,--gc-sections \
 	      -lzip $(shell pkg-config --libs glib-2.0)
 

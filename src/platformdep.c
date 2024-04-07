@@ -2,6 +2,13 @@
 #include <libnotify/notify.h>
 #include <gtk/gtk.h>
 
+#ifdef HAVEX11 // for window title
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xfixes.h>
+#endif
+
 void
 notify(char* title, _Bool urgent, char const* fmt, ...)
 {
@@ -47,10 +54,6 @@ get_clipboard(void)
 }
 
 
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#include <X11/Xutil.h>
-#include <X11/extensions/Xfixes.h>
 /*
  * Wait until clipboard changes and return new clipboard contents.
  * Can return NULL.
@@ -76,6 +79,7 @@ get_sentence(void)
 static char*
 get_windowname_single(Display* dpy, Window win)
 {
+#ifdef HAVEX11
     Atom actual_type;
     int actual_format;
     unsigned long nitems;
@@ -88,7 +92,7 @@ get_windowname_single(Display* dpy, Window win)
 	XInternAtom(dpy, "WM_NAME", False)
     };
 
-    for (size_t i = 0; i < sizeof(atoms) && status != Success; i++)
+    for (size_t i = 0; i < countof(atoms) && status != Success; i++)
     {
 	status = XGetWindowProperty(dpy, win, atoms[i], 0, (~0L),
 				    False, AnyPropertyType, &actual_type,
@@ -97,6 +101,9 @@ get_windowname_single(Display* dpy, Window win)
     }
 
     return (char*)wname;
+#else
+    return NULL;
+#endif
 }
 
 /*
@@ -106,6 +113,7 @@ get_windowname_single(Display* dpy, Window win)
 s8
 get_windowname(void)
 {
+#ifdef HAVEX11
     Display *dpy = XOpenDisplay(NULL);
     if (!dpy)
     {
@@ -133,6 +141,9 @@ get_windowname(void)
 
     XCloseDisplay(dpy);
     return fromcstr_(wname);
+#else
+    return (s8){0};
+#endif
 }
 
 // using gtk4:
