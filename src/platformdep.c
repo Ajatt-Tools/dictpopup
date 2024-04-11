@@ -9,6 +9,8 @@
 #include <X11/extensions/Xfixes.h>
 #endif
 
+#include "messages.h"
+
 void
 notify(char* title, _Bool urgent, char const* fmt, ...)
 {
@@ -34,7 +36,6 @@ notify(char* title, _Bool urgent, char const* fmt, ...)
     g_free(txt);
 }
 
-#include "messages.h"
 
 // Alternatively one could use: https://github.com/jtanx/libclipboard
 s8
@@ -61,10 +62,10 @@ get_clipboard(void)
 s8
 get_sentence(void)
 {
+#ifdef HAVEX11
     Display* disp = XOpenDisplay(NULL);
     if (!disp)
-	return (s8){ 0 }
-    ;
+	return (s8){ 0 };
     Window root = DefaultRootWindow(disp);
     Atom clip = XInternAtom(disp, "CLIPBOARD", False);
     XFixesSelectSelectionInput(disp, root, clip,
@@ -72,14 +73,15 @@ get_sentence(void)
     XEvent evt;
     XNextEvent(disp, &evt);     // Wait for clipboard to change
     XCloseDisplay(disp);
-
+#else
     return get_clipboard();
+#endif
 }
 
+#ifdef HAVEX11
 static char*
 get_windowname_single(Display* dpy, Window win)
 {
-#ifdef HAVEX11
     Atom actual_type;
     int actual_format;
     unsigned long nitems;
@@ -101,10 +103,8 @@ get_windowname_single(Display* dpy, Window win)
     }
 
     return (char*)wname;
-#else
-    return NULL;
-#endif
 }
+#endif
 
 /*
  * Returns the window title of the currently active window
