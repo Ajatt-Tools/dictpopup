@@ -54,6 +54,23 @@ get_clipboard(void)
     return fromcstr_(gtk_clipboard_wait_for_text(clipboard));
 }
 
+void
+wait_cb_change(void)
+{
+#ifdef HAVEX11
+    Display* disp = XOpenDisplay(NULL);
+    if (!disp) return;
+    Window root = DefaultRootWindow(disp);
+    Atom clip = XInternAtom(disp, "CLIPBOARD", False);
+    XFixesSelectSelectionInput(disp, root, clip,
+			       XFixesSetSelectionOwnerNotifyMask);
+    XEvent evt;
+    XNextEvent(disp, &evt);
+    XCloseDisplay(disp);
+#else
+    sleep(5); // FIXME
+#endif
+}
 
 /*
  * Wait until clipboard changes and return new clipboard contents.
@@ -62,20 +79,8 @@ get_clipboard(void)
 s8
 get_sentence(void)
 {
-#ifdef HAVEX11
-    Display* disp = XOpenDisplay(NULL);
-    if (!disp)
-	return (s8){ 0 };
-    Window root = DefaultRootWindow(disp);
-    Atom clip = XInternAtom(disp, "CLIPBOARD", False);
-    XFixesSelectSelectionInput(disp, root, clip,
-			       XFixesSetSelectionOwnerNotifyMask);
-    XEvent evt;
-    XNextEvent(disp, &evt);     // Wait for clipboard to change
-    XCloseDisplay(disp);
-#else
+    wait_cb_change();
     return get_clipboard();
-#endif
 }
 
 #ifdef HAVEX11
