@@ -25,7 +25,8 @@ See `TODO.txt` for more.
 x11, gtk3, mecab, ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
 
 ## Installation
-Download the repository with `git clone --recursive "https://github.com/GenjiFujimoto/dictpopup.git"` (note the `--recursive`), change directory `cd dictpopup` and then install with `make && sudo make install`.
+First make sure, that you have all necessary dependencies installed.\
+Then download the repository with `git clone --recursive "https://github.com/GenjiFujimoto/dictpopup.git"` (note the `--recursive`), change directory `cd dictpopup` and then install with `make && sudo make install`.
 
 After the program installation you need to create a database where the dictionary entries are read from.
 This is done via `dictpopup-create` which creates the database from all Yomichan dictionaries in the current directory.
@@ -33,7 +34,7 @@ Without arguments it stores the database in the default location `~/.local/share
 
 ### If you do not use X11
 If you do not use X11 (but run Wayland for example), then you can replace the install command above with ``make O_HAVEX11=0 && sudo make install``.
-This will disable X11 related code, which is responsible for obtaining the window title of the focused window.
+This will disable X11 related code, which is responsible for obtaining the window title of the focused window and currently also for waiting for clipboard updates.
 
 ## Configuration
 Copy the example config `config.ini` of the repo to `~/.config/dictpopup/config.ini` and configure it according to your setup. 
@@ -78,3 +79,6 @@ The popup can be closed with `q` or `Esc`.
 - Create an Anki card: `<Ctrl>+s`
 - Play audio: `r`
 - Exit: `q`, `<Esc>`
+
+## Contact
+If you are having trouble setting up the program, don't hesitate to open up an [issue](https://github.com/btrkeks/dictpopup/issues) or write me an [email](mailto:genji.fujimoto@fedora.email).
