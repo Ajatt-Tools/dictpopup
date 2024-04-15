@@ -9,9 +9,10 @@ CC=gcc
 CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNOTIFICATIONS
 CFLAGS= ${CPPFLAGS} -I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb \
        $(shell pkg-config --cflags gtk+-3.0) $(shell pkg-config --cflags libnotify)
-DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes -Wdouble-promotion \
+DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function \
 	     -fsanitize=undefined,address -fsanitize-undefined-trap-on-error
+# DEBUG_CFLAGS+=-Wshadow
 # DEBUG_CFLAGS+=-Wconversion
 # DEBUG_CFLAGS+=-fanalyzer
 RELEASE_CFLAGS=-O3 -flto -march=native

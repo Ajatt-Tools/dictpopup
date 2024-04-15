@@ -26,8 +26,12 @@ x11, gtk3, mecab, ffplay (optional, for pronunciation), [AnkiConnect Anki addon]
 
 ## Installation
 First make sure, that you have all necessary dependencies installed.\
-Then download the repository with `git clone --recursive "https://github.com/GenjiFujimoto/dictpopup.git"` (note the `--recursive`), change directory `cd dictpopup` and then install with `make && sudo make install`.
-
+Then 
+```bash
+git clone --recursive "https://github.com/btrkeks/dictpopup.git"
+cd dictpopup
+make && sudo make install
+```
 After the program installation you need to create a database where the dictionary entries are read from.
 This is done via `dictpopup-create` which creates the database from all Yomichan dictionaries in the current directory.
 Without arguments it stores the database in the default location `~/.local/share/dictpopup` which is also the default search path.
