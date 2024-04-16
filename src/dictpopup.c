@@ -27,27 +27,22 @@ typedef struct possible_entries_s {
     s8 dictname;
 } possible_entries_s;
 
-static char*
-map_entry(possible_entries_s pe, int i)
+s8
+map_entry(possible_entries_s p, int i)
 {
     // A safer way would be switching to strings, but I feel like that's
     // not very practical to configure
-    // TODO: s8 implemenation?
-    // TODO: Warning if unknown number encountered
-    s8 ret = i == 0 ? (s8){ 0 }
-	     : i == 1 ? pe.lookup
-	     : i == 2 ? pe.copiedsent
-	     : i == 3 ? pe.boldsent
-	     : i == 4 ? pe.dictkanji
-	     : i == 5 ? pe.dictreading
-	     : i == 6 ? pe.dictdefinition
-	     : i == 7 ? pe.furigana
-	     : i == 8 ? pe.windowname
-	     : i == 9 ? pe.dictname
+    return     i == 0 ? (s8){ 0 }
+	     : i == 1 ? p.lookup
+	     : i == 2 ? p.copiedsent
+	     : i == 3 ? p.boldsent
+	     : i == 4 ? p.dictkanji
+	     : i == 5 ? p.dictreading
+	     : i == 6 ? p.dictdefinition
+	     : i == 7 ? p.furigana
+	     : i == 8 ? p.windowname
+	     : i == 9 ? p.dictname
 	     : (s8){ 0 };
-
-    assert(ret.s == NULL || ret.s[ret.len] == '\0');
-    return (char*)ret.s;
 }
 
 static s8
@@ -101,37 +96,28 @@ fill_entries(possible_entries_s pe[static 1], dictentry const de)
 static int
 getfreq(s8 kanji, s8 reading)
 {
-      s8 key = concat(kanji, S("\0"), reading);
-      int freq = db_getfreq(key);
-      frees8(&key);
-      if (freq == -1)
-      {
-	key = concat(kanji, S("\0"));
-	freq = db_getfreq(key);
-	frees8(&key);
-      }
-      if (freq == -1) freq = INT_MAX;
-
-      return freq;
+    s8 key = concat(kanji, S("\0"), reading);
+    int freq = db_getfreq(key);
+    frees8(&key);
+    return freq;
 }
 
 /*
  * Returns: dictentry with newly allocated strings parsed from @data
- */ 
+ */
 static dictentry
 data_to_dictent(s8 data)
 {
-    s8 d = data;
-
     s8 data_split[4] = { 0 };
-    for (int i = 0; i < countof(data_split) && d.len > 0; i++)
+
+    s8 d = data;
+    for (int i = 0; i < countof(data_split); i++)
     {
+	assert(d.len > 0);
+
 	size len = 0;
-	for (; len < d.len; len++)
-	{
-	    if (d.s[len] == '\0')
-		break;
-	}
+	while(len < d.len && d.s[len] != '\0')
+	  len++;
 	data_split[i] = news8(len);
 	u8copy(data_split[i].s, d.s, data_split[i].len);
 
@@ -140,11 +126,11 @@ data_to_dictent(s8 data)
     }
 
     return (dictentry) {
-	.dictname = data_split[0],
-	.kanji = data_split[1],
-	.reading = data_split[2],
-	.definition = data_split[3],
-	.frequency = getfreq(data_split[1], data_split[2])
+	       .dictname = data_split[0],
+	       .kanji = data_split[1],
+	       .reading = data_split[2],
+	       .definition = data_split[3],
+	       .frequency = getfreq(data_split[1], data_split[2])
     };
 }
 
@@ -164,6 +150,7 @@ lookup_add_to_dict(dictentry* dict[static 1], s8 word)
 	    dictionary_add(dict, de);
 	}
     }
+    free(ids);
 }
 
 static void
@@ -224,6 +211,7 @@ static void*
 create_dictionary(void* voidin)
 {
     s8* lookup = (s8*)voidin;
+    assert(lookup && lookup->s);
 
     dictentry* dict = NULL;
 
@@ -237,7 +225,8 @@ create_dictionary(void* voidin)
     }
     if (dictlen(dict) == 0 && cfg.general.substringSearch)
     {
-	while (dictlen(dict) == 0 && lookup->len > 3)
+	int first_chr_len = utf8_chr_len(lookup->s);
+	while (dictlen(dict) == 0 && lookup->len > first_chr_len)
 	{
 	    *lookup = s8striputf8chr(*lookup);
 	    fill_dictionary_with(&dict, *lookup);
@@ -250,7 +239,8 @@ create_dictionary(void* voidin)
 	msg("No dictionary entry found");
 	exit(EXIT_FAILURE);
     }
-    
+
+    assert(dict);
     if (cfg.general.sort)
 	qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
 
@@ -271,7 +261,7 @@ send_ankicard(possible_entries_s p)
     };
 
     for (size_t i = 0; i < ac.num_fields; i++)
-	ac.fieldentries[i] = map_entry(p, cfg.anki.fieldMapping[i]);
+	ac.fieldentries[i] = (char*)map_entry(p, cfg.anki.fieldMapping[i]).s; // TODO: assert is null-terminated
 
     retval_s ac_resp = ac_addNote(ac);
     if (ac_resp.ok)
@@ -283,10 +273,8 @@ send_ankicard(possible_entries_s p)
 int
 main(int argc, char** argv)
 {
-    int nextarg = parse_cmd_line_opts(argc, argv);
+    int nextarg = parse_cmd_line_opts(argc, argv); // Needs to be first
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
-    if (cfg.args.debug)
-	print_settings();
 
     possible_entries_s p = { 0 };
     p.windowname = get_windowname();

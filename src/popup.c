@@ -30,6 +30,7 @@ static GtkWidget *dict_tw;
 static GtkTextBuffer *dict_tw_buffer;
 static GtkWidget *lbl_dictnum;
 static GtkWidget *lbl_dictname;
+static GtkWidget *lbl_freq;
 static GtkWidget *lbl_cur_reading;
 static GtkWidget *exists_dot;
 
@@ -37,9 +38,9 @@ static int exists_in_anki = 0;
 gint64 time_last_pron = 0;
 
 
-static void update_window();
-static void check_if_exists();
-static void play_pronunciation();
+static void update_window(void);
+static void check_if_exists(void);
+static void play_pronunciation(void);
 
 void
 dictionary_data_done(dictentry* passed_dict)
@@ -61,7 +62,7 @@ dictionary_data_done(dictentry* passed_dict)
 }
 
 static void
-check_if_exists()
+check_if_exists(void)
 {
     if (!cfg.anki.checkExisting || !cfg.anki.enabled)
 	return;
@@ -93,7 +94,7 @@ jppron_caller(void* voidin)
 }
 
 static void
-play_pronunciation()
+play_pronunciation(void)
 {
     gint64 time_now = g_get_monotonic_time();
     if ((time_now - time_last_pron) < 500000) // 500ms
@@ -128,7 +129,7 @@ on_draw_event(GtkWidget *widget, cairo_t *cr)
 }
 
 static void
-update_buffer()
+update_buffer(void)
 {
     gtk_text_buffer_set_text(dict_tw_buffer, (char*)curent.definition.s, (gint)curent.definition.len);
 
@@ -138,7 +139,7 @@ update_buffer()
 }
 
 static void
-update_win_title()
+update_win_title(void)
 {
     s8 title = concat(S("dictpopup - "), curent.reading, S("【"), curent.kanji, S("】from "), curent.dictname);
     gtk_window_set_title(GTK_WINDOW(window), (char*)title.s);
@@ -146,20 +147,29 @@ update_win_title()
 }
 
 static void
-update_dictnum_info()
+update_dictnum_info(void)
 {
     g_autofree char* info_txt = g_strdup_printf("%li/%li", curent_num + 1, dictlen(dict));
     gtk_label_set_text(GTK_LABEL(lbl_dictnum), info_txt);
 }
 
 static void
-update_dictname_info()
+update_dictname_info(void)
 {
     gtk_label_set_text(GTK_LABEL(lbl_dictname), (char*)curent.dictname.s);
 }
 
 static void
-update_cur_reading()
+update_frequency_info(void)
+{
+    char tmp[11];
+    char* freqstr = curent.frequency == INT_MAX ? "" : tmp;
+    if (freqstr == tmp) snprintf(tmp, sizeof(tmp), "%d", curent.frequency);
+    gtk_label_set_text(GTK_LABEL(lbl_freq), freqstr);
+}
+
+static void
+update_cur_reading(void)
 {
     s8 txt = {0};
     if (curent.kanji.len && curent.reading.len)
@@ -179,7 +189,7 @@ update_cur_reading()
 }
 
 static void
-update_window()
+update_window(void)
 {
     if (dict_data_ready)
     {
@@ -187,6 +197,7 @@ update_window()
 	update_win_title();
 	update_dictnum_info();
 	update_dictname_info();
+	update_frequency_info();
 	update_cur_reading();
     }
 }
@@ -207,25 +218,25 @@ change_de(char c)
 }
 
 static void
-change_de_up()
+change_de_up(void)
 {
     change_de('+');
 }
 
 static void
-change_de_down()
+change_de_down(void)
 {
     change_de('-');
 }
 
 static void
-close_window()
+close_window(void)
 {
     gtk_widget_destroy(window);
 }
 
 static gboolean
-add_anki()
+add_anki(void)
 {
     g_mutex_lock(&vars_mutex);
     if (!dict_data_ready)
@@ -247,7 +258,7 @@ add_anki()
 }
 
 static gboolean
-quit()
+quit(void)
 {
     curent = (dictentry){ 0 };
     dictionary_free(&dict);
@@ -278,7 +289,7 @@ key_press_on_win(GtkWidget *widget, GdkEventKey *event)
 }
 
 static void
-set_margins()
+set_margins(void)
 {
     gtk_text_view_set_top_margin(GTK_TEXT_VIEW(dict_tw), cfg.popup.margin);
     gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(dict_tw), cfg.popup.margin);
@@ -287,7 +298,7 @@ set_margins()
 }
 
 static void
-move_win_to_mouse_ptr()
+move_win_to_mouse_ptr(void)
 {
     GdkDisplay *display = gdk_display_get_default();
     GdkDevice *device = gdk_seat_get_pointer(gdk_display_get_default_seat(display));
@@ -298,7 +309,7 @@ move_win_to_mouse_ptr()
 }
 
 static void
-search_in_anki_browser()
+search_in_anki_browser(void)
 {
     retval_s ac_resp = ac_gui_search(cfg.anki.deck, cfg.anki.searchField, (char*)curent.kanji.s);
     CHECK_AC_RESP(ac_resp);
@@ -401,9 +412,15 @@ activate(GtkApplication* app, gpointer user_data)
     set_margins();
     /* ------------------------------------- */
 
-    /* --------------------------- */
+    /* ------- BOTOOM BAR-------------------- */
+    GtkWidget *bottom_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, spacing_between_widgets);
+    gtk_box_pack_start(GTK_BOX(main_vbox), bottom_bar, 0, 0, 0);
+
+    lbl_freq = gtk_label_new("test");
+    gtk_box_pack_start(GTK_BOX(bottom_bar), lbl_freq, FALSE, FALSE, 0);
+
     lbl_dictname = gtk_label_new(NULL);
-    gtk_box_pack_start(GTK_BOX(main_vbox), lbl_dictname, 0, 0, 0);
+    gtk_box_set_center_widget(GTK_BOX(bottom_bar), lbl_dictname);
     /* --------------------------- */
 
     gtk_vars_set = TRUE;
@@ -416,9 +433,9 @@ activate(GtkApplication* app, gpointer user_data)
 
 
 dictentry
-popup()
+popup(void)
 {
-    GtkApplication* app = gtk_application_new("com.github.GenjiFujimoto.dictpopup", G_APPLICATION_NON_UNIQUE);
+    GtkApplication* app = gtk_application_new("com.github.btrkeks.dictpopup", G_APPLICATION_NON_UNIQUE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
     g_application_run(G_APPLICATION(app), 0, NULL);
     g_object_unref(app);
