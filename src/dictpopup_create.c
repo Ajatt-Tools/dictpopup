@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h> // access
 #include <sys/stat.h> // mkdir
+#include <signal.h> // Catch SIGINT
 
 #include <dirent.h>
 #include <zip.h>
@@ -17,6 +18,8 @@
 	    error_msg(__VA_ARGS__); \
 	    return retval;          \
 	} while (0)
+
+volatile sig_atomic_t sigint_received = 0;
 
 const char json_typename[][16] = {
     [JSON_ERROR] = "ERROR",
@@ -280,7 +283,7 @@ add_dictionary(s8 buffer, s8 dictname)
 	return;
     }
 
-    for (;;)
+    while(!sigint_received)
     {
 	type = json_next(s);
 
@@ -370,7 +373,7 @@ add_frequency(s8 buffer)
     type = json_next(s);
     assert(type == JSON_ARRAY);
 
-    for (;;)
+    while(!sigint_received)
     {
 	type = json_next(s);
 
@@ -511,7 +514,7 @@ add_from_zip(char* filename)
 
     struct zip_stat finfo;
     zip_stat_init(&finfo);
-    for (int i = 0; (zip_stat_index(za, i, 0, &finfo)) == 0; i++)
+    for (int i = 0; (zip_stat_index(za, i, 0, &finfo)) == 0 && !sigint_received; i++)
     {
 	s8 fn = fromcstr_((char*)finfo.name); // Warning: Casts away const!
 	if (startswith(fn, S("term_bank_")))
@@ -566,9 +569,22 @@ check_path_existing(s8 dbpath)
     }
 }
 
+void sigint_handler(int s)
+{
+    sigint_received = 1;
+}
+
+void setup_sighandler(void)
+{
+    struct sigaction act;
+    act.sa_handler = sigint_handler;
+    sigaction(SIGINT, &act, NULL);
+}
+
 int
 main(int argc, char* argv[])
 {
+    setup_sighandler();
     int nextarg = parse_cmd_line_opts(argc, argv);
 
     s8 dbpath = argc - nextarg > 0 ? fromcstr_(argv[nextarg]) : get_default_path();
@@ -582,15 +598,15 @@ main(int argc, char* argv[])
     if (!(dir = opendir(".")))
 	fatal_perror("Opening current directory");
     struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL)
+    while ((entry = readdir(dir)) != NULL && !sigint_received)
     {
 	s8 fn = fromcstr_(entry->d_name);
 	if (endswith(fn, S(".zip")))
 	    add_from_zip((char*)fn.s);
     }
+
     closedir(dir);
     closedb();
-
     s8 lockfile = buildpath(dbpath, S("lock.mdb"));
     remove((char*)lockfile.s);
     frees8(&lockfile);
