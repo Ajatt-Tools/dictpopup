@@ -35,7 +35,7 @@ const char json_typename[][16] = {
 static void append_definition(json_stream s[static 1], stringbuilder_s sb[static 1], s8 liststyle, i32 listdepth);
 
 static s8
-get_default_path() // Where db is stored
+get_default_path(void) // Where db is stored
 {
     return buildpath(fromcstr_((char*)g_get_user_data_dir()), S("dictpopup"));
 }
@@ -94,7 +94,7 @@ add_dictent_to_db(dictentry de)
 	if (de.reading.len > 0)         // Let the db figure out duplicates
 	    addtodb(de.reading, datastr);
 
-	frees8(&datastr);
+	free(datastr.s);
     }
 }
 
@@ -119,7 +119,7 @@ static void
 append_structured_content(json_stream* s, stringbuilder_s sb[static 1], s8 liststyle, i32 listdepth)
 {
     enum json_type type;
-    enum tag_type tag;
+    enum tag_type tag = TAG_UNKNOWN;
     for (;;)
     {
 	type = json_next(s);
@@ -368,11 +368,7 @@ add_frequency(s8 buffer)
 
     enum json_type type;
     type = json_next(s);
-    if (type != JSON_ARRAY)
-    {
-	fprintf(stderr, "Error: Format not supported.");
-	return;
-    }
+    assert(type == JSON_ARRAY);
 
     for (;;)
     {
@@ -431,6 +427,8 @@ add_frequency(s8 buffer)
 
 		    type = json_next(s);
 		}
+
+		assert(type == JSON_OBJECT_END);
 	    }
 	    else if (type == JSON_NUMBER)
 		freq = atoi(json_get_string(s, NULL));     // TODO: Error handling
@@ -442,7 +440,7 @@ add_frequency(s8 buffer)
 	    frees8(&reading);
 	    frees8(&word);
 
-	    json_skip_until(s, JSON_ARRAY);
+	    json_skip_until(s, JSON_ARRAY_END);
 	}
 	else
 	    assert(0);
@@ -464,7 +462,7 @@ extract_dictname(zip_t* archive)
     for (;;)
     {
 	type = json_next(s);
-	s8 value = { 0 };
+	s8 value;
 	if (type == JSON_STRING)
 	{
 	    value = json_get_string_(s);
@@ -547,7 +545,7 @@ static void
 check_file_existing(s8 dbpath)
 {
     s8 data_fp = buildpath(dbpath, S("data.mdb"));
-    if (access((char*)data_fp.s, R_OK))
+    if (access((char*)data_fp.s, R_OK) == 0)
     {
 	if (askyn("A database file already exists. Would you like to delete the old one?")) // Maybe allow creating a backup
 	    remove((char*)data_fp.s);
@@ -561,7 +559,7 @@ static void
 check_path_existing(s8 dbpath)
 {
     char* dbpath_c = (char*)dbpath.s;
-    if (access(dbpath_c, R_OK))
+    if (access(dbpath_c, R_OK) != 0)
     {
 	if (mkdir(dbpath_c, S_IRWXU | S_IRWXG | S_IXOTH))
 	    fatal_perror("mkdir");
