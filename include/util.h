@@ -24,7 +24,7 @@ typedef          char    byte;
 void* xmalloc(size_t size);
 void* xcalloc(size_t nmemb, size_t size);
 void* xrealloc(void* ptr, size_t size);
-#define new(type, num) xcalloc(num, sizeof(type))
+#define new(type, num)	xcalloc(num, sizeof(type))
 
 /* ------------------- Start s8 utils ---------------- */
 #define countof(a)    (size)(sizeof(a) / sizeof(*(a)))
@@ -79,8 +79,13 @@ s8 s8striputf8chr(s8 s);
 /*
  * Returns u8 pointer pointing to the start of the char after the first utf-8 character
  */
-#define skip_utf8_char(p) (u8*)((p) + utf8_skip[*(const u8 *)(p)])
-extern const u8* const utf8_skip;
+#define skip_utf8_char(p) ((p) + utf8_chr_len(p))
+
+/*
+ * Returns the length in bytes of the utf8 encoded char pointed to by @p
+ */
+#define utf8_chr_len(p) utf8_chr_len_data[(p)[0] >> 3]
+extern u8 const utf8_chr_len_data[];
 
 /*
  * Turns escaped characters such as the string "\\n" into the character '\n' (inplace)
