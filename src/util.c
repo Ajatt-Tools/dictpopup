@@ -6,22 +6,15 @@
 
 #include "util.h"
 
-static const u8 utf8_skip_data[256] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1
+u8 const utf8_chr_len_data[] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0
 };
-const u8* const utf8_skip = utf8_skip_data;
 
-#define fatal_perror(context)     \
-	do {                          \
-	    perror(context);        \
-	    abort();                \
+#define fatal_perror(context) \
+	do {                  \
+	    perror(context);  \
+	    abort();          \
 	} while (0)
 
 void* xmalloc(size_t nbytes)
@@ -58,36 +51,34 @@ void* xrealloc(void* ptr, size_t nbytes)
 }
 /* --------------- Start arena ----------------- */
 
-typedef struct {
-    byte *beg;
-    byte *end;
-} arena;
+/* typedef struct { */
+/*     byte *beg; */
+/*     byte *end; */
+/* } arena; */
 
-arena
-newarena_(void)
-{
-    arena a = {0};
-    size cap = 1<<22;
-    a.beg = (byte*)xmalloc(cap);
-    a.end = a.beg + cap;
-    return a;
-}
+/* arena */
+/* newarena_(void) */
+/* { */
+/*     arena a = {0}; */
+/*     size cap = 1<<22; */
+/*     a.beg = (byte*)xmalloc(cap); */
+/*     a.end = a.beg + cap; */
+/*     return a; */
+/* } */
 
 /* --------------------------------------------- */
 
 /* --------------- Start s8 utils -------------- */
 void
-u8copy(u8* dst, u8* src, size n)
+u8copy(u8* restrict dst, u8* restrict src, size n)
 {
     assert(n >= 0);
     for (; n; n--)
-    {
 	*dst++ = *src++;
-    }
 }
 
 i32
-u8compare(u8* a, u8* b, size n)
+u8compare(u8* restrict a, u8* restrict b, size n)
 {
     for (; n; n--)
     {
@@ -292,7 +283,6 @@ void
 frees8(s8 z[static 1])
 {
     free(z->s);
-    *z = (s8){ 0 };
 }
 
 void
