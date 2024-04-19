@@ -27,7 +27,7 @@ x11, gtk3, mecab, [lmdb](https://www.symas.com/lmdb), ffplay (optional, for pron
 
 ## Installation
 ### Arch Linux
-Install the AUR package `dictpoup`.
+Install the AUR package `dictpopup`.
 
 ### Manual
 First make sure, that you have all necessary dependencies installed.\
