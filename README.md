@@ -26,6 +26,10 @@ See `TODO.txt` for more.
 x11, gtk3, mecab, [lmdb](https://www.symas.com/lmdb), ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
 
 ## Installation
+### Arch Linux
+Install the AUR package `dictpoup`.
+
+### Manual
 First make sure, that you have all necessary dependencies installed.\
 Then 
 ```bash
@@ -33,13 +37,15 @@ git clone --recursive "https://github.com/btrkeks/dictpopup.git"
 cd dictpopup
 make && sudo make install
 ```
+#### If you do not use X11
+Then you can the `make` command above with `make O_HAVEX11=0`
+This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window and also for waiting for clipboard updates.
+This means adding sentences to Anki won't be very pleasant.
+
+## Setup
 After the program installation you need to create a database where the dictionary entries are read from.
 This is done via `dictpopup-create` which creates the database from all Yomichan dictionaries in the current directory.
 Without arguments it stores the database in the default location `~/.local/share/dictpopup` which is also the default search path.
-
-### If you do not use X11
-If you do not use X11 (but run Wayland for example), then you can replace the install command above with ``make O_HAVEX11=0 && sudo make install``.
-This will disable X11 related code, which is responsible for obtaining the window title of the focused window and currently also for waiting for clipboard updates.
 
 ## Configuration
 Copy the example config `config.ini` of the repo to `~/.config/dictpopup/config.ini` and configure it according to your setup. 
