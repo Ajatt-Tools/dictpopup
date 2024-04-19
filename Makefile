@@ -1,6 +1,7 @@
 .POSIX:
 .SUFFIXES:
 PREFIX=/usr/local
+MANPREFIX = ${PREFIX}/share/man
 IDIR=include
 SDIR=src
 LIBDIR=lib
@@ -62,18 +63,24 @@ CONFIG_DIR=${DESTDIR}${PREFIX}/share/dictpopup
 install: default
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	mkdir -p ${DESTDIR}$(PREFIX)/share/man/man1
+
 	cp -f dictpopup ${DESTDIR}${PREFIX}/bin
 	cp -f dictpopup-create ${DESTDIR}${PREFIX}/bin
-	gzip < man/dictpopup.1 > ${DESTDIR}$(PREFIX)/share/man/man1/dictpopup.1.gz
-	gzip < man/dictpopup-create.1 > ${DESTDIR}$(PREFIX)/share/man/man1/dictpopup-create.1.gz
+	chmod 755 ${DESTDIR}${PREFIX}/bin/dictpopup
+	chmod 755 ${DESTDIR}${PREFIX}/bin/dictpopup-create
+
+	gzip < man/dictpopup.1 > ${DESTDIR}${MANPREFIX}/man1/dictpopup.1.gz
+	gzip < man/dictpopup-create.1 > ${DESTDIR}${MANPREFIX}/man1/dictpopup-create.1.gz
 	
 	mkdir -p $(CONFIG_DIR)
 	cp -f config.ini $(CONFIG_DIR)
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/dictpopup
-	rm -f ${DESTDIR}${PREFIX}/bin/dictpopup-create
-	rm -rf $(CONFIG_DIR)/config.ini
+	rm -f ${DESTDIR}${PREFIX}/bin/dictpopup \
+	      ${DESTDIR}${PREFIX}/bin/dictpopup-create \
+	      ${DESTDIR}${MANPREFIX}/man1/dictpopup.1.gz \
+	      ${DESTDIR}${MANPREFIX}/man1/dictpopup-create.1.gz \
+	      $(CONFIG_DIR)/config.ini
 
 clean:
 	rm -f dictpopup dictpopup-create test
