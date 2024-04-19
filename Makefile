@@ -1,29 +1,27 @@
 .POSIX:
 .SUFFIXES:
 PREFIX=/usr/local
-DESTDIR=
 IDIR=include
 SDIR=src
 LIBDIR=lib
 CC=gcc
 CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNOTIFICATIONS
-CFLAGS= ${CPPFLAGS} -I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb \
+CFLAGS= ${CPPFLAGS} -I$(IDIR)  \
        $(shell pkg-config --cflags gtk+-3.0) $(shell pkg-config --cflags libnotify)
-DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion \
+DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion -Wshadow \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function \
 	     -fsanitize=undefined,address -fsanitize-undefined-trap-on-error
-# DEBUG_CFLAGS+=-Wshadow
 # DEBUG_CFLAGS+=-Wconversion
 # DEBUG_CFLAGS+=-fanalyzer
 RELEASE_CFLAGS=-O3 -flto -march=native
 
 LDLIBS=-ffunction-sections -fdata-sections -Wl,--gc-sections \
-       -lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify)
+       -lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify) -llmdb
 
 FILES=popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
 FILES_H=ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
 
-LMDB_FILES = $(LIBDIR)/lmdb/libraries/liblmdb/mdb.c $(LIBDIR)/lmdb/libraries/liblmdb/midl.c
+# LMDB_FILES = $(LIBDIR)/lmdb/libraries/liblmdb/mdb.c $(LIBDIR)/lmdb/libraries/liblmdb/midl.c
 SRC=$(addprefix $(SDIR)/,$(FILES)) $(LMDB_FILES)
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
 
@@ -45,7 +43,7 @@ dictpopup_debug: $(SRC) $(SRC_H)
 
 CFLAGS_CREATE=-I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb -D_POSIX_C_SOURCE=200809L $(shell pkg-config --cflags glib-2.0)
 LDLIBS_CREATE=-ffunction-sections -fdata-sections -Wl,--gc-sections \
-	      -lzip $(shell pkg-config --libs glib-2.0)
+	      -lzip $(shell pkg-config --libs glib-2.0) -llmdb
 
 FILES_CREATE=dbwriter.c pdjson.c util.c settings.c
 FILES_H_CREATE=dbwriter.h pdjson.h util.h buf.h settings.h
@@ -61,7 +59,7 @@ dictpopup-create_debug: $(SRC_CREATE) $(SRC_H_CREATE)
 
 CONFIG_DIR=${DESTDIR}${PREFIX}/share/dictpopup
 
-install: copy-config
+install: default
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	mkdir -p ${DESTDIR}$(PREFIX)/share/man/man1
 	cp -f dictpopup ${DESTDIR}${PREFIX}/bin
@@ -71,8 +69,6 @@ install: copy-config
 	
 	mkdir -p $(CONFIG_DIR)
 	cp -f config.ini $(CONFIG_DIR)
-
-copy-config:
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/dictpopup

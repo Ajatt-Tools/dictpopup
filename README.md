@@ -14,6 +14,7 @@ See `TODO.txt` for more.
  * Deinflect
  * Kanjify e.g. お前 -> 御前
  * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
+ * Sort dictionary entries by frequency (requires a frequency dictionary. I recommend: CC100)
  * Fall back to a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
  * Play a pronunciation on lookup / button press (requires files see [Pronuncation](#pronunciation))
  * Add word with selected definition to Anki
@@ -22,7 +23,7 @@ See `TODO.txt` for more.
  * Fast and memory efficient
 
 ## Dependencies
-x11, gtk3, mecab, ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
+x11, gtk3, mecab, [lmdb](https://www.symas.com/lmdb), ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
 
 ## Installation
 First make sure, that you have all necessary dependencies installed.\
@@ -85,4 +86,4 @@ The popup can be closed with `q` or `Esc`.
 - Exit: `q`, `<Esc>`
 
 ## Contact
-If you are having trouble setting up the program, don't hesitate to open up an [issue](https://github.com/btrkeks/dictpopup/issues) or write me an [email](mailto:genji.fujimoto@fedora.email).
+If you are having trouble setting up the program, don't hesitate to open up an [issue](https://github.com/btrkeks/dictpopup/issues) or write me an [email](mailto:butterkeks@fedora.email).
