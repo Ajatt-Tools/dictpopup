@@ -38,8 +38,8 @@ cd dictpopup
 make && sudo make install
 ```
 #### If you do not use X11
-Then you can the `make` command above with `make O_HAVEX11=0`
-This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window and also for waiting for clipboard updates.
+Then you can replace the `make` command above with `make O_HAVEX11=0`.\
+This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window and also for listening for clipboard updates.
 This means adding sentences to Anki won't be very pleasant.
 
 ## Setup
