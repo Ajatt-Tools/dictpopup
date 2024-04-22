@@ -37,7 +37,7 @@ notify(char* title, _Bool urgent, char const* fmt, ...)
 }
 
 
-// Alternatively one could use: https://github.com/jtanx/libclipboard
+// Instead of gtk one could also use: https://github.com/jtanx/libclipboard
 s8
 get_selection(void)
 {
@@ -46,6 +46,7 @@ get_selection(void)
     return fromcstr_(gtk_clipboard_wait_for_text(clipboard));
 }
 
+/* -- Sentence -- */
 static s8
 get_clipboard(void)
 {
@@ -54,22 +55,19 @@ get_clipboard(void)
     return fromcstr_(gtk_clipboard_wait_for_text(clipboard));
 }
 
-void
+static void 
+cb_changed(GtkClipboard *clipboard, gpointer user_data)
+{
+    gtk_main_quit();
+}
+
+static void
 wait_cb_change(void)
 {
-#ifdef HAVEX11
-    Display* disp = XOpenDisplay(NULL);
-    if (!disp) return;
-    Window root = DefaultRootWindow(disp);
-    Atom clip = XInternAtom(disp, "CLIPBOARD", False);
-    XFixesSelectSelectionInput(disp, root, clip,
-			       XFixesSetSelectionOwnerNotifyMask);
-    XEvent evt;
-    XNextEvent(disp, &evt);
-    XCloseDisplay(disp);
-#else
-    sleep(5); // FIXME
-#endif
+    gtk_init(NULL, NULL);
+    GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    g_signal_connect(clipboard, "owner-change", G_CALLBACK(cb_changed), NULL);
+    gtk_main();
 }
 
 /*
@@ -82,90 +80,38 @@ get_sentence(void)
     wait_cb_change();
     return get_clipboard();
 }
+/* -------------- */
 
-#ifdef HAVEX11
-static char*
-get_windowname_single(Display* dpy, Window win)
-{
-    Atom actual_type;
-    int actual_format;
-    unsigned long nitems;
-    unsigned long bytes_after;     /* unused */
-    unsigned char *wname = NULL;
-    int status = !Success;
-
-    Atom atoms[2] = {
-	XInternAtom(dpy, "_NET_WM_NAME", False),
-	XInternAtom(dpy, "WM_NAME", False)
-    };
-
-    for (size_t i = 0; i < countof(atoms) && status != Success; i++)
-    {
-	status = XGetWindowProperty(dpy, win, atoms[i], 0, (~0L),
-				    False, AnyPropertyType, &actual_type,
-				    &actual_format, &nitems, &bytes_after,
-				    &wname);
-    }
-
-    return (char*)wname;
-}
-#endif
-
-/*
- * Returns the window title of the currently active window
- * The return value can be freed using XFree.
- */
 s8
 get_windowname(void)
 {
 #ifdef HAVEX11
-    Display *dpy = XOpenDisplay(NULL);
-    if (!dpy)
-    {
-	error_msg("ERROR: Can't open X display for retrieving the window title. Are you using Linux with X11?");
-	return (s8){ 0 };
-    }
+	XTextProperty text_prop;
 
-    Window foc_win;
-    int revert_to;
-    XGetInputFocus(dpy, &foc_win, &revert_to);
+	Display *dpy = XOpenDisplay(NULL);
+	if (!dpy)
+	{
+	  	debug_msg("Can't open X display for retrieving the window title. Are you using Linux with X11?");
+		return (s8){0};
+	}
 
-    char* wname = get_windowname_single(dpy, foc_win);
+	Window focused_win;
+	int revert_to;
+	XGetInputFocus(dpy, &focused_win, &revert_to);
 
-    // TODO: Need to iterate parent windows for this to work properly
-    /* Window *windows; */
-    /* int nwindows; */
-    /* window_list(context, window_arg, &windows, &nwindows, False); */
-    /* int w_index; */
-    /* for (w_index = 0; w_index < nwindows; w_index++) */
-    /* { */
-    /* 	Window window = windows[w_index]; */
-    /* 	{ */
-    /* 	} */
-    /* } */
+	if (!XGetWMName(dpy, focused_win, &text_prop))
+	{
+		debug_msg("Could not obtain window name.");
+		return (s8){0};
+	}
+	XCloseDisplay(dpy);
 
-    XCloseDisplay(dpy);
-    return fromcstr_(wname);
+	return fromcstr_((char*)text_prop.value);
 #else
-    return (s8){0};
+	// Not implemented
+	return (s8){0};
 #endif
 }
-
-// using gtk4:
-/* static void */
-/* ended (GObject *object) */
-/* { */
-/*   g_object_unref (object); */
-/* } */
-/* void */
-/* play_audio(char* path) */
-/* { */
-/*     GtkMediaStream *stream; */
-/*     stream = gtk_media_file_new_for_filename(path); */
-/*     gtk_media_stream_set_volume(stream, 1.0); */
-/*     gtk_media_stream_play(stream); */
-/*     g_signal_connect(stream, "notify::ended", G_CALLBACK(ended), NULL); */
-/* } */
 
 void
 play_audio(s8 filepath)
@@ -179,28 +125,6 @@ play_audio(s8 filepath)
 	error_msg("Failed to play file %s: %s", filepath.s, error->message);
 	g_error_free(error);
     }
-    frees8(&cmd);
+
+    free(cmd.s);
 }
-
-/* char* */
-/* get_user_data_dir(void) */
-/* { */
-/*     char* data_dir = NULL; */
-/*     const char* data_dir_env = getenv("XDG_DATA_HOME"); */
-
-/*     if (data_dir_env && *data_dir_env) */
-/* 	data_dir = strdup(data_dir_env); */
-/* #ifdef G_OS_WIN32 */
-/*     else */
-/* 	data_dir = get_special_folder(&FOLDERID_LocalAppData); */
-/* #endif */
-/*     if (!data_dir || !data_dir[0]) */
-/*     { */
-/* 	gchar *home_dir = g_build_home_dir(); */
-/* 	g_free(data_dir); */
-/* 	data_dir = g_build_filename(home_dir, ".local", "share", NULL); */
-/* 	g_free(home_dir); */
-/*     } */
-
-/*     return data_dir; */
-/* } */
