@@ -1,10 +1,9 @@
 ## dictpopup
 High priority
-- Automatically place config.ini in ~/.config on install
 
 Mid priority
+- Put lookup string into dictentry struct
 - Implement the reading label as a text view to allow for editing -> initiate new search on Enter press
-- Merge dbreader.c and dbwriter.c
 - Group terms by reading, allow for switching between different readings
 - Implement a small window to manually enter a search string instead of selecting
 - Expand deinflection list
@@ -18,6 +17,7 @@ Mid priority
 - Need some check when looking up a hiragana conversion to prevent things like 賢人会 -> 県人会
 - Don't show circle indicator if Anki is not running / on error
 - Search for audio of inflected selected word (e.g. 下がらない) (optionally)
+- Merge dbreader.c and dbwriter.c
 
 Low priority
 - Fix "Error obtaining window name" on recursive lookup
@@ -40,10 +40,6 @@ Low priority
 - Refactor popup.c
 - Add correct feature test macros
 - Could split Mecab conversion and kata -> hira conversion into separate configuration options
-- Improve portability of non-popup code
-- Don't call the shell for jppron
-  - merge code into this repo?
-- Add command line options for verbosity (esp. showing warnings in dictpopup-create)
 - Skip certain lines on definition add (without selection), e.g.:
   - しず か （しづ—） [1]【静か・▽閑か】
   -（形動）〔文〕ナリ
@@ -65,6 +61,7 @@ Low priority
     "String of space-separated rule identifiers for the definition which is used to validate deinflection.
     An empty string should be used for words which aren't inflected."
 - たいそう gets deinflected to たいい
+- 懐から becomes 懐く
 - 白けた gets deinflected to 白い
 - 目した only gets deinflected to 目す
 - はたきながら (should become はたく)
@@ -72,28 +69,35 @@ Low priority
 - に looks broken
 - 大正門 pulls 大誓文
 - Can't definlect 眠ろうとする, 粘ろうとする
+- 失われ、
+
+freq:
+- いじらしい not present in all
 
 Possible ideas:
-- loading percentage in dictpopup-create
-- A (very small) optimization would be to sort the dictSortOrder string and then use binary search or sth in indexof()
-- Right click on audio button -> open some menu with "copy file to clipboard", ...
-- Consider using an Input Method Framework to draw the popup (to allow mouse pointer positioning for WMs other than X11)
+- Implement a dbus service mode
+  - Keep window in the background and just hide on close
+  - This should allow for near instantaneous lookup (The bottleneck currently is all due to gtk + X11, i.e. starting the window)
+- Consider using an Input Method Framework to draw the popup (to allow for mouse pointer positioning for WMs other than X11)
   - Relevant discussion: https://discourse.gnome.org/t/spawning-window-at-mouse-pointer-using-gtk4/19446/6
   - But I think this won't allow moving / resizing the window
   - Another approach might be using an invisible (transparent) fullscreen window with a popover / popup menu at the mouse pointer
   - Need to look into how goldendict's move() function is implemented (Probably using Qt)
+- Show loading percentage in dictpopup-create
+- Right click on audio button -> open some menu with "copy file to clipboard", ...
 - Write a browser addon which enables using dictpopup just by pressing Shift (like yomichan)
-  - It simply needs to pass the next 50 characters starting from the current mouse position as an argument to dictpopup
+  - It simply needs to pass the next ~50 characters starting from the current mouse position as an argument to dictpopup
   - However I strongly doubt that an extension can execute some program, even if it's a local copy
 - Display a vertical bar to the right for quickly switching between different dictionaries (similar to goldendict's popup)
 - Support hyper links?
   - Could use gtk_label_set_markup, but would need to switch to a label instead of a textview
 - Make dictionary numbers (①, ②, ...) clickable for adding to Anki
-- Implement a dbus service mode
-  - Keep window in the background and just hide on close
+- A (very small) optimization would be to sort the dictSortOrder string and then use binary search or sth in indexof()
 
 To check:
 - definflector.c assumes that constant strings given in the code are utf8 encoded. I don't know if this always has to be true (on Windows)
+
+
 
 Test results for storing compressed dictionary entries:
 - Snappy: 840M -> 734M

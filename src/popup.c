@@ -7,14 +7,20 @@
 #include "jppron.h"
 
 #include "messages.h"
-#define CHECK_AC_RESP(retval)                       \
-	if (!retval.ok)                             \
-	{                                           \
-	    error_msg("%s", ac_resp.data.string);   \
-	    return;                                 \
-	}
+#define CHECK_AC_RESP(retval)                         \
+	do {                                          \
+	    if (!retval.ok)                           \
+	    {                                         \
+		error_msg("%s", ac_resp.data.string); \
+		return;                               \
+	    }                                         \
+	}                                             \
+	while (0)
 
 // TODO: Remove globals or store in struct
+
+typedef struct {
+} popwin;
 
 static GMutex vars_mutex;
 static GCond vars_set_condition;
@@ -38,31 +44,43 @@ static int exists_in_anki = 0;
 gint64 time_last_pron = 0;
 
 
-static void update_window(void);
-static void check_if_exists(void);
 static void play_pronunciation(void);
+static void update_window(void);
+static void enable_buttons(void);
+static void anki_check_exists(void);
 
 void
 dictionary_data_done(dictentry* passed_dict)
 {
     g_mutex_lock(&vars_mutex);
+
     dict = passed_dict;
+    curent = dictentry_at_index(dict, curent_num);
     dict_data_ready = TRUE;
+
     while (!gtk_vars_set)
 	g_cond_wait(&vars_set_condition, &vars_mutex);
+
     g_mutex_unlock(&vars_mutex);
 
-    curent = dictentry_at_index(dict, curent_num);
 
     if (cfg.pron.onStart)
 	play_pronunciation();
 
     update_window();
-    check_if_exists();     // Check only once
+    enable_buttons();
+    anki_check_exists();     // Check only once
 }
 
 static void
-check_if_exists(void)
+enable_buttons(void)
+{
+    // TODO: Implement
+    // Buttons should be disabled at the beginning
+}
+
+static void
+anki_check_exists(void)
 {
     if (!cfg.anki.checkExisting || !cfg.anki.enabled)
 	return;
@@ -109,15 +127,22 @@ play_pronunciation(void)
 static void
 draw_dot(cairo_t *cr)
 {
-    if (exists_in_anki == 1)
-	cairo_set_source_rgb(cr, 0, 1, 0);         // green
-    else if (exists_in_anki == 2)
-	cairo_set_source_rgb(cr, 1, 0.5, 0);         //orange
-    else
-	cairo_set_source_rgb(cr, 1, 0, 0);         // red
+    switch (exists_in_anki)
+    {
+	case 0:
+	    cairo_set_source_rgb(cr, 1, 0, 0);         // red
+	    break;
+	case 1:
+	    cairo_set_source_rgb(cr, 0, 1, 0);         // green
+	    break;
+	case 2:
+	    cairo_set_source_rgb(cr, 1, 0.5, 0);       //orange
+	    break;
+	default:
+	    debug_msg("Encountered unkown color for exists dot");
 
+    }
     cairo_arc(cr, 6, 6, 6, 0, 2 * G_PI);
-
     cairo_fill(cr);
 }
 
@@ -162,27 +187,30 @@ update_dictname_info(void)
 static void
 update_frequency_info(void)
 {
-    char tmp[11];
-    char* freqstr = curent.frequency == INT_MAX ? "" : tmp;
-    if (freqstr == tmp) snprintf(tmp, sizeof(tmp), "%d", curent.frequency);
+    char tmp[12];
+    char* freqstr = curent.frequency == -1 ? "" : tmp;
+    if (freqstr == tmp)
+	snprintf(tmp, sizeof(tmp), "%d", curent.frequency);
     gtk_label_set_text(GTK_LABEL(lbl_freq), freqstr);
 }
 
 static void
 update_cur_reading(void)
 {
-    s8 txt = {0};
+    s8 txt = { 0 };
     if (curent.kanji.len && curent.reading.len)
     {
 	if (s8equals(curent.kanji, curent.reading))
-	      txt = s8dup(curent.reading.len ? curent.reading : curent.kanji);
+	    txt = s8dup(curent.reading.len ? curent.reading : curent.kanji);
 	else
-	      txt = concat(curent.reading, S("【"), curent.kanji, S("】"));
+	    txt = concat(curent.reading, S("【"), curent.kanji, S("】"));
     }
-    else if (curent.reading.len || curent.kanji.len)
-	txt = s8dup(curent.reading.len ? curent.reading : curent.kanji);
+    else if (curent.reading.len)
+	txt = s8dup(curent.reading);
+    else if (curent.kanji.len)
+	txt = s8dup(curent.kanji);
     else
-	return;
+	txt = s8dup(S(""));
 
     gtk_label_set_text(GTK_LABEL(lbl_cur_reading), (char*)txt.s);
     frees8(&txt);
@@ -318,8 +346,6 @@ search_in_anki_browser(void)
 static void
 button_press(GtkWidget *widget, GdkEventButton *event)
 {
-    assert(event);
-
     if (event->type == GDK_BUTTON_PRESS)
 	search_in_anki_browser();
 }
@@ -407,7 +433,6 @@ activate(GtkApplication* app, gpointer user_data)
     gtk_text_view_set_editable(GTK_TEXT_VIEW(dict_tw), FALSE);
     gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(dict_tw), GTK_WRAP_CHAR);
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(dict_tw), FALSE);
-    /* gtk_text_view_set_indent(GTK_TEXT_VIEW(dict_tw), -2); */
 
     set_margins();
     /* ------------------------------------- */
@@ -416,7 +441,7 @@ activate(GtkApplication* app, gpointer user_data)
     GtkWidget *bottom_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, spacing_between_widgets);
     gtk_box_pack_start(GTK_BOX(main_vbox), bottom_bar, 0, 0, 0);
 
-    lbl_freq = gtk_label_new("test");
+    lbl_freq = gtk_label_new(NULL);
     gtk_box_pack_start(GTK_BOX(bottom_bar), lbl_freq, FALSE, FALSE, 0);
 
     lbl_dictname = gtk_label_new(NULL);

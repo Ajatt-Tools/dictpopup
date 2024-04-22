@@ -39,8 +39,7 @@ make && sudo make install
 ```
 #### If you do not use X11
 Then you can replace the `make` command above with `make O_HAVEX11=0`.\
-This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window and also for listening for clipboard updates.
-This means adding sentences to Anki won't be very pleasant.
+This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window.
 
 ## Setup
 After the program installation you need to create a database where the dictionary entries are read from.
@@ -73,23 +72,21 @@ This will allow for a faster lookup.
 
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.
-If something is not working as expected, you can add the command line argument `-d` to receive debug messages on standard output.
+If something is not working as expected, you can add the command line argument `-d` to receive debug messages or add `-c` to print the config on stdout.
 
-The "+" sign adds the currently shown definition to Anki after prompting you to select a sentence.
-If there is a selection, it will be used instead as a definition.
+The "+" sign adds the currently shown definition to Anki after prompting you to copy a sentence.
+If there is text selected in the popup window, it will be used instead as a definition.
 
 The green/red dot indicates whether the word is already present in your Anki collection.
 It displays an orange dot if there exist corresponding cards, but which are all suspended.
-
-The popup can be closed with `q` or `Esc`.
 
 ## Keybindings
 
 - Next entry: `n`, `s`
 - Previous entry: `p`, `a`
-- Create an Anki card: `<Ctrl>+s`
+- Create an Anki card: `Ctrl+s`
 - Play audio: `r`
-- Exit: `q`, `<Esc>`
+- Exit: `q`, `Esc`
 
 ## Contact
 If you are having trouble setting up the program, don't hesitate to open up an [issue](https://github.com/btrkeks/dictpopup/issues) or write me an [email](mailto:butterkeks@fedora.email).
