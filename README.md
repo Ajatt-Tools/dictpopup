@@ -14,7 +14,7 @@ See `TODO.txt` for more.
  * Deinflect
  * Kanjify e.g. お前 -> 御前
  * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
- * Sort dictionary entries by frequency (requires a frequency dictionary. I recommend: CC100)
+ * Sort dictionary entries by frequency (requires a frequency dictionary. I recommend CC100)
  * Fall back to a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
  * Play a pronunciation on lookup / button press (requires files see [Pronuncation](#pronunciation))
  * Add word with selected definition to Anki
@@ -45,6 +45,8 @@ This will disable X11 related code, which is currently responsible for obtaining
 After the program installation you need to create a database where the dictionary entries are read from.
 This is done via `dictpopup-create` which creates the database from all Yomichan dictionaries in the current directory.
 Without arguments it stores the database in the default location `~/.local/share/dictpopup` which is also the default search path.
+
+You can also include a frequency dictionary in there, but only one (it will give an error if you add more, because I don't think that mixing makes sense).
 
 ## Configuration
 Copy the example config `config.ini` of the repo to `~/.config/dictpopup/config.ini` and configure it according to your setup. 
