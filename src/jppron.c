@@ -387,7 +387,7 @@ add_from_index(database db, char* index_path, s8 curdir)
 		 && json_get_depth(s) == 1
 		 && type == JSON_OBJECT_END)
 	{
-	    reading_files = false;
+	    /* reading_files = false; */
 	    break;
 	}
 	else if (reading_files && type == JSON_STRING)
@@ -531,17 +531,17 @@ static fileinfo
 getfileinfo(database db, s8 fn)
 {
     s8 data = getfromdb2(db, fn);
-    s8 d = data;
-
     s8 data_split[4] = { 0 };
+
+    s8 d = data;
     for (int i = 0; i < countof(data_split) && d.len > 0; i++)
     {
+	assert(d.len > 0);
+
 	size len = 0;
-	for (; len < d.len; len++)
-	{
-	    if (d.s[len] == '\0')
-		break;
-	}
+	while(len < d.len && d.s[len] != '\0')
+	  len++;
+
 	data_split[i] = news8(len);
 	u8copy(data_split[i].s, d.s, data_split[i].len);
 
@@ -595,7 +595,7 @@ play_word(s8 word, s8 reading, s8 database_path)
 	}
 	if (!match)
 	{
-	    msg("Could not find an audio file with corresponding reading. Playing all..");
+	    debug_msg("Could not find an audio file with corresponding reading. Playing all..");
 	    reading.len = 0;
 	}
     }
@@ -618,7 +618,7 @@ play_word(s8 word, s8 reading, s8 database_path)
 }
 
 static s8
-get_database_path()
+get_database_path(void)
 {
     return fromcstr_(g_build_filename(g_get_user_data_dir(), "jppron", NULL));
 }

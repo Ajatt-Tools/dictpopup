@@ -17,7 +17,6 @@ s8* deinflect(s8 word);
 s8 kanji2hira(s8 input);
 
 /*
- * Converts all katakana characters in @kata_in into its hiragana counterparts.
- * Returns a newly allocated s8
+ * Converts all katakana characters in @kata_in into its hiragana counterparts (inplace).
  */
 void kata2hira(s8 kata_in);

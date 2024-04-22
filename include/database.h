@@ -3,6 +3,7 @@
 #include "util.h"
 
 typedef struct {
+  stringbuilder_s lastval;
   MDB_env *env;
   MDB_dbi dbi1;
   MDB_dbi dbi2;

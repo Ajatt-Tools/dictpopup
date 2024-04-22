@@ -16,6 +16,7 @@ typedef int32_t   i32;
 typedef uint32_t  u32;
 typedef ptrdiff_t size;
 
+#define new(type, num)	xcalloc(num, sizeof(type))
 static void*
 xcalloc(size_t nmemb, size_t nbytes)
 {
@@ -60,7 +61,7 @@ s8fromcstr(char* z)
 }
 
 typedef struct {
-	u8 *data;
+	u8* data;
     	size len;
     	size cap;
 } stringbuilder_s;
@@ -70,7 +71,7 @@ sb_init(stringbuilder_s *b, size_t init_cap)
 {
     b->len = 0;
     b->cap = init_cap;
-    b->data = xcalloc(1, b->cap);
+    b->data = new(u8, b->cap);
 }
 
 static void
@@ -195,7 +196,7 @@ json_escape_str(char const* str)
 }
 /* END UTILS */
 
-typedef size_t (*ResponseFunc)(char *ptr, size_t size, size_t nmemb, void *userdata);
+typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
 
 void
 ankicard_free(ankicard ac)
@@ -248,7 +249,7 @@ sendRequest(s8 request, ResponseFunc response_checker)
 }
 
 static size_t
-search_checker(char *ptr, size_t size, size_t nmemb, void *userdata)
+search_checker(char *ptr, size_t len, size_t nmemb, void *userdata)
 {
 	assert(userdata);
 	retval_s* ret = userdata;
@@ -342,14 +343,18 @@ get_array_len(char* array[static 1])
 static char**
 json_escape_str_array(int n, char** array)
 {
-    n = n < 0 ? get_array_len(array) : n;
+    if (!array)
+      return NULL;
 
-    char **output = g_new(char*, (gsize)(n + 1));
+    if (n < 0)
+      n = get_array_len(array);
+
+    char **r = new(char*, n + 1);
     for (int i = 0; i < n; i++)
-	  output[i] = json_escape_str(array[i]);
-    output[n] = NULL;
+	  r[i] = json_escape_str(array[i]);
+    r[n] = NULL;
     
-    return output;
+    return r;
 }
 
 /*
@@ -369,19 +374,8 @@ ankicard_dup_json_esc(ankicard const ac)
 	};
 }
 
-static char*
-check_card(ankicard const ac)
-{
-	return !ac.deck ? "No deck specified."
-	     : !ac.notetype ? "No notetype specified."
-	     : !ac.num_fields ? "Number of fields is 0"
-	     : !ac.fieldnames ? "No fieldnames provided."
-	     : !ac.fieldentries ? "No fieldentries provided."
-	     : NULL;
-}
-
 static size_t
-check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata)
+check_add_response(char* ptr, size_t len, size_t nmemb, void* userdata)
 {
 	assert(userdata);
 	retval_s* ret = userdata;
@@ -392,6 +386,17 @@ check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata)
 		*ret = (retval_s) { .data.string = ptr, .ok = false };
 
 	return nmemb;
+}
+
+static char*
+check_card(ankicard const ac)
+{
+	return !ac.deck ? "No deck specified."
+	     : !ac.notetype ? "No notetype specified."
+	     : !ac.num_fields ? "Number of fields is 0"
+	     : !ac.fieldnames ? "No fieldnames provided."
+	     : !ac.fieldentries ? "No fieldentries provided."
+	     : NULL;
 }
 
 retval_s
@@ -430,6 +435,7 @@ ac_addNote(ankicard const ac)
 	    )
 	);
 
+	assert(ac_je.fieldnames && ac_je.fieldentries);
 	for (size_t i = 0; i < ac_je.num_fields; i++)
 	{
 	      if(i)

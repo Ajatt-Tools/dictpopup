@@ -398,6 +398,13 @@ sb_gets8(stringbuilder_s sb)
 }
 
 void
+sb_set(stringbuilder_s sb[static 1], s8 s)
+{
+    sb->len = 0;
+    sb_append(sb, s);
+}
+
+void
 sb_free(stringbuilder_s sb[static 1])
 {
     free(sb->data);

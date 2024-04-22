@@ -14,7 +14,6 @@
 	if ((rc = call) != MDB_SUCCESS) {                            \
 	    fatal("Database error: %s", mdb_strerror(rc));           \
 	}
-static int rc;
 
 static MDB_env* env = 0;
 static MDB_dbi dbi1 = 0;
@@ -25,6 +24,7 @@ static MDB_txn* txn = 0;
 void
 open_database(void)
 {
+    int rc;
     MDB_CHECK(mdb_env_create(&env));
     mdb_env_set_maxdbs(env, 3);
 
@@ -53,24 +53,29 @@ close_database(void)
     txn = 0;
 }
 
-// valid until closure of db
+// Needs to be freed
 u32*
 db_getids(s8 key, size_t num[static 1])
 {
+    int rc;
     MDB_val key_mdb = (MDB_val) { .mv_data = key.s, .mv_size = (size_t)key.len };
-    MDB_val val_mdb;
+    MDB_val val_mdb = {0};
 
     MDB_cursor* cursor;
     MDB_CHECK(mdb_cursor_open(txn, dbi1, &cursor));
     if ((rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET)) == MDB_NOTFOUND)
+    {
+	mdb_cursor_close(cursor);
 	return NULL;
+    }
     MDB_CHECK(rc);
     MDB_CHECK(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE)); // Reads up to a page, i.e. max 1024 entries
+									     
     mdb_cursor_close(cursor);
 
     *num = val_mdb.mv_size / sizeof(u32);
-    u32* buf = new(u32, *num); // ensures proper alignment
-    memcpy(buf, val_mdb.mv_data, val_mdb.mv_size);
+    u32* buf = new(u32, *num);
+    memcpy(buf, val_mdb.mv_data, val_mdb.mv_size); // ensures proper alignment
     return buf;
 }
 
@@ -82,6 +87,7 @@ db_getids(s8 key, size_t num[static 1])
 s8
 db_getdata(u32 id)
 {
+	int rc;
 	MDB_val key = (MDB_val){ .mv_data = &id, .mv_size = sizeof(id) };
 	MDB_val data = {0};
 	MDB_CHECK(mdb_get(txn, dbi2, &key, &data));
@@ -94,8 +100,9 @@ db_getfreq(s8 key)
     MDB_val key_m = (MDB_val) { .mv_data = key.s, .mv_size = (size_t)key.len };
     MDB_val val_m = { 0 };
 
+    int rc;
     if ((rc = mdb_get(txn, dbi3, &key_m, &val_m)) == MDB_NOTFOUND)
-	return INT_MAX;
+	return -1;
     MDB_CHECK(rc);
 
     int val;

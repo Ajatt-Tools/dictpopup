@@ -206,6 +206,7 @@ static void
 atou_form(s8 word, ptrdiff_t len_ending)
 {
     word.len -= len_ending;
+    assert(word.len >= 0);
 
     IF_ENDSWITH_REPLACE("", "る");
     IF_ENDSWITH_REPLACE("さ", "す");
@@ -217,8 +218,6 @@ atou_form(s8 word, ptrdiff_t len_ending)
     IF_ENDSWITH_REPLACE("わ", "う");
     IF_ENDSWITH_REPLACE("な", "ぬ");
     IF_ENDSWITH_REPLACE("ら", "る");
-
-    word.len += len_ending;
 }
 
 /*
@@ -231,6 +230,7 @@ static void
 itou_form(s8 word, ptrdiff_t len_ending)
 {
     word.len -= len_ending;
+    assert(word.len >= 0);
 
     IF_ENDSWITH_REPLACE("", "る");     // Word can alway be a る-verb, e.g. 生きます
     IF_ENDSWITH_REPLACE("し", "す");
@@ -242,8 +242,6 @@ itou_form(s8 word, ptrdiff_t len_ending)
     IF_ENDSWITH_REPLACE("い", "う");
     IF_ENDSWITH_REPLACE("に", "ぬ");
     IF_ENDSWITH_REPLACE("り", "る");
-
-    word.len += len_ending;
 }
 
 static void
@@ -413,9 +411,7 @@ deinflect(s8 word)
 	deinflect_one_iter(deinfs[i]);
 
     // Checking for stem form
-    // TODO: Is there a stem form which gets wrongly deinflected above?
-    if (buf_size(deinfs) == 0)
-	itou_form(word, 0);
+    itou_form(word, 0);
 
     return deinfs;
 }

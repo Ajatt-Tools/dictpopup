@@ -32,7 +32,7 @@ map_entry(possible_entries_s p, int i)
 {
     // A safer way would be switching to strings, but I feel like that's
     // not very practical to configure
-    return     i == 0 ? (s8){ 0 }
+    return     i == 0 ? S("")
 	     : i == 1 ? p.lookup
 	     : i == 2 ? p.copiedsent
 	     : i == 3 ? p.boldsent
@@ -42,7 +42,7 @@ map_entry(possible_entries_s p, int i)
 	     : i == 7 ? p.furigana
 	     : i == 8 ? p.windowname
 	     : i == 9 ? p.dictname
-	     : (s8){ 0 };
+	     : S("");
 }
 
 static s8
@@ -50,12 +50,12 @@ add_bold_tags(s8 sent, s8 word)
 {
     s8 bdword = concat(S("<b>"), word, S("</b>"));
 
-    GString* bdsent = g_string_new_len((gchar*)sent.s, (gssize)sent.len);
     assert(word.s[word.len] == '\0');
-    assert(bdword.s[bdword.len] == '\0');
+
+    GString* bdsent = g_string_new_len((gchar*)sent.s, (gssize)sent.len);
     g_string_replace(bdsent, (char*)word.s, (char*)bdword.s, 0);
 
-    frees8(&bdword);
+    free(bdword.s);
 
     s8 ret = { 0 };
     ret.len = bdsent->len;
@@ -66,8 +66,8 @@ add_bold_tags(s8 sent, s8 word)
 static s8
 create_furigana(s8 kanji, s8 reading)
 {
-    return !kanji.len && !reading.len ? (s8){ 0 }
-	     : !reading.len ? (s8){ 0 } // Leave it to AJT Japanese
+    return !kanji.len && !reading.len ? S("")
+	     : !reading.len ? S("") // Leave it to AJT Japanese
 	     : !kanji.len ? s8dup(reading)
 	     : s8equals(kanji, reading) ? s8dup(reading)
 	     : concat(kanji, S("["), reading, S("]")); // TODO: Obviously not enough if kanji contains hiragana
@@ -98,7 +98,7 @@ getfreq(s8 kanji, s8 reading)
 {
     s8 key = concat(kanji, S("\0"), reading);
     int freq = db_getfreq(key);
-    frees8(&key);
+    free(key.s);
     return freq;
 }
 
@@ -145,7 +145,7 @@ lookup_add_to_dict(dictentry* dict[static 1], s8 word)
     {
 	for (size_t i = 0; i < n_ids; i++)
 	{
-	    s8 de_data = db_getdata(ids[i]);
+	    const s8 de_data = db_getdata(ids[i]);
 	    dictentry de = data_to_dictent(de_data);
 	    dictionary_add(dict, de);
 	}
@@ -163,7 +163,7 @@ add_deinflections_to_dict(dictentry* dict[static 1], s8 word)
 }
 
 static int
-indexof(char* str, char* arr[])
+indexof(char const* str, char* arr[])
 {
     if (str && arr)
     {
@@ -179,29 +179,29 @@ indexof(char* str, char* arr[])
 static int
 dictentry_comparer(void const* voida, void const* voidb)
 {
-    dictentry* a = (dictentry*)voida;
-    dictentry* b = (dictentry*)voidb;
-    assert(a && b);
+    assert(voida && voidb);
+    dictentry a = *(dictentry*)voida;
+    dictentry b = *(dictentry*)voidb;
 
     int inda = 0, indb = 0;
-    if (s8equals(a->dictname, b->dictname))
+    if (s8equals(a.dictname, b.dictname))
     {
-	inda = a->frequency;
-	indb = b->frequency;
+	inda = a.frequency == -1 ? INT_MAX : a.frequency;
+	indb = b.frequency == -1 ? INT_MAX : b.frequency;
     }
     else
     {
-	inda = indexof((char*)a->dictname.s, cfg.general.dictSortOrder);
-	indb = indexof((char*)b->dictname.s, cfg.general.dictSortOrder);
+	inda = indexof((char*)a.dictname.s, cfg.general.dictSortOrder);
+	indb = indexof((char*)b.dictname.s, cfg.general.dictSortOrder);
     }
 
-    return inda < indb ? -1
+    return   inda < indb ? -1
 	   : inda == indb ? 0
 	   : 1;
 }
 
 static void
-fill_dictionary_with(dictentry* dict[static 1], s8 word)
+fill_dict_with(dictentry* dict[static 1], s8 word)
 {
     lookup_add_to_dict(dict, word);
     add_deinflections_to_dict(dict, word);
@@ -216,12 +216,12 @@ create_dictionary(void* voidin)
     dictentry* dict = NULL;
 
     open_database();
-    fill_dictionary_with(&dict, *lookup);
+    fill_dict_with(&dict, *lookup);
     if (dictlen(dict) == 0 && cfg.general.mecab)
     {
 	s8 hira = kanji2hira(*lookup);
-	fill_dictionary_with(&dict, hira);
-	frees8(&hira);
+	fill_dict_with(&dict, hira);
+	free(hira.s);
     }
     if (dictlen(dict) == 0 && cfg.general.substringSearch)
     {
@@ -229,7 +229,7 @@ create_dictionary(void* voidin)
 	while (dictlen(dict) == 0 && lookup->len > first_chr_len)
 	{
 	    *lookup = s8striputf8chr(*lookup);
-	    fill_dictionary_with(&dict, *lookup);
+	    fill_dict_with(&dict, *lookup);
 	}
     }
     close_database();
@@ -239,8 +239,8 @@ create_dictionary(void* voidin)
 	msg("No dictionary entry found");
 	exit(EXIT_FAILURE);
     }
-
     assert(dict);
+
     if (cfg.general.sort)
 	qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
 

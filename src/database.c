@@ -17,8 +17,6 @@
 	    }                                            \
 	} while (0)
 
-s8 last_added_key = { 0 };
-
 database
 opendb(const char* path, bool readonly)
 {
@@ -27,14 +25,12 @@ opendb(const char* path, bool readonly)
     MDB_CHECK(mdb_env_create(&db.env));
     MDB_CHECK(mdb_env_set_maxdbs(db.env, 2));
 
-    if (readonly)
-    {
-	db.readonly = true;
+    db.readonly = readonly;
+
+    if (db.readonly)
 	MDB_CHECK(mdb_env_open(db.env, path, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
-    }
     else
     {
-	db.readonly = false;
 	unsigned int mapsize = 2147483648; // 2 Gb max
 	MDB_CHECK(mdb_env_set_mapsize(db.env, mapsize));
 
@@ -42,6 +38,8 @@ opendb(const char* path, bool readonly)
 	MDB_CHECK(mdb_txn_begin(db.env, NULL, 0, &db.txn));
 	MDB_CHECK(mdb_dbi_open(db.txn, "dbi1", MDB_DUPSORT | MDB_CREATE, &db.dbi1));
 	MDB_CHECK(mdb_dbi_open(db.txn, "dbi2", MDB_CREATE, &db.dbi2));
+
+	db.lastval = sb_init(200);
     }
 
     return db;
@@ -50,9 +48,9 @@ opendb(const char* path, bool readonly)
 void
 closedb(database db)
 {
-    int rc;
     if (!db.readonly)
     {
+	int rc;
 	MDB_CHECK(mdb_txn_commit(db.txn));
 	mdb_dbi_close(db.env, db.dbi1);
 	mdb_dbi_close(db.env, db.dbi2);
@@ -74,7 +72,7 @@ addtodb1(database db, s8 key, s8 val)
     rc = mdb_put(db.txn, db.dbi1, &mdb_key, &mdb_val, MDB_NOOVERWRITE);
     if (rc == MDB_KEYEXIST)
     {
-	if (s8equals(last_added_key, key))
+	if (s8equals(sb_gets8(db.lastval), key))
 	{
 	    mdb_val = (MDB_val){ .mv_data = val.s, .mv_size = (size_t)val.len };
 	    rc = mdb_put(db.txn, db.dbi1, &mdb_key, &mdb_val, 0);
@@ -87,10 +85,7 @@ addtodb1(database db, s8 key, s8 val)
 	MDB_CHECK(rc);
 
     if (rc == MDB_SUCCESS)
-    {
-	frees8(&last_added_key);
-	last_added_key = s8dup(key);
-    }
+	sb_set(&db.lastval, key);
 }
 
 /*

@@ -121,6 +121,7 @@ typedef struct {
 stringbuilder_s sb_init(size_t init_cap);
 void sb_append(stringbuilder_s* b, s8 str);
 s8 sb_gets8(stringbuilder_s sb);
+void sb_set(stringbuilder_s sb[static 1], s8 s);
 void sb_free(stringbuilder_s sb[static 1]);
 /* ------------------------------------------------------------------_ */
 
