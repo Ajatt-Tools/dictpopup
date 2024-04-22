@@ -36,9 +36,10 @@ static settings const default_cfg = {
     .pron.dirPath = NULL, // Don't guess
 };
 settings cfg = default_cfg;
+bool print_cfg = false;
 
 static void
-set_runtime_defaults()
+set_runtime_defaults(void)
 {
     if (!cfg.general.dbpth)
     {
@@ -53,11 +54,14 @@ parse_cmd_line_opts(int argc, char** argv)
     int c;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "d")) != -1)
+    while ((c = getopt(argc, argv, "dc")) != -1)
 	switch (c)
 	{
 	case 'd':
 	    cfg.args.debug = 1;
+	    break;
+	case 'c':
+	    print_cfg = 1;
 	    break;
 	case '?':
 	    fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
@@ -319,4 +323,7 @@ read_user_settings(int fieldmapping_max)
     frees8(&cfgpth);
 
     set_runtime_defaults();
+
+    if (print_cfg)
+      print_settings();
 }
