@@ -24,8 +24,8 @@ DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-p
 	     -fsanitize=undefined,address -fsanitize-undefined-trap-on-error
 RELEASE_CFLAGS=-O3 -flto -march=native
 
-FILES=popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
-FILES_H=ankiconnectc.h dbreader.h deinflector.h popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
+FILES=gtk3popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
+FILES_H=ankiconnectc.h dbreader.h deinflector.h gtk3popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
 SRC=$(addprefix $(SDIR)/,$(FILES))
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
 

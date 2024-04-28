@@ -11,7 +11,7 @@
 #include "ankiconnectc.h"
 #include "util.h"
 #include "platformdep.h"
-#include "popup.h"
+#include "gtk3popup.h"
 #include "messages.h"
 
 #define POSSIBLE_ENTRIES_S_NMEMB 9
