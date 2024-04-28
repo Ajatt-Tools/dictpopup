@@ -23,7 +23,7 @@ See `TODO.txt` for more.
  * Fast and memory efficient
 
 ## Dependencies
-x11, gtk3, mecab, [lmdb](https://www.symas.com/lmdb), ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
+libx11, gtk3, mecab, [lmdb](https://www.symas.com/lmdb), ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
 
 ## Installation
 ### Arch Linux
@@ -33,13 +33,14 @@ Install the AUR package `dictpopup`.
 First make sure, that you have all necessary dependencies installed.\
 Then 
 ```bash
-git clone --recursive "https://github.com/btrkeks/dictpopup.git"
+git clone "https://github.com/btrkeks/dictpopup.git"
 cd dictpopup
 make && sudo make install
 ```
 #### If you do not use X11
 Then you can replace the `make` command above with `make O_HAVEX11=0`.\
 This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window.
+But please note that Wayland does not support moving windows. Hence the popup will always be displayed at the top left corner in that case.
 
 ## Setup
 After the program installation you need to create a database where the dictionary entries are read from.
