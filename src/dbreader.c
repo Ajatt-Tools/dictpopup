@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
+#include <unistd.h> // for access()
 
 #include "settings.h" // for dbpath
 
@@ -109,4 +110,13 @@ db_getfreq(s8 key)
     assert(sizeof(val) == val_m.mv_size);
     memcpy(&val, val_m.mv_data, sizeof(val)); // ensures proper alignment
     return val;
+}
+
+i32
+db_exists(s8 dbpath)
+{
+    s8 dbfile = buildpath(dbpath, S("data.mdb"));
+    i32 exists = (access((char*)dbfile.s, R_OK) == 0);
+    frees8(&dbfile);
+    return exists;
 }

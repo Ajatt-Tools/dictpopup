@@ -276,6 +276,9 @@ main(int argc, char** argv)
     int nextarg = parse_cmd_line_opts(argc, argv); // Needs to be first
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
 
+    if (!db_exists(fromcstr_(cfg.general.dbpth)))
+      fatal("Database does not exist. You must create it first with dictpoup-create.");
+
     possible_entries_s p = { 0 };
     p.windowname = get_windowname();
     p.lookup = argc - nextarg > 0 ? fromcstr_(argv[nextarg]) : get_selection();

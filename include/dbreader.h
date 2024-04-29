@@ -14,3 +14,4 @@ void close_database(void);
 s8 db_getdata(u32 id);
 u32* db_getids(s8 key, size_t len[static 1]);
 int db_getfreq(s8 key);
+i32 db_exists(s8 dbpath);
