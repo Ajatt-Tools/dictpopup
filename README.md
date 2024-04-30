@@ -25,7 +25,9 @@ See `TODO.txt` for more.
  * Fast and memory efficient
 
 ## Dependencies
-libx11, gtk3, mecab, [lmdb](https://www.symas.com/lmdb), ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
+lmdb, mecab, gtk3, libx11, curl, libnotify, libzip\
+[AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)\
+ffplay (optional, for pronunciation)
 
 ## Installation
 ### Arch Linux
