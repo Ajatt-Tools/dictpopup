@@ -5,6 +5,7 @@
 #include "ankiconnectc.h"
 #include "util.h"
 #include "jppron.h"
+#include "dictpopup.h"
 
 #include "messages.h"
 #define CHECK_AC_RESP(retval)                         \
@@ -17,11 +18,9 @@
 	}                                             \
 	while (0)
 
+#define PRON_DEBOUNCE_MICROSEC 500000
+
 // TODO: Remove globals or store in struct
-
-typedef struct {
-} popwin;
-
 static GMutex vars_mutex;
 static GCond vars_set_condition;
 static gboolean gtk_vars_set = FALSE;
@@ -31,52 +30,28 @@ static dictentry* dict = NULL;
 static dictentry curent = { 0 };
 static size curent_num = 0;
 
-static GtkWidget *window = NULL;
-static GtkWidget *dict_tw;
+static GtkWidget* window = NULL;
+static GtkWidget* dict_tw;
 static GtkTextBuffer *dict_tw_buffer;
-static GtkWidget *lbl_dictnum;
-static GtkWidget *lbl_dictname;
-static GtkWidget *lbl_freq;
-static GtkWidget *lbl_cur_reading;
-static GtkWidget *exists_dot;
+static GtkWidget* lbl_dictnum;
+static GtkWidget* lbl_dictname;
+static GtkWidget* lbl_freq;
+static GtkWidget* lbl_cur_reading;
+static GtkWidget* exists_dot;
 
 static int exists_in_anki = 0;
 gint64 time_last_pron = 0;
 
-
-static void play_pronunciation(void);
-static void update_window(void);
-static void enable_buttons(void);
-static void anki_check_exists(void);
-
-void
-dictionary_data_done(dictentry* passed_dict)
-{
-    g_mutex_lock(&vars_mutex);
-
-    dict = passed_dict;
-    curent = dictentry_at_index(dict, curent_num);
-    dict_data_ready = TRUE;
-
-    while (!gtk_vars_set)
-	g_cond_wait(&vars_set_condition, &vars_mutex);
-
-    g_mutex_unlock(&vars_mutex);
-
-
-    if (cfg.pron.onStart)
-	play_pronunciation();
-
-    update_window();
-    enable_buttons();
-    anki_check_exists();     // Check only once
-}
+typedef struct {
+    bool create_ac;
+    dictentry de;
+} window_ret_s;
 
 static void
 enable_buttons(void)
 {
     // TODO: Implement
-    // Buttons should be disabled at the beginning
+    // Buttons should be disabled at the beginning when still loading
 }
 
 static void
@@ -115,7 +90,7 @@ static void
 play_pronunciation(void)
 {
     gint64 time_now = g_get_monotonic_time();
-    if ((time_now - time_last_pron) < 500000) // 500ms
+    if ((time_now - time_last_pron) < PRON_DEBOUNCE_MICROSEC)
 	return;
     time_last_pron = time_now;
 
@@ -129,18 +104,17 @@ draw_dot(cairo_t *cr)
 {
     switch (exists_in_anki)
     {
-	case 0:
-	    cairo_set_source_rgb(cr, 1, 0, 0);         // red
-	    break;
-	case 1:
-	    cairo_set_source_rgb(cr, 0, 1, 0);         // green
-	    break;
-	case 2:
-	    cairo_set_source_rgb(cr, 1, 0.5, 0);       //orange
-	    break;
-	default:
-	    debug_msg("Encountered unkown color for exists dot");
-
+    case 0:
+	cairo_set_source_rgb(cr, 1, 0, 0);             // red
+	break;
+    case 1:
+	cairo_set_source_rgb(cr, 0, 1, 0);             // green
+	break;
+    case 2:
+	cairo_set_source_rgb(cr, 1, 0.5, 0);           //orange
+	break;
+    default:
+	debug_msg("Encountered unkown color for exists dot");
     }
     cairo_arc(cr, 6, 6, 6, 0, 2 * G_PI);
     cairo_fill(cr);
@@ -231,30 +205,19 @@ update_window(void)
 }
 
 static gboolean
-change_de(char c)
+change_de(GtkButton* self, gpointer user_data)
 {
-    assert(c == '+' || c == '-');
+    int c = GPOINTER_TO_INT(user_data);
+    assert(c == 1 || c == -1);
 
-    if (c == '+')
+    if (c == 1)
 	curent_num = (curent_num != dictlen(dict) - 1) ? curent_num + 1 : 0;
-    else if (c == '-')
+    else if (c == -1)
 	curent_num = (curent_num != 0) ? curent_num - 1 : dictlen(dict) - 1;
 
     curent = dictentry_at_index(dict, curent_num);
     update_window();
     return TRUE;
-}
-
-static void
-change_de_up(void)
-{
-    change_de('+');
-}
-
-static void
-change_de_down(void)
-{
-    change_de('-');
 }
 
 static void
@@ -264,21 +227,23 @@ close_window(void)
 }
 
 static gboolean
-add_anki(void)
+add_anki(GtkWidget* widget, gpointer user_data)
 {
+    window_ret_s* r = (window_ret_s*)user_data;
+      
     g_mutex_lock(&vars_mutex);
     if (!dict_data_ready)
 	return FALSE;
     g_mutex_unlock(&vars_mutex);
 
-    curent = dictentry_dup(curent);
+    r->de = dictentry_dup(curent);
     dictionary_free(&dict);
 
     GtkTextIter start, end;
     if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end))     // Use text selection if existing
     {
-	frees8(&curent.definition);
-	curent.definition = fromcstr_(gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE));
+	frees8(&r->de.definition);
+	r->de.definition = fromcstr_(gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE));
     }
 
     close_window();
@@ -286,29 +251,28 @@ add_anki(void)
 }
 
 static gboolean
-quit(void)
+key_press_on_win(GtkWidget* win, GdkEventKey* event, gpointer user_data)
 {
-    curent = (dictentry){ 0 };
-    dictionary_free(&dict);
-
-    close_window();
-    return TRUE;
-}
-
-static gboolean
-key_press_on_win(GtkWidget *widget, GdkEventKey *event)
-{
-    /* Keyboard shortcuts */
-    if (event->keyval == GDK_KEY_Escape || event->keyval == GDK_KEY_q)
-	return quit();
-    else if ((event->state & GDK_CONTROL_MASK) && (event->keyval == GDK_KEY_s))
-	return add_anki();
-    else if (event->keyval == GDK_KEY_p || event->keyval == GDK_KEY_a)
-	return change_de('-');
-    else if (event->keyval == GDK_KEY_n || event->keyval == GDK_KEY_s)
-	return change_de('+');
-    else if (event->keyval == GDK_KEY_r)
+    switch (event->keyval)
     {
+    case GDK_KEY_Escape:
+    case GDK_KEY_q:
+	close_window();
+	return TRUE;
+    case GDK_KEY_s:
+	if (event->state & GDK_CONTROL_MASK)
+	{
+	    add_anki(win, user_data);
+	    return TRUE;
+	} // else fallthrough
+    case GDK_KEY_n:
+	change_de(NULL, GINT_TO_POINTER(1));
+	return TRUE;
+    case GDK_KEY_p:
+    case GDK_KEY_a:
+	change_de(NULL, GINT_TO_POINTER(-1));
+	return TRUE;
+    case GDK_KEY_r:
 	play_pronunciation();
 	return TRUE;
     }
@@ -353,6 +317,8 @@ button_press(GtkWidget *widget, GdkEventButton *event)
 static void
 activate(GtkApplication* app, gpointer user_data)
 {
+    window_ret_s* ret = user_data;
+
     g_mutex_lock(&vars_mutex);
     /* ------------ WINDOW ------------ */
     window = gtk_application_window_new(app);
@@ -362,9 +328,9 @@ activate(GtkApplication* app, gpointer user_data)
     gtk_window_set_type_hint(GTK_WINDOW(window), GDK_WINDOW_TYPE_HINT_POPUP_MENU);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
     gtk_window_set_keep_above(GTK_WINDOW(window), 1);
+    move_win_to_mouse_ptr();
 
-    g_signal_connect(window, "delete-event", G_CALLBACK(quit), NULL);
-    g_signal_connect(window, "key-press-event", G_CALLBACK(key_press_on_win), NULL);
+    g_signal_connect(window, "key-press-event", G_CALLBACK(key_press_on_win), ret);
     /* -------------------------------- */
 
     GtkWidget* main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -376,13 +342,13 @@ activate(GtkApplication* app, gpointer user_data)
     gtk_box_pack_start(GTK_BOX(main_vbox), top_bar, 0, 0, 0);
 
     GtkWidget* btn_l = gtk_button_new_from_icon_name("go-previous-symbolic", 2);
-    g_signal_connect(btn_l, "clicked", G_CALLBACK(change_de_down), NULL);
+    g_signal_connect(btn_l, "clicked", G_CALLBACK(change_de), GINT_TO_POINTER(-1));
     gtk_box_pack_start(GTK_BOX(top_bar), btn_l, FALSE, FALSE, 0);
 
     if (cfg.anki.enabled)
     {
 	GtkWidget* btn_add_anki = gtk_button_new_from_icon_name("list-add-symbolic", 2);
-	g_signal_connect(btn_add_anki, "clicked", G_CALLBACK(add_anki), dict_tw);
+	g_signal_connect(btn_add_anki, "clicked", G_CALLBACK(add_anki), ret);
 	gtk_box_pack_start(GTK_BOX(top_bar), btn_add_anki, FALSE, FALSE, 0);
     }
 
@@ -405,7 +371,7 @@ activate(GtkApplication* app, gpointer user_data)
 
 
     GtkWidget* btn_r = gtk_button_new_from_icon_name("go-next-symbolic", 2);
-    g_signal_connect(btn_r, "clicked", G_CALLBACK(change_de_up), NULL);
+    g_signal_connect(btn_r, "clicked", G_CALLBACK(change_de), GINT_TO_POINTER(1));
     gtk_box_pack_end(GTK_BOX(top_bar), btn_r, FALSE, FALSE, 0);
 
     if (cfg.pron.displayButton)
@@ -452,17 +418,50 @@ activate(GtkApplication* app, gpointer user_data)
     g_cond_signal(&vars_set_condition);
     g_mutex_unlock(&vars_mutex);
 
-    move_win_to_mouse_ptr();
     gtk_widget_show_all(window);
 }
 
-
-dictentry
-popup(void)
+static void*
+fill_dictionary(void* voidin)
 {
+    dictpopup_s data = *(dictpopup_s*)voidin;
+    dictentry* local_dict = create_dictionary(data);
+
+    g_mutex_lock(&vars_mutex);
+
+    dict = local_dict;
+    curent = dictentry_at_index(dict, curent_num);
+    dict_data_ready = TRUE;
+
+    while (!gtk_vars_set)
+	g_cond_wait(&vars_set_condition, &vars_mutex);
+
+    g_mutex_unlock(&vars_mutex);
+
+    if (cfg.pron.onStart)
+	play_pronunciation();
+
+    update_window();
+    anki_check_exists();     // Check only once
+    enable_buttons();
+    return NULL;
+}
+
+int
+main(int argc, char* argv[])
+{
+    dictpopup_s d = dictpopup_init(argc, argv);
+    window_ret_s ret = { 0 };
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, fill_dictionary, &d);
+    pthread_detach(thread);
+
     GtkApplication* app = gtk_application_new("com.github.btrkeks.dictpopup", G_APPLICATION_NON_UNIQUE);
-    g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
+    g_signal_connect(app, "activate", G_CALLBACK(activate), &ret);
     g_application_run(G_APPLICATION(app), 0, NULL);
     g_object_unref(app);
-    return curent;
+
+    if (ret.create_ac)
+	create_ankicard(d, ret.de);
 }

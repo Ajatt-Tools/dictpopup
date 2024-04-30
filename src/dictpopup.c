@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <unistd.h> // fork
 
 #include <glib.h>
 
@@ -11,21 +10,9 @@
 #include "ankiconnectc.h"
 #include "util.h"
 #include "platformdep.h"
-#include "gtk3popup.h"
 #include "messages.h"
-
-#define POSSIBLE_ENTRIES_S_NMEMB 9
-typedef struct possible_entries_s {
-    s8 lookup;
-    s8 copiedsent;
-    s8 boldsent;
-    s8 dictkanji;
-    s8 dictreading;
-    s8 dictdefinition;
-    s8 furigana;
-    s8 windowname;
-    s8 dictname;
-} possible_entries_s;
+#include "dictpopup.h"
+#include "gtk3popup.h"
 
 s8
 map_entry(possible_entries_s p, int i)
@@ -207,29 +194,28 @@ fill_dict_with(dictentry* dict[static 1], s8 word)
     add_deinflections_to_dict(dict, word);
 }
 
-static void*
-create_dictionary(void* voidin)
+dictentry*
+create_dictionary(dictpopup_s data)
 {
-    s8* lookup = (s8*)voidin;
-    assert(lookup && lookup->s);
-
+    s8 lookup = data.pe.lookup;
+    assert(lookup.s);
     dictentry* dict = NULL;
 
     open_database();
-    fill_dict_with(&dict, *lookup);
+    fill_dict_with(&dict, lookup);
     if (dictlen(dict) == 0 && cfg.general.mecab)
     {
-	s8 hira = kanji2hira(*lookup);
+	s8 hira = kanji2hira(lookup);
 	fill_dict_with(&dict, hira);
 	free(hira.s);
     }
     if (dictlen(dict) == 0 && cfg.general.substringSearch)
     {
-	int first_chr_len = utf8_chr_len(lookup->s);
-	while (dictlen(dict) == 0 && lookup->len > first_chr_len)
+	int first_chr_len = utf8_chr_len(lookup.s);
+	while (dictlen(dict) == 0 && lookup.len > first_chr_len)
 	{
-	    *lookup = s8striputf8chr(*lookup);
-	    fill_dict_with(&dict, *lookup);
+	    lookup = s8striputf8chr(lookup);
+	    fill_dict_with(&dict, lookup);
 	}
     }
     close_database();
@@ -237,16 +223,14 @@ create_dictionary(void* voidin)
     if (dictlen(dict) == 0)
     {
 	msg("No dictionary entry found");
-	exit(EXIT_FAILURE);
+	return dict;
     }
-    assert(dict);
 
+    assert(dict);
     if (cfg.general.sort)
 	qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
 
-    lookup->s[lookup->len] = '\0';
-    dictionary_data_done(dict);
-    return NULL;
+    return dict;
 }
 
 static void
@@ -270,14 +254,21 @@ send_ankicard(possible_entries_s p)
 	error_msg("Error adding card: %s", ac_resp.data.string);
 }
 
-int
-main(int argc, char** argv)
+void
+create_ankicard(dictpopup_s d, dictentry de)
+{
+    //TODO: implement
+    return;
+}
+
+dictpopup_s
+dictpopup_init(int argc, char** argv)
 {
     int nextarg = parse_cmd_line_opts(argc, argv); // Needs to be first
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
 
     if (!db_exists(fromcstr_(cfg.general.dbpth)))
-      fatal("Database does not exist. You must create it first with dictpoup-create.");
+      fatal("Database does not exist. You must create it first with dictpopup-create.");
 
     possible_entries_s p = { 0 };
     p.windowname = get_windowname();
@@ -289,14 +280,5 @@ main(int argc, char** argv)
     if (cfg.general.nukeWhitespaceLookup)
 	nuke_whitespace(p.lookup);
 
-    pthread_t thread;
-    pthread_create(&thread, NULL, create_dictionary, &p.lookup);
-    pthread_detach(thread);
-
-    dictentry chosen_entry = popup();
-    if (chosen_entry.definition.len && cfg.anki.enabled)
-    {
-	fill_entries(&p, chosen_entry);
-	send_ankicard(p);
-    }
+    return (dictpopup_s){p};
 }

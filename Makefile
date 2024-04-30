@@ -24,7 +24,7 @@ DEBUG_CFLAGS=-DDEBUG -g3 -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-p
 	     -fsanitize=undefined,address -fsanitize-undefined-trap-on-error
 RELEASE_CFLAGS=-O3 -flto -march=native
 
-FILES=gtk3popup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
+FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
 FILES_H=ankiconnectc.h dbreader.h deinflector.h gtk3popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
 SRC=$(addprefix $(SDIR)/,$(FILES))
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
@@ -44,9 +44,9 @@ default: dictpopup dictpopup-create
 debug: dictpopup-debug dictpopup-create-debug
 
 dictpopup: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -o $@ src/dictpopup.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) -o $@ src/gtk3popup.c $(SRC) $(LDLIBS)
 dictpopup-debug: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -o $@ src/dictpopup.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -o $@ src/gtk3popup.c $(SRC) $(LDLIBS)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE)
 	$(CC) $(CFLAGS_CREATE) $(RELEASE_CFLAGS) -o $@ src/dictpopup_create.c $(SRC_CREATE) $(LDLIBS_CREATE)
@@ -82,7 +82,7 @@ uninstall:
 	      $(CONFIG_DIR)/config.ini
 
 clean:
-	rm -f dictpopup dictpopup-create test
+	rm -f dictpopup dictpopup-create dictpopup-debug dictpopup-create-debug test
 
 tests: $(SRC) $(SRC_H)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -o $@ $(SDIR)/test.c $(SRC) $(LDLIBS)
