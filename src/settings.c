@@ -54,7 +54,7 @@ parse_cmd_line_opts(int argc, char** argv)
     int c;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "dc")) != -1)
+    while ((c = getopt(argc, argv, "dch")) != -1)
 	switch (c)
 	{
 	case 'd':
@@ -63,6 +63,9 @@ parse_cmd_line_opts(int argc, char** argv)
 	case 'c':
 	    print_cfg = 1;
 	    break;
+	case 'h':
+	    puts("See 'man dictpopup' or 'man dictpopup-create' for help.");
+	    exit(EXIT_SUCCESS);
 	case '?':
 	    fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
 	    exit(EXIT_FAILURE);
