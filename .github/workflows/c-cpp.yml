@@ -13,7 +13,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get -qq update
-        sudo apt-get install -y -qq liblmdb-dev mecab libgtk-3-dev libx11-dev
+        sudo apt-get install -y -qq liblmdb-dev mecab libgtk-3-dev libx11-dev libcurl4-openssl-dev
     - uses: actions/checkout@v4
     - name: make
       run: make
