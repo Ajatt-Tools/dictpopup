@@ -10,7 +10,8 @@ LDIR=lib
 
 CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNOTIFICATIONS -I$(IDIR)
 LDLIBS=-ffunction-sections -fdata-sections -Wl,--gc-sections \
-       -lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify) -llmdb
+       -lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) \
+       $(shell pkg-config --libs libnotify) -llmdb -lglib-2.0
 
 O_HAVEX11 := 1  # X11 integration
 ifeq ($(strip $(O_HAVEX11)),1)
