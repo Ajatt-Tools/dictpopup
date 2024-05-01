@@ -36,7 +36,8 @@ Install the AUR package `dictpopup`.
 ### Manual
 First make sure, that you have all necessary dependencies installed. On a Debian based distro this can be done with:
 ```
-    sudo apt-get install liblmdb-dev libmecab-dev libgtk-3-dev libx11-dev libcurl4-openssl-dev libnotify-dev libzip-dev
+sudo apt-get install liblmdb-dev libmecab-dev libgtk-3-dev libx11-dev \
+     libcurl4-openssl-dev libnotify-dev libzip-dev
 ```
 Then install with:
 ```bash
