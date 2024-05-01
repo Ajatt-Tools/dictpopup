@@ -59,7 +59,7 @@ add_bold_tags(s8 sent, s8 word)
 
     s8 ret = { 0 };
     ret.len = bdsent->len;
-    ret.s = g_string_free(bdsent, FALSE);
+    ret.s = (u8*)g_string_free(bdsent, FALSE);
     return ret;
 }
 

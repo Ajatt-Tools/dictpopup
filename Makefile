@@ -83,7 +83,7 @@ uninstall:
 	      $(CONFIG_DIR)/config.ini
 
 clean:
-	rm -f dictpopup dictpopup-create test
+	rm -f dictpopup dictpopup-create dictpopup-debug dictpopup-create-debug tests
 
 tests: $(SRC) $(SRC_H)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -o $@ $(SDIR)/test.c $(SRC) $(LDLIBS)
