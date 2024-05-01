@@ -314,7 +314,6 @@ read_user_settings(int fieldmapping_max)
 
 	g_error_free(error);
 	error = NULL;
-	return;
     }
     else
     {

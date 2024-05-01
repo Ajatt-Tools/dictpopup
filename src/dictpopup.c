@@ -277,7 +277,7 @@ main(int argc, char** argv)
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
 
     if (!db_exists(fromcstr_(cfg.general.dbpth)))
-      fatal("Database does not exist. You must create it first with dictpoup-create.");
+      fatal("Cannot find database in '%s'. You must create it first with dictpoup-create.", cfg.general.dbpth);
 
     possible_entries_s p = { 0 };
     p.windowname = get_windowname();
