@@ -2,29 +2,37 @@
 #define PDJSON_H
 
 #ifndef PDJSON_SYMEXPORT
-#   define PDJSON_SYMEXPORT
+    #define PDJSON_SYMEXPORT
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #else
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
-    #include <stdbool.h>
-#else
-    #ifndef bool
-        #define bool int
-        #define true 1
-        #define false 0
-    #endif /* bool */
-#endif /* __STDC_VERSION__ */
-#endif /* __cplusplus */
+    #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
+        #include <stdbool.h>
+    #else
+        #ifndef bool
+            #define bool int
+            #define true 1
+            #define false 0
+        #endif /* bool */
+    #endif     /* __STDC_VERSION__ */
+#endif         /* __cplusplus */
 
 #include <stdio.h>
 
 enum json_type {
-    JSON_ERROR = 1, JSON_DONE,
-    JSON_OBJECT, JSON_OBJECT_END, JSON_ARRAY, JSON_ARRAY_END,
-    JSON_STRING, JSON_NUMBER, JSON_TRUE, JSON_FALSE, JSON_NULL
+    JSON_ERROR = 1,
+    JSON_DONE,
+    JSON_OBJECT,
+    JSON_OBJECT_END,
+    JSON_ARRAY,
+    JSON_ARRAY_END,
+    JSON_STRING,
+    JSON_NUMBER,
+    JSON_TRUE,
+    JSON_FALSE,
+    JSON_NULL
 };
 
 struct json_allocator {
@@ -41,7 +49,8 @@ typedef struct json_allocator json_allocator;
 PDJSON_SYMEXPORT void json_open_buffer(json_stream *json, const void *buffer, size_t size);
 PDJSON_SYMEXPORT void json_open_string(json_stream *json, const char *string);
 PDJSON_SYMEXPORT void json_open_stream(json_stream *json, FILE *stream);
-PDJSON_SYMEXPORT void json_open_user(json_stream *json, json_user_io get, json_user_io peek, void *user);
+PDJSON_SYMEXPORT void json_open_user(json_stream *json, json_user_io get, json_user_io peek,
+                                     void *user);
 PDJSON_SYMEXPORT void json_close(json_stream *json);
 
 PDJSON_SYMEXPORT void json_set_allocator(json_stream *json, json_allocator *a);
