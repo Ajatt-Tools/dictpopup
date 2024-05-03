@@ -75,7 +75,7 @@ This will allow for a faster lookup.
 
 ## Usage
 Select a word and call `dictpopup` (using a shortcut). It is also possible to give an argument instead: `dictpopup WORD`.
-If something is not working as expected, you can add the command line argument `-d` to receive debug messages or add `-c` to print the config on stdout.
+If something is not working as expected, you can add `DP_DEBUG=1` before the command or add the command line option `-c` to print the config on stdout.
 
 The "+" sign adds the currently shown definition to Anki after prompting you to copy a sentence.
 If there is text selected in the popup window, it will be used instead as a definition.

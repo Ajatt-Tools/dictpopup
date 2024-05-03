@@ -1,39 +1,46 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef DP_UTIL_H
+#define DP_UTIL_H
 
-#include "buf.h" // growable buffer implementation
+#include "buf.h"    // growable buffer implementation
+#include <dirent.h> // DIR
+#include <stdio.h>  // FILE
+#include <unistd.h> // close()
 
-#ifndef __PTRDIFF_TYPE__  // not GCC-like?
-#  include <stddef.h>
-#  define __PTRDIFF_TYPE__         ptrdiff_t
-#  define __builtin_unreachable()  *(volatile int *)0 = 0
-#endif
-
-typedef unsigned char    u8;
-typedef   signed int     b32;
-typedef   signed int     i32;
-typedef unsigned int     u32;
+typedef unsigned char u8;
+typedef signed int b32;
+typedef signed int i32;
+typedef unsigned int u32;
 typedef __PTRDIFF_TYPE__ size;
-typedef          char    byte;
+typedef char byte;
 
-#define assert(c)     while (!(c)) __builtin_unreachable()
+#define assert(c)                                                                                  \
+    while (!(c))                                                                                   \
+    __builtin_unreachable()
 
-/*
- * memory allocation wrapper which abort on failure
- */ 
-void* xmalloc(size_t size);
-void* xcalloc(size_t nmemb, size_t size);
-void* xrealloc(void* ptr, size_t size);
-#define new(type, num)	xcalloc(num, sizeof(type))
+#define _drop_(x) __attribute__((__cleanup__(drop_##x)))
+#define _printf_(a, b) __attribute__((__format__(printf, a, b)))
+
+#define arrlen(x)                                                                                  \
+    (__builtin_choose_expr(!__builtin_types_compatible_p(typeof(x), typeof(&*(x))),                \
+                           sizeof(x) / sizeof((x)[0]), (void)0 /* decayed, compile error */))
+
+/**
+ * Memory allocation wrapper which abort on failure
+ */
+void *xmalloc(size_t size);
+void *xcalloc(size_t nmemb, size_t size);
+void *xrealloc(void *ptr, size_t size);
+#define new(type, num) xcalloc(num, sizeof(type))
 
 /* ------------------- Start s8 utils ---------------- */
-#define countof(a)    (size)(sizeof(a) / sizeof(*(a)))
-#define lengthof(s)   (countof("" s "") - 1)
-#define s8(s)         {(u8 *)s, countof(s)-1}
-#define S(s)          (s8)s8(s)
+#define countof(a) (size)(sizeof(a) / sizeof(*(a)))
+#define lengthof(s) (countof("" s "") - 1)
+#define s8(s)                                                                                      \
+    { (u8 *)s, countof(s) - 1 }
+#define S(s) (s8) s8(s)
 
 typedef struct {
-    u8* s;
+    u8 *s;
     size len;
 } s8;
 
@@ -43,7 +50,7 @@ typedef struct {
  */
 s8 news8(size len);
 
-void u8copy(u8 *dst, u8 *src, size n);
+void u8copy(u8 *restrict dst, const u8 *restrict src, size n);
 i32 u8compare(u8 *a, u8 *b, size n);
 /*
  * Copies @src into @dst returning the remaining portion of @dst
@@ -57,7 +64,7 @@ s8 s8dup(s8 s);
 /*
  * Turns @z into an s8 string, reusing the pointer.
  */
-s8 fromcstr_(char* z);
+s8 fromcstr_(char *z);
 /*
  * Returns a true value if a is equal to b
  */
@@ -77,7 +84,8 @@ b32 endswith(s8 s, s8 suffix);
 s8 s8striputf8chr(s8 s);
 
 /*
- * Returns u8 pointer pointing to the start of the char after the first utf-8 character
+ * Returns u8 pointer pointing to the start of the char after the first utf-8
+ * character
  */
 #define skip_utf8_char(p) ((p) + utf8_chr_len(p))
 
@@ -88,65 +96,100 @@ s8 s8striputf8chr(s8 s);
 extern u8 const utf8_chr_len_data[];
 
 /*
- * Turns escaped characters such as the string "\\n" into the character '\n' (inplace)
+ * Turns escaped characters such as the string "\\n" into the character '\n'
+ * (inplace)
  *
  * Returns: unescaped string
  */
 s8 unescape(s8 str);
 
 void frees8(s8 z[static 1]);
-void frees8buffer(s8* buf[static 1]);
+void frees8buffer(s8 *buf[static 1]);
 
 /*
  * Concatenates all s8 strings passed as argument
  *
  * Returns: A newly allocated s8 containing the concatenated string
  */
-#define concat(...) \
-    concat_((s8[]){ __VA_ARGS__, S("CONCAT_STOPPER")}, S("CONCAT_STOPPER")) // Might be better to use a stopper that consists of a single invalid char
+#define concat(...)                                                                                \
+    concat_((s8[]){__VA_ARGS__, S("CONCAT_STOPPER")}, S("CONCAT_STOPPER")) // Might be better to use
+                                                                           // a stopper that
+                                                                           // consists of a single
+                                                                           // invalid char
 s8 concat_(s8 strings[static 1], const s8 stopper);
 
-#define buildpath(...) \
-    buildpath_((s8[]){ __VA_ARGS__, S("BUILD_PATH_STOPPER")}, S("BUILD_PATH_STOPPER"))
+#define buildpath(...)                                                                             \
+    buildpath_((s8[]){__VA_ARGS__, S("BUILD_PATH_STOPPER")}, S("BUILD_PATH_STOPPER"))
 s8 buildpath_(s8 pathcomps[static 1], const s8 stopper);
 /* ------------------- End s8 utils ---------------- */
 
 /* --------------------------- string builder -----------------------_ */
 typedef struct {
-	u8 *data;
-    	size len;
-    	size cap;
+    u8 *data;
+    size len;
+    size cap;
 } stringbuilder_s;
 
 stringbuilder_s sb_init(size_t init_cap);
-void sb_append(stringbuilder_s* b, s8 str);
+void sb_append(stringbuilder_s *b, s8 str);
 s8 sb_gets8(stringbuilder_s sb);
 void sb_set(stringbuilder_s sb[static 1], s8 s);
 void sb_free(stringbuilder_s sb[static 1]);
 /* ------------------------------------------------------------------_ */
 
-
-
 /* --------------------- Start dictentry / dictionary ----------------- */
 typedef struct {
-  s8 dictname;
-  s8 kanji;
-  s8 reading;
-  s8 definition;
-  int frequency;
+    s8 dictname;
+    s8 kanji;
+    s8 reading;
+    s8 definition;
+    int frequency;
 } dictentry;
 
 dictentry dictentry_dup(dictentry de);
 void dictentry_free(dictentry de[static 1]);
 void dictentry_print(dictentry de);
-void dictionary_add(dictentry* dict[static 1], dictentry de);
-size dictlen(dictentry* dict);
-void dictionary_free(dictentry* dict[static 1]);
-dictentry dictentry_at_index(dictentry* dict, size index);
+void dictionary_add(dictentry *dict[static 1], dictentry de);
+size dictlen(dictentry *dict);
+void dictionary_free(dictentry *dict[static 1]);
+dictentry dictentry_at_index(dictentry *dict, size index);
 /* --------------------- End dictentry ------------------------ */
+
+size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...);
 
 s8 nuke_whitespace(s8 z);
 
-int printf_cmd_async(char const *fmt, ...);
+/**
+ * __attribute__((cleanup)) functions
+ */
+#define DEFINE_DROP_FUNC_PTR(type, func)                                                           \
+    static inline void drop_##func(type *p) {                                                      \
+        func(p);                                                                                   \
+    }
+#define DEFINE_DROP_FUNC(type, func)                                                               \
+    static inline void drop_##func(type *p) {                                                      \
+        if (*p)                                                                                    \
+            func(*p);                                                                              \
+    }
+#define DEFINE_DROP_FUNC_VOID(func)                                                                \
+    static inline void drop_##func(void *p) {                                                      \
+        void **pp = p;                                                                             \
+        if (*pp)                                                                                   \
+            func(*pp);                                                                             \
+    }
+
+static inline void drop_frees8(s8 *str) {
+    free(str->s);
+}
+
+static inline void drop_close(int *fd) {
+    if (*fd >= 0) {
+        close(*fd);
+    }
+}
+
+DEFINE_DROP_FUNC_VOID(free)
+DEFINE_DROP_FUNC(FILE *, fclose)
+DEFINE_DROP_FUNC(DIR *, closedir)
 
 #endif

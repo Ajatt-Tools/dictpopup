@@ -1,0 +1,11 @@
+BinPackArguments: true
+BreakStringLiterals: false
+ColumnLimit: 100
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+IndentWidth: 4
+PenaltyBreakComment: 0
+SortIncludes: true
+SpaceBeforeParens: ControlStatementsExceptForEachMacros
+UseTab: Never
+AllowShortFunctionsOnASingleLine: None
