@@ -1,6 +1,6 @@
 # dictpopup
 
-![Linux build](https://github.com/btrkeks/dictpopup/actions/workflows/linux_build.yml/badge.svg)
+![Linux build](https://github.com/btrkeks/dictpopup/actions/workflows/ci.yml/badge.svg)
 
 This is a lightweight popup for searching selected text in your yomichan dictionaries with support for creating Anki cards.
 The look of the popup will depend on your gtk3 settings.
