@@ -188,7 +188,7 @@ s8 unescape(s8 str) {
     return str;
 }
 
-s8 concat_(s8 strings[static 1], const s8 stopper) {
+s8 concat_(s8 *strings, const s8 stopper) {
     size len = 0;
     for (s8 *s = strings; !s8equals(*s, stopper); s++)
         len += s->len;
@@ -200,7 +200,7 @@ s8 concat_(s8 strings[static 1], const s8 stopper) {
     return ret;
 }
 
-s8 buildpath_(s8 pathcomps[static 1], const s8 stopper) {
+s8 buildpath_(s8 *pathcomps, const s8 stopper) {
 #ifdef _WIN32
     s8 sep = S("\\");
 #else
@@ -231,11 +231,11 @@ s8 buildpath_(s8 pathcomps[static 1], const s8 stopper) {
     return retpath;
 }
 
-void frees8(s8 z[static 1]) {
+void frees8(s8 *z) {
     free(z->s);
 }
 
-void frees8buffer(s8 *buf[static 1]) {
+void frees8buffer(s8 **buf) {
     while (buf_size(*buf) > 0)
         free(buf_pop(*buf).s);
     buf_free(*buf);
@@ -258,7 +258,7 @@ void dictentry_print(dictentry de) {
            de.dictname.s, de.kanji.s, de.reading.s, de.definition.s);
 }
 
-void dictionary_add(dictentry *dict[static 1], dictentry de) {
+void dictionary_add(dictentry **dict, dictentry de) {
     buf_push(*dict, de);
 }
 
@@ -266,14 +266,14 @@ size dictlen(dictentry *dict) {
     return buf_size(dict);
 }
 
-void dictentry_free(dictentry de[static 1]) {
+void dictentry_free(dictentry *de) {
     frees8(&de->dictname);
     frees8(&de->kanji);
     frees8(&de->reading);
     frees8(&de->definition);
 }
 
-void dictionary_free(dictentry *dict[static 1]) {
+void dictionary_free(dictentry **dict) {
     while (buf_size(*dict) > 0)
         dictentry_free(&buf_pop(*dict));
     buf_free(*dict);
@@ -315,12 +315,12 @@ s8 sb_gets8(stringbuilder_s sb) {
     return (s8){.s = sb.data, .len = sb.len};
 }
 
-void sb_set(stringbuilder_s sb[static 1], s8 s) {
+void sb_set(stringbuilder_s *sb, s8 s) {
     sb->len = 0;
     sb_append(sb, s);
 }
 
-void sb_free(stringbuilder_s sb[static 1]) {
+void sb_free(stringbuilder_s *sb) {
     free(sb->data);
     *sb = (stringbuilder_s){0};
 }
@@ -340,7 +340,7 @@ size_t snprintf_safe(char *buf, size_t len, const char *fmt, ...) {
 }
 
 // TODO: Rewrite these
-static void remove_substr(char str[static 1], s8 sub) {
+static void _nonnull_ remove_substr(char *str, s8 sub) {
     char *s = str, *e = str;
 
     do {

@@ -463,8 +463,8 @@ static void check_db_exists(s8 dbpath) {
 static void create_path(s8 dbpath) {
     char *dbpath_c = (char *)dbpath.s;
     if (access(dbpath_c, R_OK) != 0) {
-	int stat = mkdir(dbpath_c, S_IRWXU | S_IRWXG | S_IXOTH);
-	die_on(stat != 0, "Error creating directory '%s': %s", dbpath_c, strerror(errno));
+        int stat = mkdir(dbpath_c, S_IRWXU | S_IRWXG | S_IXOTH);
+        die_on(stat != 0, "Error creating directory '%s': %s", dbpath_c, strerror(errno));
     }
 }
 

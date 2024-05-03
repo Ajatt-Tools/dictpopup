@@ -87,19 +87,6 @@ static bool debug_mode_enabled(void) {
         } while (0)
 #endif
 
-#define fatal(fmt, ...)                                                                            \
-    do {                                                                                           \
-        err(fmt, ##__VA_ARGS__);                                                                   \
-        exit(EXIT_FAILURE);                                                                        \
-    } while (0)
-
-#define fatal_perror(context)                                                                      \
-    do {                                                                                           \
-        perror(context);                                                                           \
-        abort();                                                                                   \
-    } while (0)
-
-// TODO: Decide on die or fatal
 #define _die(dump, fmt, ...)                                                                       \
     do {                                                                                           \
         err(fmt, ##__VA_ARGS__);                                                                   \

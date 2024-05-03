@@ -1,8 +1,8 @@
 #include <gtk/gtk.h>
 #include <stdbool.h>
 
-#include "dictpopup.h"
 #include "ankiconnectc.h"
+#include "dictpopup.h"
 #include "jppron.h"
 #include "settings.h"
 #include "util.h"
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
 
     window_ret_s ret = {0};
     GtkApplication *app =
-        gtk_application_new("com.github.btrkeks.dictpopup", G_APPLICATION_NON_UNIQUE);
+        gtk_application_new("com.github.Ajatt-Tools.dictpopup", G_APPLICATION_NON_UNIQUE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), &ret);
     g_application_run(G_APPLICATION(app), 0, NULL);
     g_object_unref(app);

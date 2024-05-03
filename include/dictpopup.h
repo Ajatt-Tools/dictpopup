@@ -6,17 +6,16 @@
 // Opaque type
 typedef struct dictpopup_s dictpopup_t;
 
-
 dictpopup_t dictpopup_init(int argc, char **argv);
 
 /*
  * Looks up @lookup in the database and returns all corresponding dictentries in
  * a buffer (see include/buf.h)
  */
-dictentry * _nonnull_ create_dictionary(dictpopup_t *d);
-
+dictentry *_nonnull_ create_dictionary(dictpopup_t *d);
 
 void create_ankicard(dictpopup_t d, dictentry de);
+
 
 
 #define POSSIBLE_ENTRIES_S_NMEMB 9

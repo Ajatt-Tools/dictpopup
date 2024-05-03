@@ -4,10 +4,10 @@
 
 #include <glib.h>
 
-#include "dictpopup.h"
-#include "db.h"
 #include "ankiconnectc.h"
+#include "db.h"
 #include "deinflector.h"
+#include "dictpopup.h"
 #include "messages.h"
 #include "platformdep.h"
 #include "settings.h"

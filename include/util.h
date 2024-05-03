@@ -19,6 +19,7 @@ typedef char byte;
 
 #define _drop_(x) __attribute__((__cleanup__(drop_##x)))
 #define _nonnull_ __attribute__((nonnull))
+#define _nonnull_n_(...) __attribute__((nonnull(__VA_ARGS__)))
 #define _printf_(a, b) __attribute__((__format__(printf, a, b)))
 
 #define arrlen(x)                                                                                  \
@@ -103,8 +104,8 @@ extern u8 const utf8_chr_len_data[];
  */
 s8 unescape(s8 str);
 
-void frees8(s8 z[static 1]);
-void frees8buffer(s8 *buf[static 1]);
+void _nonnull_ frees8(s8 *z);
+void _nonnull_ frees8buffer(s8 **buf);
 
 /*
  * Concatenates all s8 strings passed as argument
@@ -116,11 +117,11 @@ void frees8buffer(s8 *buf[static 1]);
                                                                            // a stopper that
                                                                            // consists of a single
                                                                            // invalid char
-s8 concat_(s8 strings[static 1], const s8 stopper);
+s8 _nonnull_ concat_(s8 *strings, const s8 stopper);
 
 #define buildpath(...)                                                                             \
     buildpath_((s8[]){__VA_ARGS__, S("BUILD_PATH_STOPPER")}, S("BUILD_PATH_STOPPER"))
-s8 buildpath_(s8 pathcomps[static 1], const s8 stopper);
+s8 _nonnull_ buildpath_(s8 *pathcomps, const s8 stopper);
 /* ------------------- End s8 utils ---------------- */
 
 /* --------------------------- string builder -----------------------_ */
@@ -133,8 +134,8 @@ typedef struct {
 stringbuilder_s sb_init(size_t init_cap);
 void sb_append(stringbuilder_s *b, s8 str);
 s8 sb_gets8(stringbuilder_s sb);
-void sb_set(stringbuilder_s sb[static 1], s8 s);
-void sb_free(stringbuilder_s sb[static 1]);
+void _nonnull_ sb_set(stringbuilder_s *sb, s8 s);
+void _nonnull_ sb_free(stringbuilder_s *sb);
 /* ------------------------------------------------------------------_ */
 
 /* --------------------- Start dictentry / dictionary ----------------- */
@@ -147,11 +148,11 @@ typedef struct {
 } dictentry;
 
 dictentry dictentry_dup(dictentry de);
-void dictentry_free(dictentry de[static 1]);
+void _nonnull_ dictentry_free(dictentry *de);
 void dictentry_print(dictentry de);
-void dictionary_add(dictentry *dict[static 1], dictentry de);
+void _nonnull_ dictionary_add(dictentry **dict, dictentry de);
 size dictlen(dictentry *dict);
-void dictionary_free(dictentry *dict[static 1]);
+void _nonnull_ dictionary_free(dictentry **dict);
 dictentry dictentry_at_index(dictentry *dict, size index);
 /* --------------------- End dictentry ------------------------ */
 

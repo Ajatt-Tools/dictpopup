@@ -29,7 +29,7 @@ DEBUG_CFLAGS=-DDEBUG \
 RELEASE_CFLAGS=-O3 -flto -march=native
 
 FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
-FILES_H=ankiconnectc.h db.h deinflector.h gtk3popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
+FILES_H=ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
 SRC=$(addprefix $(SDIR)/,$(FILES))
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
 

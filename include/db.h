@@ -19,12 +19,10 @@ void _nonnull_ db_get_dictents(database_t *db, s8 headword, dictentry *dict[stat
 void _nonnull_ db_put_freq(database_t *db, s8 word, s8 reading, u32 freq);
 int _nonnull_ db_get_freq(database_t *db, s8 word, s8 reading);
 
-
 /*
  * Checks if there exists a database in the provided path
  */
 i32 db_check_exists(s8 dbpath);
-
 
 struct database_s {
     MDB_env *env;
