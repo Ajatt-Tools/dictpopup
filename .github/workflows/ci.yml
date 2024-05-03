@@ -18,7 +18,7 @@ jobs:
 
       - run: gcc --version
 
-      - run: make
+      - run: make clean analyse
 
 on:
   push:

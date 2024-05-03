@@ -56,8 +56,8 @@ int parse_cmd_line_opts(int argc, char **argv) {
                 print_cfg = 1;
                 break;
             case 'h':
-	              puts("See 'man dictpopup' or 'man dictpopup-create' for help.");
-	              exit(EXIT_SUCCESS);
+                puts("See 'man dictpopup' or 'man dictpopup-create' for help.");
+                exit(EXIT_SUCCESS);
             case '?':
                 fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
                 exit(EXIT_FAILURE);
