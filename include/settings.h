@@ -38,10 +38,6 @@ typedef struct {
         bool onStart;
         char *dirPath;
     } pron;
-
-    struct {
-        unsigned int debug : 1;
-    } args;
 } settings;
 
 extern settings cfg;

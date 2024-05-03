@@ -122,11 +122,6 @@ void print_settings(void) {
     printf("Pronounce on start: %s\n", printyn(cfg.pron.onStart));
     printf("Audio file directory: %s\n", cfg.pron.dirPath ? cfg.pron.dirPath : "empty");
     putchar('\n');
-
-    puts("Command line options:");
-    printf("Debug output: %s\n", printyn(cfg.args.debug));
-
-    putchar('\n');
 }
 
 /*
