@@ -9,34 +9,39 @@
 #include "settings.h"
 #include "util.h"
 
-static settings const default_cfg = {
-    .general.sort = 0,
-    .general.dictSortOrder = NULL,
-    .general.dbpth = NULL, // Set by set_runtime_defaults()
-    .general.nukeWhitespaceLookup = 1,
-    .general.mecab = 0,
-    .general.substringSearch = 1,
-    //
-    .anki.enabled = 0,
-    .anki.deck = NULL, // Don't even try to guess
-    .anki.notetype = "Japanese sentences",
-    .anki.fieldnames = (char *[]){"SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes"},
-    .anki.numFields = 0,
-    .anki.copySentence = 1,
-    .anki.nukeWhitespaceSentence = 1,
-    .anki.fieldMapping = (u32[]){3, 4, 7, 6, 8},
-    .anki.checkExisting = 0,
-    //
-    .popup.width = 600,
-    .popup.height = 400,
-    .popup.margin = 5,
-    //
-    .pron.displayButton = 0,
-    .pron.onStart = 0,
-    .pron.dirPath = NULL, // Don't guess
-};
-settings cfg = default_cfg;
+settings cfg = {0};
 bool print_cfg = false;
+
+static settings get_default_cfg(void) {
+    settings default_cfg = {
+        .general.sort = 0,
+        .general.dictSortOrder = NULL,
+        .general.dbpth = NULL, // Set by set_runtime_defaults()
+        .general.nukeWhitespaceLookup = 1,
+        .general.mecab = 0,
+        .general.substringSearch = 1,
+        //
+        .anki.enabled = 0,
+        .anki.deck = NULL, // Don't even try to guess
+        .anki.notetype = "Japanese sentences",
+        .anki.fieldnames =
+            (char *[]){"SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes"},
+        .anki.numFields = 0,
+        .anki.copySentence = 1,
+        .anki.nukeWhitespaceSentence = 1,
+        .anki.fieldMapping = (u32[]){3, 4, 7, 6, 8},
+        .anki.checkExisting = 0,
+        //
+        .popup.width = 600,
+        .popup.height = 400,
+        .popup.margin = 5,
+        //
+        .pron.displayButton = 0,
+        .pron.onStart = 0,
+        .pron.dirPath = NULL, // Don't guess
+    };
+    return default_cfg;
+}
 
 static void set_runtime_defaults(void) {
     if (!cfg.general.dbpth) {
@@ -248,6 +253,8 @@ static void read_pronunciation(GKeyFile *kf) {
 }
 
 void read_user_settings(int fieldmapping_max) {
+    cfg = get_default_cfg(); // TODO: Put this to the end and only set missing values
+
     g_autoptr(GKeyFile) kf = g_key_file_new();
     GError *error = NULL;
     _drop_(frees8) s8 cfgpth =
