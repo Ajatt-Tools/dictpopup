@@ -1,4 +1,23 @@
+#ifndef DP_DICTPOPUP_H
+#define DP_DICTPOPUP_H
+
 #include "util.h"
+
+// Opaque type
+typedef struct dictpopup_s dictpopup_t;
+
+
+dictpopup_t dictpopup_init(int argc, char **argv);
+
+/*
+ * Looks up @lookup in the database and returns all corresponding dictentries in
+ * a buffer (see include/buf.h)
+ */
+dictentry * _nonnull_ create_dictionary(dictpopup_t *d);
+
+
+void create_ankicard(dictpopup_t d, dictentry de);
+
 
 #define POSSIBLE_ENTRIES_S_NMEMB 9
 typedef struct possible_entries_s {
@@ -13,16 +32,8 @@ typedef struct possible_entries_s {
     s8 dictname;
 } possible_entries_s;
 
-typedef struct dictpopup_s {
+struct dictpopup_s {
     possible_entries_s pe;
-} dictpopup_s;
+};
 
-dictpopup_s dictpopup_init(int argc, char **argv);
-
-/*
- * Looks up @lookup in the database and returns all corresponding dictentries in
- * a buffer (see include/buf.h)
- */
-dictentry *create_dictionary(dictpopup_s d[static 1]);
-
-void create_ankicard(dictpopup_s d, dictentry de);
+#endif

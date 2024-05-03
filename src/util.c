@@ -18,12 +18,6 @@ u8 const utf8_chr_len_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
         }                                                                                          \
     } while (0)
 
-#define fatal_perror(context)                                                                      \
-    do {                                                                                           \
-        perror(context);                                                                           \
-        abort();                                                                                   \
-    } while (0)
-
 void *xmalloc(size_t nbytes) {
     void *p = malloc(nbytes);
     if (!p) {

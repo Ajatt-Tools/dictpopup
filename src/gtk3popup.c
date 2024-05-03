@@ -1,8 +1,8 @@
 #include <gtk/gtk.h>
 #include <stdbool.h>
 
-#include "ankiconnectc.h"
 #include "dictpopup.h"
+#include "ankiconnectc.h"
 #include "jppron.h"
 #include "settings.h"
 #include "util.h"
@@ -367,9 +367,11 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_show_all(window);
 }
 
+/*
+ * To be called by pthread_create()
+ */
 static void *fill_dictionary(void *voidin) {
-    dictpopup_s *data = (dictpopup_s *)voidin;
-    assert(data);
+    dictpopup_t *data = (dictpopup_t *)voidin;
     dictentry *local_dict = create_dictionary(data);
 
     g_mutex_lock(&vars_mutex);
@@ -393,7 +395,7 @@ static void *fill_dictionary(void *voidin) {
 }
 
 int main(int argc, char *argv[]) {
-    dictpopup_s d = dictpopup_init(argc, argv);
+    dictpopup_t d = dictpopup_init(argc, argv);
 
     pthread_t thread;
     pthread_create(&thread, NULL, fill_dictionary, &d);

@@ -18,6 +18,7 @@ typedef char byte;
     __builtin_unreachable()
 
 #define _drop_(x) __attribute__((__cleanup__(drop_##x)))
+#define _nonnull_ __attribute__((nonnull))
 #define _printf_(a, b) __attribute__((__format__(printf, a, b)))
 
 #define arrlen(x)                                                                                  \
@@ -33,10 +34,9 @@ void *xrealloc(void *ptr, size_t size);
 #define new(type, num) xcalloc(num, sizeof(type))
 
 /* ------------------- Start s8 utils ---------------- */
-#define countof(a) (size)(sizeof(a) / sizeof(*(a)))
-#define lengthof(s) (countof("" s "") - 1)
+#define lengthof(s) (arrlen("" s "") - 1)
 #define s8(s)                                                                                      \
-    { (u8 *)s, countof(s) - 1 }
+    { (u8 *)s, arrlen(s) - 1 }
 #define S(s) (s8) s8(s)
 
 typedef struct {
@@ -178,10 +178,6 @@ s8 nuke_whitespace(s8 z);
             func(*pp);                                                                             \
     }
 
-static inline void drop_frees8(s8 *str) {
-    free(str->s);
-}
-
 static inline void drop_close(int *fd) {
     if (*fd >= 0) {
         close(*fd);
@@ -191,5 +187,6 @@ static inline void drop_close(int *fd) {
 DEFINE_DROP_FUNC_VOID(free)
 DEFINE_DROP_FUNC(FILE *, fclose)
 DEFINE_DROP_FUNC(DIR *, closedir)
+DEFINE_DROP_FUNC_PTR(s8, frees8)
 
 #endif

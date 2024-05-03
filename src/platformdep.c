@@ -90,7 +90,7 @@ s8 get_windowname(void) {
     unsigned long nr_items, bytes_after;
     unsigned char *prop = NULL;
 
-    for (size_t i = 0; i < countof(props); i++) {
+    for (size_t i = 0; i < arrlen(props); i++) {
         if (XGetWindowProperty(dpy, focused_win, props[i], 0, (~0L), False,
                                (props[i] == XA_WM_NAME) ? AnyPropertyType : utf8_string,
                                &actual_type, &format, &nr_items, &bytes_after, &prop) == Success &&

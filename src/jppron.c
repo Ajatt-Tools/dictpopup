@@ -23,12 +23,6 @@
     #define access _access
 #endif
 
-#define fatal_perror(context)                                                                      \
-    do {                                                                                           \
-        perror(context);                                                                           \
-        abort();                                                                                   \
-    } while (0)
-
 typedef struct {
     s8 origin;
     s8 hira_reading;
@@ -167,10 +161,10 @@ static s8 normalize_reading(s8 reading) {
     return r;
 }
 
-static void add_from_index(database db, char const *index_path, s8 curdir) {
-    FILE *index = fopen(index_path, "r");
-    if (!index)
-        fatal_perror("Opening index file");
+static void add_from_index(database db, const char *index_path, s8 curdir) {
+    _drop_(fclose) FILE *index = fopen(index_path, "r");
+    die_on(!index, "Failed to open the index '%s': %s", index_path, strerror(errno));
+
     json_stream s[1];
     json_open_stream(s, index);
 
@@ -345,13 +339,11 @@ static void jppron_create(char *audio_dir_path, s8 dbpth) {
     remove((char *)dbfile.s);
     frees8(&dbfile);
 
-    // TODO: Delete old db if existent
-    if (create_dir((char *)dbpth.s))
-        fatal_perror("Creating directory");
+    int stat = create_dir((char *)dbpth.s);
+    die_on(stat != 0, "Creating directory '%s': %s", dbpth.s, strerror(errno));
 
-    DIR *audio_dir;
-    if ((audio_dir = opendir(audio_dir_path)) == NULL)
-        fatal_perror("Opening audio directory");
+    _drop_(closedir) DIR *audio_dir = opendir(audio_dir_path);
+    die_on(!audio_dir, "Failed to open audio directory '%s': %s", audio_dir_path, strerror(errno));
 
     database db = opendb((char *)dbpth.s, false);
 
@@ -374,7 +366,6 @@ static void jppron_create(char *audio_dir_path, s8 dbpth) {
     }
 
     closedb(db);
-    closedir(audio_dir);
 
     s8 lock_file = buildpath(dbpth, S("lock.mdb"));
     remove((char *)lock_file.s);
@@ -386,7 +377,7 @@ static fileinfo getfileinfo(database db, s8 fn) {
     s8 data_split[4] = {0};
 
     s8 d = data;
-    for (int i = 0; i < countof(data_split) && d.len > 0; i++) {
+    for (long unsigned int i = 0; i < arrlen(data_split) && d.len > 0; i++) {
         assert(d.len > 0);
 
         size len = 0;
@@ -493,7 +484,7 @@ void jppron(s8 word, s8 reading, char *audiopth) {
 #ifdef INCLUDE_MAIN
 int main(int argc, char **argv) {
     if (argc < 2)
-        fatal("Usage: %s word", argc > 0 ? argv[0] : "jppron");
+        die("Usage: %s word", argc > 0 ? argv[0] : "jppron");
 
     char *default_audio_path = g_build_filename(g_get_user_data_dir(), "ajt_japanese_audio", NULL);
 

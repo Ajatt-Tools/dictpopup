@@ -28,8 +28,8 @@ DEBUG_CFLAGS=-DDEBUG \
 	     -Og -ggdb 
 RELEASE_CFLAGS=-O3 -flto -march=native
 
-FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c dbreader.c ankiconnectc.c database.c jppron.c pdjson.c
-FILES_H=ankiconnectc.h dbreader.h deinflector.h gtk3popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
+FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
+FILES_H=ankiconnectc.h db.h deinflector.h gtk3popup.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
 SRC=$(addprefix $(SDIR)/,$(FILES))
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
 
@@ -38,8 +38,8 @@ CFLAGS_CREATE=-I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb -D_POSIX_C_SOUR
 LDLIBS_CREATE=-ffunction-sections -fdata-sections -Wl,--gc-sections \
 	      -lzip $(shell pkg-config --libs glib-2.0) -llmdb
 
-FILES_CREATE=dbwriter.c pdjson.c util.c settings.c
-FILES_H_CREATE=dbwriter.h pdjson.h util.h buf.h settings.h
+FILES_CREATE=db.c pdjson.c util.c settings.c
+FILES_H_CREATE=db.h pdjson.h util.h buf.h settings.h
 
 SRC_CREATE=$(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
 SRC_H_CREATE=$(addprefix $(IDIR)/,$(FILES_H_CREATE))

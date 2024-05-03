@@ -4,11 +4,10 @@
 
 #include <glib.h>
 
-#include "ankiconnectc.h"
-#include "dbreader.h"
-#include "deinflector.h"
 #include "dictpopup.h"
-#include "gtk3popup.h"
+#include "db.h"
+#include "ankiconnectc.h"
+#include "deinflector.h"
 #include "messages.h"
 #include "platformdep.h"
 #include "settings.h"
@@ -71,58 +70,20 @@ static void fill_entries(possible_entries_s pe[static 1], dictentry const de) {
     pe->dictname = de.dictname;
 }
 
-static int getfreq(s8 kanji, s8 reading) {
-    _drop_(frees8) s8 key = concat(kanji, S("\0"), reading);
-    return db_getfreq(key);
-}
-
-/*
- * Returns: dictentry with newly allocated strings parsed from @data
- */
-static dictentry data_to_dictent(s8 data) {
-    s8 data_split[4] = {0};
-
-    s8 d = data;
-    for (int i = 0; i < countof(data_split); i++) {
-        assert(d.len > 0);
-
-        size len = 0;
-        while (len < d.len && d.s[len] != '\0')
-            len++;
-        data_split[i] = news8(len);
-        u8copy(data_split[i].s, d.s, data_split[i].len);
-
-        d.s += data_split[i].len + 1;
-        d.len -= data_split[i].len + 1;
-    }
-
-    return (dictentry){.dictname = data_split[0],
-                       .kanji = data_split[1],
-                       .reading = data_split[2],
-                       .definition = data_split[3],
-                       .frequency = getfreq(data_split[1], data_split[2])};
-}
-
-static void lookup_add_to_dict(dictentry *dict[static 1], s8 word) {
-    dbg("Looking up: %.*s", (int)word.len, word.s);
-
-    size_t n_ids = 0;
-    u32 *ids = db_getids(word, &n_ids);
-    if (ids) {
-        for (size_t i = 0; i < n_ids; i++) {
-            const s8 de_data = db_getdata(ids[i]);
-            dictentry de = data_to_dictent(de_data);
-            dictionary_add(dict, de);
-        }
-    }
-    free(ids);
-}
-
-static void add_deinflections_to_dict(dictentry *dict[static 1], s8 word) {
+static void add_deinflections_to_dict(database_t db[static 1], s8 word, dictentry *dict[static 1]) {
     s8 *deinfs_b = deinflect(word);
     for (size_t i = 0; i < buf_size(deinfs_b); i++)
-        lookup_add_to_dict(dict, deinfs_b[i]);
+        db_get_dictents(db, deinfs_b[i], dict);
     frees8buffer(&deinfs_b);
+}
+
+static dictentry *lookup(database_t db[static 1], s8 word) {
+    dbg("Looking up: %.*s", (int)word.len, word.s);
+
+    dictentry *dict;
+    db_get_dictents(db, word, &dict);
+    add_deinflections_to_dict(db, word, &dict);
+    return dict;
 }
 
 static int indexof(char const *str, char *arr[]) {
@@ -152,48 +113,44 @@ static int dictentry_comparer(void const *voida, void const *voidb) {
     return inda < indb ? -1 : inda == indb ? 0 : 1;
 }
 
-static void fill_dict_with(dictentry *dict[static 1], s8 word) {
-    lookup_add_to_dict(dict, word);
-    add_deinflections_to_dict(dict, word);
-}
-
-dictentry *create_dictionary(dictpopup_s d[static 1]) {
+dictentry *create_dictionary(dictpopup_t *d) {
     dictentry *dict = NULL;
 
-    open_database();
-    fill_dict_with(&dict, d->pe.lookup);
-    if (dictlen(dict) == 0 && cfg.general.mecab) {
+    database_t db = db_open(cfg.general.dbpth, true);
+
+    // TODO: Fix lookup name clash
+    dict = lookup(&db, d->pe.lookup);
+    if (!dict && cfg.general.mecab) {
         _drop_(frees8) s8 hira = kanji2hira(d->pe.lookup);
-        fill_dict_with(&dict, hira);
+        dict = lookup(&db, hira);
     }
-    if (dictlen(dict) == 0 && cfg.general.substringSearch) {
+    if (!dict && cfg.general.substringSearch) {
         int first_chr_len = utf8_chr_len(d->pe.lookup.s);
         while (dictlen(dict) == 0 && d->pe.lookup.len > first_chr_len) {
             d->pe.lookup = s8striputf8chr(d->pe.lookup);
-            fill_dict_with(&dict, d->pe.lookup);
+            d->pe.lookup.s[d->pe.lookup.len] = '\0'; // TODO: Remove necessity for this
+            dict = lookup(&db, d->pe.lookup);
         }
     }
-    close_database();
 
-    if (dictlen(dict) == 0) {
+    db_close(&db);
+
+    if (!dict) {
         msg("No dictionary entry found");
-        return dict;
+        exit(EXIT_FAILURE);
     }
 
-    assert(dict);
     if (cfg.general.sort)
         qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
-
-    d->pe.lookup.s[d->pe.lookup.len] = '\0'; // TODO: Remove necessity for this
 
     return dict;
 }
 
-void create_ankicard(dictpopup_s d, dictentry de) {
+void create_ankicard(dictpopup_t d, dictentry de) {
     possible_entries_s p = d.pe;
     fill_entries(&p, de);
 
-    _drop_(free) char **fieldentries = new(char *, cfg.anki.numFields);
+    _drop_(free) char **fieldentries = new (char *, cfg.anki.numFields);
     for (size_t i = 0; i < cfg.anki.numFields; i++)
         fieldentries[i] = (char *)map_entry(p, cfg.anki.fieldMapping[i]).s;
 
@@ -209,23 +166,24 @@ void create_ankicard(dictpopup_s d, dictentry de) {
         err("Error adding card: %s", ac_resp.data.string);
 }
 
-dictpopup_s dictpopup_init(int argc, char **argv) {
-    int nextarg = parse_cmd_line_opts(argc, argv); // Needs to be first
+dictpopup_t dictpopup_init(int argc, char **argv) {
+    int nextarg = parse_cmd_line_opts(argc, argv);
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
 
-    if (!db_exists(fromcstr_(cfg.general.dbpth)))
-        fatal("Database does not exist. You must create it first with "
-              "dictpopup-create.");
+    die_on(!db_check_exists(fromcstr_(cfg.general.dbpth)),
+           "Database does not exist. You must create it first with dictpopup-create.");
 
     possible_entries_s p = {0};
+
     p.windowname = get_windowname();
     p.lookup = argc - nextarg > 0 ? fromcstr_(argv[nextarg]) : get_selection();
-    if (p.lookup.len == 0)
-        fatal("No selection and no argument provided. Exiting.");
-    if (!g_utf8_validate((char *)p.lookup.s, p.lookup.len, NULL))
-        fatal("Lookup is not a valid UTF-8 string");
+
+    die_on(!p.lookup.len, "No selection and no argument provided. Exiting..");
+    die_on(!g_utf8_validate((char *)p.lookup.s, p.lookup.len, NULL),
+           "Lookup is not a valid UTF-8 string");
+
     if (cfg.general.nukeWhitespaceLookup)
         nuke_whitespace(p.lookup);
 
-    return (dictpopup_s){p};
+    return (dictpopup_t){p};
 }

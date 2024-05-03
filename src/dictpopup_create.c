@@ -7,7 +7,7 @@
 #include <glib.h> // for g_get_user_data_dir()
 #include <zip.h>
 
-#include "dbwriter.h"
+#include "db.h"
 #include "messages.h"
 #include "pdjson.h"
 #include "settings.h"
@@ -67,7 +67,7 @@ static s8 json_get_string_(json_stream *json) {
     return r;
 }
 
-static void add_dictent_to_db(dictentry de) {
+static void add_dictent_to_db(database_t *db, dictentry de) {
     if (de.definition.len == 0)
         dbg("Could not parse a definition for entry with kanji: \"%s\" and "
             "reading: \"%s\". In dictionary: \"%s\"",
@@ -77,15 +77,10 @@ static void add_dictent_to_db(dictentry de) {
             "\"%s\", in dictionary: \"%s\"",
             de.definition.s, de.dictname.s);
     else {
-        s8 sep = S("\0");
-        s8 datastr = concat(de.dictname, sep, de.kanji, sep, de.reading, sep, de.definition);
-
         if (de.kanji.len > 0)
-            addtodb(de.kanji, datastr);
+            db_put_dictent(db, de.kanji, de);
         if (de.reading.len > 0) // Let the db figure out duplicates
-            addtodb(de.reading, datastr);
-
-        free(datastr.s);
+            db_put_dictent(db, de.reading, de);
     }
 }
 
@@ -223,7 +218,7 @@ static void freedictentry_(dictentry de[static 1]) {
     frees8(&de->definition);
 }
 
-static void add_dictionary(s8 buffer, s8 dictname) {
+static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
     /* printf("Buffer: %.*s", (int)buffer.len, (char*)buffer.s); */
     json_stream s[1];
     json_open_buffer(s, buffer.s, buffer.len);
@@ -294,7 +289,7 @@ static void add_dictionary(s8 buffer, s8 dictname) {
             // Skip
             /* ----------- */
 
-            add_dictent_to_db(de);
+            add_dictent_to_db(db, de);
             freedictentry_(&de);
             json_skip_until(s, JSON_ARRAY_END);
         }
@@ -303,12 +298,7 @@ static void add_dictionary(s8 buffer, s8 dictname) {
     json_close(s); // TODO: json_reset instead of close
 }
 
-static void add_freq_to_db(s8 word, s8 reading, int freq) {
-    _drop_(frees8) s8 data = concat(word, S("\0"), reading);
-    db_add_int(data, freq);
-}
-
-static void add_frequency(s8 buffer) {
+static void add_frequency(database_t *db, s8 buffer) {
     json_stream s[1];
     json_open_buffer(s, buffer.s, buffer.len);
 
@@ -373,7 +363,7 @@ static void add_frequency(s8 buffer) {
                 assert(0);
             /* ----------- */
 
-            add_freq_to_db(word, reading, freq);
+            db_put_freq(db, word, reading, freq);
             frees8(&reading);
             frees8(&word);
 
@@ -425,7 +415,7 @@ static zip_t *open_zip(char *filename) {
     return za;
 }
 
-static void add_from_zip(char *filename) {
+static void add_from_zip(database_t *db, char *filename) {
     zip_t *za;
     if (!(za = open_zip(filename)))
         return;
@@ -441,12 +431,12 @@ static void add_from_zip(char *filename) {
             _drop_(frees8) s8 buffer = unzip_file(za, finfo.name); // Stats
                                                                    // again, but
                                                                    // anyway
-            add_dictionary(buffer, dictname);
+            add_dictionary(db, buffer, dictname);
         } else if (startswith(fn, S("term_meta_bank"))) {
             _drop_(frees8) s8 buffer = unzip_file(za, finfo.name); // Stats
                                                                    // again, but
                                                                    // anyway
-            add_frequency(buffer);
+            add_frequency(db, buffer);
         }
     }
 }
@@ -473,8 +463,8 @@ static void check_db_exists(s8 dbpath) {
 static void create_path(s8 dbpath) {
     char *dbpath_c = (char *)dbpath.s;
     if (access(dbpath_c, R_OK) != 0) {
-        if (mkdir(dbpath_c, S_IRWXU | S_IRWXG | S_IXOTH))
-            fatal_perror("mkdir");
+	int stat = mkdir(dbpath_c, S_IRWXU | S_IRWXG | S_IXOTH);
+	die_on(stat != 0, "Error creating directory '%s': %s", dbpath_c, strerror(errno));
     }
 }
 
@@ -498,7 +488,7 @@ int main(int argc, char *argv[]) {
     create_path(dbpath);
     check_db_exists(dbpath);
 
-    opendb((char *)dbpath.s);
+    database_t db = db_open((char *)dbpath.s, false);
 
     _drop_(closedir) DIR *dir = opendir(".");
     die_on(!dir, "Error opening current directory");
@@ -507,10 +497,10 @@ int main(int argc, char *argv[]) {
     while ((entry = readdir(dir)) && !sigint_received) {
         s8 fn = fromcstr_(entry->d_name);
         if (endswith(fn, S(".zip")))
-            add_from_zip((char *)fn.s);
+            add_from_zip(&db, (char *)fn.s);
     }
 
-    closedb();
+    db_close(&db);
 
     _drop_(frees8) s8 lockfile = buildpath(dbpath, S("lock.mdb"));
     remove((char *)lockfile.s);
