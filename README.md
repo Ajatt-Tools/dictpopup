@@ -1,5 +1,7 @@
 # dictpopup
 
+![Linux build](https://github.com/btrkeks/dictpopup/actions/workflows/ci.yml/badge.svg)
+
 This is a lightweight popup for searching selected text in your yomichan dictionaries with support for creating Anki cards.
 The look of the popup will depend on your gtk3 settings.
 
@@ -23,24 +25,30 @@ See `TODO.txt` for more.
  * Fast and memory efficient
 
 ## Dependencies
-libx11, gtk3, mecab, [lmdb](https://www.symas.com/lmdb), ffplay (optional, for pronunciation), [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)
+lmdb, mecab, gtk3, libx11, curl, libnotify, libzip\
+[AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)\
+ffplay (optional, for pronunciation)
 
 ## Installation
 ### Arch Linux
 Install the AUR package `dictpopup`.
 
 ### Manual
-First make sure, that you have all necessary dependencies installed.\
-Then 
+First make sure, that you have all necessary dependencies installed. On a Debian based distro this can be done with:
+```
+sudo apt-get install liblmdb-dev libmecab-dev libgtk-3-dev libx11-dev \
+     libcurl4-openssl-dev libnotify-dev libzip-dev
+```
+Then install with:
 ```bash
 git clone "https://github.com/btrkeks/dictpopup.git"
 cd dictpopup
 make && sudo make install
 ```
 #### If you do not use X11
-Then you can replace the `make` command above with `make O_HAVEX11=0`.\
+In this case you can replace the `make` command above with `make O_HAVEX11=0`.\
 This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window.
-But please note that Wayland does not support moving windows. Hence the popup will always be displayed at the top left corner in that case.
+But please note that Wayland does not support moving windows. Thus the popup will always be displayed at the top left corner under Wayland.
 
 ## Setup
 After the program installation you need to create a database where the dictionary entries are read from.

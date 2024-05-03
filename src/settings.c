@@ -55,11 +55,12 @@ int parse_cmd_line_opts(int argc, char **argv) {
             case 'c':
                 print_cfg = 1;
                 break;
+            case 'h':
+	              puts("See 'man dictpopup' or 'man dictpopup-create' for help.");
+	              exit(EXIT_SUCCESS);
             case '?':
                 fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
                 exit(EXIT_FAILURE);
-            default:
-                abort();
         }
 
     return optind;
@@ -262,7 +263,6 @@ void read_user_settings(int fieldmapping_max) {
 
         g_error_free(error);
         error = NULL;
-        return;
     } else {
         read_general(kf);
         read_anki(kf);
