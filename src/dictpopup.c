@@ -80,7 +80,7 @@ static void add_deinflections_to_dict(database_t db[static 1], s8 word, dictentr
 static dictentry *lookup(database_t db[static 1], s8 word) {
     dbg("Looking up: %.*s", (int)word.len, word.s);
 
-    dictentry *dict;
+    dictentry *dict = NULL;
     db_get_dictents(db, word, &dict);
     add_deinflections_to_dict(db, word, &dict);
     return dict;
