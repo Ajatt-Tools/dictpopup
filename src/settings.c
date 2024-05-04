@@ -57,7 +57,7 @@ int parse_cmd_line_opts(int argc, char **argv) {
     int c;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "c")) != -1)
+    while ((c = getopt(argc, argv, "ch")) != -1)
         switch (c) {
             case 'c':
                 print_cfg = 1;
