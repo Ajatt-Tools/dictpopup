@@ -16,7 +16,7 @@ typedef int32_t i32;
 typedef uint32_t u32;
 typedef ptrdiff_t size;
 
-#define new(type, num) xcalloc(num, sizeof(type))
+#define new (type, num) xcalloc(num, sizeof(type))
 static void *xcalloc(size_t nmemb, size_t nbytes) {
     void *p = calloc(nmemb, nbytes);
     if (!p) {
