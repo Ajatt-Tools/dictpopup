@@ -20,6 +20,8 @@ jobs:
       - run: clang-format --version
 
       - run: make clean analyse
+      - run: make tests
+      - run: ./tests
 
 on:
   push:

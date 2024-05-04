@@ -190,19 +190,19 @@ s8 unescape(s8 str) {
     return str;
 }
 
-s8 concat_(s8 *strings, const s8 stopper) {
+s8 concat_(s8 *strings) {
     size len = 0;
-    for (s8 *s = strings; !s8equals(*s, stopper); s++)
+    for (s8 *s = strings; !s8equals(*s, S8_STOPPER); s++)
         len += s->len;
 
     s8 ret = news8(len);
     s8 p = ret;
-    for (s8 *s = strings; !s8equals(*s, stopper); s++)
+    for (s8 *s = strings; !s8equals(*s, S8_STOPPER); s++)
         p = s8copy(p, *s);
     return ret;
 }
 
-s8 buildpath_(s8 *pathcomps, const s8 stopper) {
+s8 buildpath_(s8 *pathcomps) {
 #ifdef _WIN32
     s8 sep = S("\\");
 #else
@@ -210,7 +210,7 @@ s8 buildpath_(s8 *pathcomps, const s8 stopper) {
 #endif
     size pathlen = 0;
     bool first = true;
-    for (s8 *pc = pathcomps; !s8equals(*pc, stopper); pc++) {
+    for (s8 *pc = pathcomps; !s8equals(*pc, S8_STOPPER); pc++) {
         if (!first)
             pathlen += sep.len;
         pathlen += pc->len;
@@ -222,7 +222,7 @@ s8 buildpath_(s8 *pathcomps, const s8 stopper) {
     s8 p = retpath;
 
     first = true;
-    for (s8 *pc = pathcomps; !s8equals(*pc, stopper); pc++) {
+    for (s8 *pc = pathcomps; !s8equals(*pc, S8_STOPPER); pc++) {
         if (!first)
             p = s8copy(p, sep);
         p = s8copy(p, *pc);

@@ -23,10 +23,9 @@ DEBUG_CFLAGS=-DDEBUG \
 	     -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion -Wshadow \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
-	     -Wno-maybe-uninitialized \
 	     -fsanitize=leak,address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
-	     -Og -ggdb 
-RELEASE_CFLAGS=-O3 -flto -march=native
+	     -Og -ggdb
+RELEASE_CFLAGS=-O3 -flto -march=native -Wmaybe-uninitialized
 
 FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
 FILES_H=ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
@@ -53,10 +52,10 @@ debug: $(bins)
 debug: CFLAGS+=$(DEBUG_CFLAGS)
 
 dictpopup: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/gtk3popup.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/gtk3popup.c $(SRC) $(LDLIBS)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE)
-	$(CC) $(CFLAGS_CREATE) -o $@ src/dictpopup_create.c $(SRC_CREATE) $(LDLIBS_CREATE)
+	$(CC) $(CFLAGS_CREATE) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS_CREATE)
 
 release:
 	version=$$(git describe); prefix=dictpopup-$${version#v}; \
@@ -90,7 +89,7 @@ clean:
 	rm -f dictpopup dictpopup-create tests
 
 tests: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -o $@ $(SDIR)/test.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/tests.c $(SRC) $(LDLIBS)
 
 check test: tests
 	./tests

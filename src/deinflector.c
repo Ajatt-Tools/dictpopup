@@ -142,19 +142,10 @@ s8 kanji2hira(s8 input) {
  * Replaces the last @suffix_len bytes of @word with @replacement.
  */
 static void add_replace_suffix(s8 word, s8 replacement, size suffix_len) {
-    assert(word.s);
     assert(word.len >= suffix_len);
-    assert(replacement.len >= 0);
 
-    // TODO: Rewrite this using s8 functions
-    s8 replstr = {0};
-    replstr.len = word.len - suffix_len + replacement.len;
-    replstr.s = new (u8, replstr.len);
-
-    memcpy(replstr.s, word.s, (size_t)(word.len - suffix_len));
-    if (replacement.len)
-        memcpy(replstr.s + word.len - suffix_len, replacement.s, (size_t)replacement.len);
-
+    word.len -= suffix_len;
+    s8 replstr = concat(word, replacement);
     buf_push(deinfs, replstr);
 }
 
@@ -162,19 +153,13 @@ static void add_replace_suffix(s8 word, s8 replacement, size suffix_len) {
  * Same as add_replace_suffix but with prefix
  */
 static void add_replace_prefix(s8 word, s8 replacement, size prefix_len) {
-    assert(word.s);
     assert(word.len >= prefix_len);
-    assert(replacement.len >= 0);
 
-    s8 retstr = {0};
-    retstr.len = word.len - prefix_len + replacement.len;
-    retstr.s = new (u8, retstr.len);
+    word.s += prefix_len;
+    word.len -= prefix_len;
+    s8 replstr = concat(replacement, word);
 
-    if (replacement.len)
-        memcpy(retstr.s, replacement.s, (size_t)replacement.len);
-    memcpy(retstr.s + replacement.len, word.s + prefix_len, (size_t)(word.len - prefix_len));
-
-    buf_push(deinfs, retstr);
+    buf_push(deinfs, replstr);
 }
 
 /*
@@ -266,6 +251,7 @@ static void check_past(s8 word) {
 static void check_masu(s8 word) {
     IF_ENDSWITH_CONVERT_ITOU("ます");
     IF_ENDSWITH_CONVERT_ITOU("ません");
+    IF_ENDSWITH_CONVERT_ITOU("ませんでした");
 }
 
 static void check_shimau(s8 word) {
@@ -314,6 +300,7 @@ static void check_potential(s8 word) {
 
     IF_ENDSWITH_REPLACE("せる", "す");
     IF_ENDSWITH_REPLACE("ける", "く");
+    IF_ENDSWITH_REPLACE("げる", "ぐ");
     IF_ENDSWITH_REPLACE("べる", "ぶ");
     IF_ENDSWITH_REPLACE("てる", "つ");
     IF_ENDSWITH_REPLACE("める", "む");
@@ -338,6 +325,20 @@ static void check_concurrent(s8 word) {
     IF_ENDSWITH_CONVERT_ITOU("ながら");
 }
 
+static void check_imperative(s8 word) {
+    // TODO: This is still missing some
+    IF_ENDSWITH_REPLACE("べろ", "べる");
+    IF_ENDSWITH_REPLACE("じろ", "じる");
+    IF_ENDSWITH_REPLACE("せ", "す");
+    IF_ENDSWITH_REPLACE("け", "く");
+    IF_ENDSWITH_REPLACE("げ", "ぐ");
+    IF_ENDSWITH_REPLACE("べ", "ぶ");
+    IF_ENDSWITH_REPLACE("て", "つ");
+    IF_ENDSWITH_REPLACE("え", "う");
+    IF_ENDSWITH_REPLACE("ね", "ぬ");
+    IF_ENDSWITH_REPLACE("め", "む");
+}
+
 static void deinflect_one_iter(s8 word) {
     check_shimau(word);
     check_adjective(word);
@@ -350,6 +351,7 @@ static void deinflect_one_iter(s8 word) {
     check_potential(word);
     check_conditional(word);
     check_concurrent(word);
+    check_imperative(word);
     kanjify(word);
 }
 

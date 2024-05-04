@@ -37,6 +37,12 @@ void *xrealloc(void *ptr, size_t size);
 // clang-format on
 
 /* ------------------- Start s8 utils ---------------- */
+// This encodes an invalid UTF-8 char to be used as a stopper
+// for variable argument length macros
+#define S8_STOPPER                                                                                 \
+    (s8) {                                                                                         \
+        .s = (u8[]){0xF8}, .len = 1                                                                \
+    }
 #define lengthof(s) (arrlen("" s "") - 1)
 #define s8(s)                                                                                      \
     { (u8 *)s, arrlen(s) - 1 }
@@ -114,16 +120,11 @@ void _nonnull_ frees8buffer(s8 **buf);
  *
  * Returns: A newly allocated s8 containing the concatenated string
  */
-#define concat(...)                                                                                \
-    concat_((s8[]){__VA_ARGS__, S("CONCAT_STOPPER")}, S("CONCAT_STOPPER")) // Might be better to use
-                                                                           // a stopper that
-                                                                           // consists of a single
-                                                                           // invalid char
-s8 _nonnull_ concat_(s8 *strings, const s8 stopper);
+#define concat(...) concat_((s8[]){__VA_ARGS__, S8_STOPPER})
+s8 _nonnull_ concat_(s8 *strings);
 
-#define buildpath(...)                                                                             \
-    buildpath_((s8[]){__VA_ARGS__, S("BUILD_PATH_STOPPER")}, S("BUILD_PATH_STOPPER"))
-s8 _nonnull_ buildpath_(s8 *pathcomps, const s8 stopper);
+#define buildpath(...) buildpath_((s8[]){__VA_ARGS__, S8_STOPPER})
+s8 _nonnull_ buildpath_(s8 *pathcomps);
 /* ------------------- End s8 utils ---------------- */
 
 /* --------------------------- string builder -----------------------_ */
