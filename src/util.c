@@ -1,8 +1,10 @@
+#include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h> // mkdir
 
 #include "util.h"
 
@@ -357,4 +359,10 @@ s8 nuke_whitespace(s8 z) {
     remove_substr((char *)z.s, S("　"));
 
     return fromcstr_((char *)z.s);
+}
+
+int createdir(char *dirpath) {
+    // TODO: Recursive implementation
+    int status = mkdir(dirpath, S_IRWXU | S_IRWXG | S_IXOTH);
+    return (status == 0 || errno == EEXIST) ? 0 : -1;
 }

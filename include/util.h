@@ -162,6 +162,11 @@ size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...)
 
 s8 nuke_whitespace(s8 z);
 
+/*
+ * Returns: 0 on success, -1 on failure and sets errno
+ */
+int _nonnull_ createdir(char *dirpath);
+
 /**
  * __attribute__((cleanup)) functions
  */

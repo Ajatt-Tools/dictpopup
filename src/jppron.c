@@ -325,21 +325,12 @@ static void add_from_index(database db, const char *index_path, s8 curdir) {
     json_close(s);
 }
 
-/*
- * Returns: 0 on success, -1 on failure and sets errno
- */
-static int create_dir(char *dir_path) {
-    // TODO: Recursive implementation?
-    int status = mkdir(dir_path, S_IRWXU | S_IRWXG | S_IXOTH);
-    return (status == 0 || errno == EEXIST) ? 0 : -1;
-}
-
 static void jppron_create(char *audio_dir_path, s8 dbpth) {
     s8 dbfile = buildpath(dbpth, S("data.mdb"));
     remove((char *)dbfile.s);
     frees8(&dbfile);
 
-    int stat = create_dir((char *)dbpth.s);
+    int stat = createdir((char *)dbpth.s);
     die_on(stat != 0, "Creating directory '%s': %s", dbpth.s, strerror(errno));
 
     _drop_(closedir) DIR *audio_dir = opendir(audio_dir_path);
