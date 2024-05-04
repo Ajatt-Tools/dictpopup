@@ -16,7 +16,9 @@ typedef int32_t i32;
 typedef uint32_t u32;
 typedef ptrdiff_t size;
 
+// clang-format off
 #define new(type, num) xcalloc(num, sizeof(type))
+// clang-format on
 static void *xcalloc(size_t nmemb, size_t nbytes) {
     void *p = calloc(nmemb, nbytes);
     if (!p) {

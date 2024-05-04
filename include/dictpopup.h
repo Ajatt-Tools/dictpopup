@@ -16,8 +16,6 @@ dictentry *_nonnull_ create_dictionary(dictpopup_t *d);
 
 void create_ankicard(dictpopup_t d, dictentry de);
 
-
-
 #define POSSIBLE_ENTRIES_S_NMEMB 9
 typedef struct possible_entries_s {
     s8 lookup;

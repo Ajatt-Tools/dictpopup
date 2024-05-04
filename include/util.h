@@ -32,7 +32,9 @@ typedef char byte;
 void *xmalloc(size_t size);
 void *xcalloc(size_t nmemb, size_t size);
 void *xrealloc(void *ptr, size_t size);
+// clang-format off
 #define new(type, num) xcalloc(num, sizeof(type))
+// clang-format on
 
 /* ------------------- Start s8 utils ---------------- */
 #define lengthof(s) (arrlen("" s "") - 1)
