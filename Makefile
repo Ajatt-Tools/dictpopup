@@ -9,8 +9,8 @@ SDIR=src
 LDIR=lib
 
 CPPFLAGS += -D_POSIX_C_SOURCE=200809L -DNOTIFICATIONS -I$(IDIR)
-LDLIBS += -ffunction-sections -fdata-sections -Wl,--gc-sections \
-       	  -lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify) -llmdb
+LDLIBS +=-lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify) -llmdb
+# LDLIBS+=-ffunction-sections -fdata-sections -Wl,--gc-sections
 
 O_HAVEX11 := 1  # X11 integration
 ifeq ($(strip $(O_HAVEX11)),1)
@@ -18,13 +18,13 @@ ifeq ($(strip $(O_HAVEX11)),1)
 	LDLIBS += -lXfixes -lX11
 endif
 
-CFLAGS := -Werror $(shell pkg-config --cflags gtk+-3.0) $(shell pkg-config --cflags libnotify) $(CFLAGS)
+CFLAGS := -Werror $(shell pkg-config --cflags gtk+-3.0) $(shell pkg-config --cflags libnotify)
 DEBUG_CFLAGS=-DDEBUG \
 	     -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion -Wshadow \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
 	     -fsanitize=leak,address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
-	     -Og -ggdb
+	     -O0 -ggdb
 RELEASE_CFLAGS=-O3 -flto -march=native -Wmaybe-uninitialized
 
 FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
@@ -33,12 +33,11 @@ SRC=$(addprefix $(SDIR)/,$(FILES))
 SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
 
 
-CFLAGS_CREATE=-I$(IDIR) -isystem$(LIBDIR)/lmdb/libraries/liblmdb -D_POSIX_C_SOURCE=200809L $(shell pkg-config --cflags glib-2.0)
-LDLIBS_CREATE=-ffunction-sections -fdata-sections -Wl,--gc-sections \
-	      -lzip $(shell pkg-config --libs glib-2.0) -llmdb
+CFLAGS_CREATE=-I$(IDIR) -D_POSIX_C_SOURCE=200809L $(shell pkg-config --cflags glib-2.0)
+LDLIBS_CREATE=-lzip $(shell pkg-config --libs glib-2.0) -llmdb
 
-FILES_CREATE=db.c pdjson.c util.c settings.c
-FILES_H_CREATE=db.h pdjson.h util.h buf.h settings.h
+FILES_CREATE=db.c pdjson.c util.c
+FILES_H_CREATE=db.h pdjson.h util.h buf.h
 
 SRC_CREATE=$(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
 SRC_H_CREATE=$(addprefix $(IDIR)/,$(FILES_H_CREATE))
@@ -56,6 +55,11 @@ dictpopup: $(SRC) $(SRC_H)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE)
 	$(CC) $(CFLAGS_CREATE) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS_CREATE)
+
+cli: $(SRC) $(SRC_H)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/cli.c $(SRC) $(LDLIBS)
+deinflector: $(SRC) $(SRC_H)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -I$(IDIR) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/util.c $(LDLIBS)
 
 release:
 	version=$$(git describe); prefix=dictpopup-$${version#v}; \
@@ -86,7 +90,7 @@ uninstall:
 	      $(CONFIG_DIR)/config.ini
 
 clean:
-	rm -f dictpopup dictpopup-create tests
+	rm -f dictpopup dictpopup-create tests cli deinflector
 
 tests: $(SRC) $(SRC_H)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/tests.c $(SRC) $(LDLIBS)

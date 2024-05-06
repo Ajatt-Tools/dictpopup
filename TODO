@@ -1,16 +1,13 @@
 ## dictpopup
-High priority
-- Refactor
-  - Allow for an easier replacement of the frontend
-    - Expose API to frontend like init() and end()?
-  -> Write a "Yomichan search"-like window application reusing the same backend
-- Create config file in ~/.config if not existent
+- Fix formating for JMDict and Jitendex
+- Write a "Yomichan search"-like window application
+- Include a small default dictionary (.mdb file)
+- Add ながら deinflection
 
 Mid priority
 - Implement the reading label as a text view to allow for editing -> initiate new search on Enter press
 - Group terms by reading, allow for switching between different readings
 - Implement a small window to manually enter a search string instead of selecting
-- Expand deinflection list
 - Kanjify the word in the copied sentence according to the dictionary entry
 - Remove trailing spaces from user settings
 - Write a gui config tool
@@ -47,7 +44,6 @@ Low priority
 - Skip certain lines on definition add (without selection), e.g.:
   - しず か （しづ—） [1]【静か・▽閑か】
   -（形動）〔文〕ナリ
-- Add unit tests and do fuzzy testing
 - Put length of longest entry into the database under LENGTH_OF_LONGEST_ENTRY. Then limit the lookup by that length
   - Only important for an auto scan implementation though
 
@@ -59,21 +55,15 @@ Low priority
 ### Misc
 - If there is a dictionary entry for 恭しく even though 恭しい is present in the collection, then a red dot will be shown
 ### Deinflection
-- 与ろうとする missing
 - やった gets deinflected to やつ
   - This can be fixed by reading in the 4th string of a Yomichan term-bank entry, which is:
     "String of space-separated rule identifiers for the definition which is used to validate deinflection.
     An empty string should be used for words which aren't inflected."
-- たいそう gets deinflected to たいい
-- 懐から becomes 懐く
-- 白けた gets deinflected to 白い
-- 目した only gets deinflected to 目す
-- はたきながら (should become はたく)
-- 挿げ(変わる)
 - に looks broken
+
+Mecab problems:
 - 大正門 pulls 大誓文
-- Can't definlect 眠ろうとする, 粘ろうとする
-- 失われ、
+- 家名だ
 
 freq:
 - いじらしい not present in all

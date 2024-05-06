@@ -13,6 +13,10 @@
 #include "settings.h"
 #include "util.h"
 
+// This only applies for substring search
+// 60 are 20 Japanese characters
+#define MAX_LOOKUP_LEN 60 // in bytes
+
 static s8 map_entry(possible_entries_s p, int i) {
     // A safer way would be switching to strings, but I feel like that's
     // not very practical to configure
@@ -78,8 +82,6 @@ static void add_deinflections_to_dict(database_t db[static 1], s8 word, dictentr
 }
 
 static dictentry *lookup(database_t db[static 1], s8 word) {
-    dbg("Looking up: %.*s", (int)word.len, word.s);
-
     dictentry *dict = NULL;
     db_get_dictents(db, word, &dict);
     add_deinflections_to_dict(db, word, &dict);
@@ -126,10 +128,12 @@ dictentry *create_dictionary(dictpopup_t *d) {
     }
     if (!dict && cfg.general.substringSearch) {
         int first_chr_len = utf8_chr_len(d->pe.lookup.s);
-        while (dictlen(dict) == 0 && d->pe.lookup.len > first_chr_len) {
+        while (!dict && d->pe.lookup.len > first_chr_len) {
             d->pe.lookup = s8striputf8chr(d->pe.lookup);
             d->pe.lookup.s[d->pe.lookup.len] = '\0'; // TODO: Remove necessity for this
-            dict = lookup(&db, d->pe.lookup);
+            if (d->pe.lookup.len < MAX_LOOKUP_LEN) { // Don't waste time looking up huge strings
+                dict = lookup(&db, d->pe.lookup);
+            }
         }
     }
 

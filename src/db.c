@@ -27,6 +27,7 @@ database_t db_open(char *dbpath, bool readonly) {
         unsigned int mapsize = 2097152000; // 2Gb
         C(mdb_env_set_mapsize(db.env, mapsize));
 
+        dbg("Opening db in path: %s", dbpath);
         C(mdb_env_open(db.env, dbpath, 0, 0664));
         C(mdb_txn_begin(db.env, NULL, 0, &db.txn));
 
@@ -154,6 +155,7 @@ static s8 getdata(database_t *db, u32 id) {
 }
 
 void db_get_dictents(database_t *db, s8 headword, dictentry *dict[static 1]) {
+    dbg("Looking up: %.*s", (int)headword.len, (char *)headword.s);
 
     size_t n_ids = 0;
     u32 *ids = get_ids(db, headword, &n_ids);

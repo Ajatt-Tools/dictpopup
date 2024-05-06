@@ -10,7 +10,6 @@
 #include "db.h"
 #include "messages.h"
 #include "pdjson.h"
-#include "settings.h"
 #include "util.h"
 
 #define error_return(retval, ...)                                                                  \
@@ -480,9 +479,8 @@ static void setup_sighandler(void) {
 
 int main(int argc, char *argv[]) {
     setup_sighandler();
-    int nextarg = parse_cmd_line_opts(argc, argv);
 
-    s8 dbpath = argc - nextarg > 0 ? fromcstr_(argv[nextarg]) : get_default_path();
+    s8 dbpath = argc > 1 ? fromcstr_(argv[1]) : get_default_path();
     dbg("Using database path: %s", dbpath.s);
 
     create_path(dbpath);
