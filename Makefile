@@ -25,7 +25,7 @@ DEBUG_CFLAGS=-DDEBUG \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
 	     -fsanitize=leak,address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
 	     -O0 -ggdb
-RELEASE_CFLAGS=-O3 -flto -march=native -Wmaybe-uninitialized
+RELEASE_CFLAGS=-O3 -flto -march=native
 
 FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
 FILES_H=ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
@@ -67,7 +67,7 @@ release:
 
 CONFIG_DIR=${DESTDIR}${PREFIX}/share/dictpopup
 
-install: default
+install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	mkdir -p ${DESTDIR}$(PREFIX)/share/man/man1
 
