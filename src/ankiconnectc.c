@@ -181,7 +181,7 @@ void ac_print_ankicard(ankicard ac) {
     puts("Ankicard:");
     printf("deck: %s\n", ac.deck);
     printf("notetype: %s\n", ac.notetype);
-    printf("Number of fields: %li\n", ac.num_fields);
+    printf("Number of fields: %zu\n", ac.num_fields);
     printf("Fieldnames: [");
     for (size_t i = 0; i < ac.num_fields; i++) {
         if (i)
@@ -191,7 +191,7 @@ void ac_print_ankicard(ankicard ac) {
     puts("]");
     printf("Contents: \n");
     for (size_t i = 0; i < ac.num_fields; i++)
-        printf("%li: %s\n", i, ac.fieldentries[i]);
+        printf("%zu: %s\n", i, ac.fieldentries[i]);
     if (ac.tags) {
         for (char **tagptr = ac.tags; *tagptr; tagptr++)
             printf("%s", *tagptr);
