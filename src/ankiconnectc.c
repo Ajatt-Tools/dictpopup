@@ -364,9 +364,9 @@ static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *user
     if (strstr(ptr, "\"error\": null"))
         *ret = (retval_s){.ok = true};
     else {
-	char *err = strndup(ptr, nmemb);
+        char *err = strndup(ptr, nmemb);
         *ret = (retval_s){.data.string = err, .ok = false};
-	// TODO: This is a memory leak
+        // TODO: This is a memory leak
     }
 
     return nmemb;
