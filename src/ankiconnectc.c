@@ -173,9 +173,31 @@ static char *json_escape_str(const char *str) {
 
     return sb_steal_str(&sb);
 }
-/* END UTILS */
+/* ------ END UTILS ------------ */
 
 typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
+
+void ac_print_ankicard(ankicard ac) {
+    puts("Ankicard:");
+    printf("deck: %s\n", ac.deck);
+    printf("notetype: %s\n", ac.notetype);
+    printf("Number of fields: %li\n", ac.num_fields);
+    printf("Fieldnames: [");
+    for (size_t i = 0; i < ac.num_fields; i++) {
+        if (i)
+            putchar(',');
+        printf("%s", ac.fieldnames[i]);
+    }
+    puts("]");
+    printf("Contents: \n");
+    for (size_t i = 0; i < ac.num_fields; i++)
+        printf("%li: %s\n", i, ac.fieldentries[i]);
+    if (ac.tags) {
+        for (char **tagptr = ac.tags; *tagptr; tagptr++)
+            printf("%s", *tagptr);
+    } else
+        puts("Tags: none");
+}
 
 void ankicard_free(ankicard ac) {
     free(ac.deck);
@@ -341,8 +363,11 @@ static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *user
 
     if (strstr(ptr, "\"error\": null"))
         *ret = (retval_s){.ok = true};
-    else
-        *ret = (retval_s){.data.string = ptr, .ok = false};
+    else {
+	char *err = strndup(ptr, nmemb);
+        *ret = (retval_s){.data.string = err, .ok = false};
+	// TODO: This is a memory leak
+    }
 
     return nmemb;
 }
