@@ -187,7 +187,9 @@ dictpopup_t dictpopup_init(int argc, char **argv) {
            "Lookup is not a valid UTF-8 string");
 
     if (cfg.general.nukeWhitespaceLookup)
-        nuke_whitespace(p.lookup);
+        p.lookup = nuke_whitespace(p.lookup);
+
+    assert(g_utf8_validate((char *)p.lookup.s, p.lookup.len, NULL));
 
     return (dictpopup_t){p};
 }
