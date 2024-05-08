@@ -129,6 +129,7 @@ s8 *getfiles(database db, s8 key) {
     if (rc != MDB_NOTFOUND)
         MDB_CHECK(rc);
 
+    mdb_cursor_close(cursor);
     mdb_txn_abort(db.txn);
     return ret;
 }

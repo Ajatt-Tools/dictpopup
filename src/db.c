@@ -180,7 +180,7 @@ void db_put_freq(database_t *db, s8 word, s8 reading, u32 freq) {
 }
 
 int db_get_freq(database_t *db, s8 word, s8 reading) {
-    s8 key = concat(word, S("\0"), reading);
+    _drop_(frees8) s8 key = concat(word, S("\0"), reading);
     MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
     MDB_val val_m = {0};
 

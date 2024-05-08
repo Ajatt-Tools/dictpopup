@@ -101,7 +101,7 @@ s8 s8striputf8chr(s8 s);
 /*
  * Returns the length in bytes of the utf8 encoded char pointed to by @p
  */
-#define utf8_chr_len(p) utf8_chr_len_data[(p)[0] >> 3]
+#define utf8_chr_len(p) utf8_chr_len_data[(p)[0] >> 4]
 extern u8 const utf8_chr_len_data[];
 
 /*

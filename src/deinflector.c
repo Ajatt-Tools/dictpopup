@@ -148,7 +148,6 @@ s8 kanji2hira(s8 input) {
     }
 
     mecab_destroy(mecab);
-    assert(input.s[input.len] == '\0');
     return sb_gets8(sb);
 }
 

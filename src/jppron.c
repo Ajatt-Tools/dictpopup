@@ -23,13 +23,6 @@
     #define access _access
 #endif
 
-typedef struct {
-    s8 origin;
-    s8 hira_reading;
-    s8 pitch_number;
-    s8 pitch_pattern;
-} fileinfo;
-
 const char json_typename[][16] = {
     [JSON_ERROR] = "ERROR",           [JSON_DONE] = "DONE",     [JSON_OBJECT] = "OBJECT",
     [JSON_OBJECT_END] = "OBJECT_END", [JSON_ARRAY] = "ARRAY",   [JSON_ARRAY_END] = "ARRAY_END",
@@ -37,19 +30,28 @@ const char json_typename[][16] = {
     [JSON_FALSE] = "FALSE",           [JSON_NULL] = "NULL",
 };
 
+typedef struct {
+    s8 origin;
+    s8 hira_reading;
+    s8 pitch_number;
+    s8 pitch_pattern;
+} fileinfo;
+
+static void freefileinfo(fileinfo fi[static 1]) {
+    frees8(&fi->origin);
+    frees8(&fi->hira_reading);
+    frees8(&fi->pitch_number);
+    frees8(&fi->pitch_pattern);
+}
+
+DEFINE_DROP_FUNC_PTR(fileinfo, freefileinfo)
+
 static void print_fileinfo(fileinfo fi) {
     printf("Source: %.*s\nReading: %.*s\nPitch number: %.*s\nPitch pattern: "
            "%.*s\n\n",
            (int)fi.origin.len, (char *)fi.origin.s, (int)fi.hira_reading.len,
            (char *)fi.hira_reading.s, (int)fi.pitch_number.len, (char *)fi.pitch_number.s,
            (int)fi.pitch_pattern.len, (char *)fi.pitch_pattern.s);
-}
-
-static void freefileinfo(fileinfo fi[static 1]) {
-    /* frees8(&fi->origin); */
-    frees8(&fi->hira_reading);
-    frees8(&fi->pitch_number);
-    frees8(&fi->pitch_pattern);
 }
 
 /* static void */
@@ -66,9 +68,9 @@ static void add_filename(database db, s8 headw, s8 fullpth) {
 
 static void add_fileinfo(database db, s8 fullpth, fileinfo fi) {
     s8 sep = S("\0");
-    s8 data = concat(fi.origin, sep, fi.hira_reading, sep, fi.pitch_number, sep, fi.pitch_pattern);
+    _drop_(frees8) s8 data =
+        concat(fi.origin, sep, fi.hira_reading, sep, fi.pitch_number, sep, fi.pitch_pattern);
     addtodb2(db, fullpth, data);
-    frees8(&data);
 }
 
 // wrapper for json api
@@ -312,7 +314,10 @@ static void add_from_index(database db, const char *index_path, s8 curdir) {
                 json_skip_until(s, JSON_OBJECT_END);
 
             add_fileinfo(db, fullpth, fi);
-            freefileinfo(&fi);
+
+            frees8(&fi.hira_reading);
+            frees8(&fi.pitch_number);
+            frees8(&fi.pitch_pattern);
             frees8(&fullpth);
         } else if (reading_files) {
             dbg("Skipping entry of type '%s' while reading files.", json_typename[type]);
@@ -391,7 +396,7 @@ static fileinfo getfileinfo(database db, s8 fn) {
 }
 
 static void play_word(s8 word, s8 reading, s8 database_path) {
-    s8 normread = normalize_reading(reading);
+    _drop_(frees8) s8 normread = normalize_reading(reading);
 
     database db = opendb((char *)database_path.s, true);
     s8 *files = getfiles(db, word);
@@ -407,7 +412,7 @@ static void play_word(s8 word, s8 reading, s8 database_path) {
     if (reading.len) {
         bool match = false;
         for (size_t i = 0; i < buf_size(files); i++) {
-            fileinfo fi = getfileinfo(db, files[i]);
+            _drop_(freefileinfo) fileinfo fi = getfileinfo(db, files[i]);
 
             if (s8equals(normread, fi.hira_reading)) {
                 printf("File path: %.*s\n", (int)files[i].len, (char *)files[i].s);
@@ -415,7 +420,6 @@ static void play_word(s8 word, s8 reading, s8 database_path) {
                 play_audio(files[i]);
                 match = true;
             }
-            freefileinfo(&fi);
         }
         if (!match) {
             dbg("Could not find an audio file with corresponding reading. "
@@ -426,10 +430,9 @@ static void play_word(s8 word, s8 reading, s8 database_path) {
     if (!reading.len) {
         // Play all
         for (size_t i = 0; i < buf_size(files); i++) {
-            fileinfo fi = getfileinfo(db, files[i]);
+            _drop_(freefileinfo) fileinfo fi = getfileinfo(db, files[i]);
             printf("\nFile path: %.*s\n", (int)files[i].len, (char *)files[i].s);
             print_fileinfo(fi);
-            freefileinfo(&fi);
 
             play_audio(files[i]);
         }

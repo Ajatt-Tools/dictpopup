@@ -209,6 +209,18 @@ void ankicard_free(ankicard ac) {
     g_strfreev(ac.tags);
 }
 
+/*
+ * Fetch api url and cache the result
+ */
+static const char *get_api_url(void) {
+    static const char *api_url = NULL;
+    if (!api_url) {
+        const char *env = getenv(AC_API_URL_EVAR);
+        api_url = env && *env ? env : DEFAULT_AC_API_URL;
+    }
+    return api_url;
+}
+
 static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     CURL *curl = curl_easy_init();
     if (!curl)
@@ -218,12 +230,7 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     headers = curl_slist_append(headers, "Accept: application/json");
     headers = curl_slist_append(headers, "Content-Type: application/json");
 
-    const char *env_url = getenv(AC_API_URL_EVAR);
-    if (env_url)
-        curl_easy_setopt(curl, CURLOPT_URL, env_url);
-    else
-        curl_easy_setopt(curl, CURLOPT_URL, DEFAULT_AC_API_URL);
-
+    curl_easy_setopt(curl, CURLOPT_URL, get_api_url());
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request.len);
@@ -237,10 +244,12 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     }
 
     CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK)
-        return (retval_s){.data.string = "Could not connect to AnkiConnect. Is Anki running?",
-                          .ok = false};
+    if (res != CURLE_OK) {
+        ret = (retval_s){.data.string = "Could not connect to AnkiConnect. Is Anki running?",
+                         .ok = false};
+    }
 
+    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     return ret;
 }
@@ -263,7 +272,7 @@ static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata
  *
  * Returns: Error msg on error, null otherwise
  */
-retval_s ac_search(_Bool include_suspended, char *deck, char *field, char *entry) {
+retval_s ac_search(bool include_suspended, char *deck, char *field, char *entry) {
 
     stringbuilder_s sb;
     sb_init(&sb, 200);

@@ -8,8 +8,13 @@
 
 #include "util.h"
 
-u8 const utf8_chr_len_data[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0};
+const u8 utf8_chr_len_data[] = {
+    /* 0XXX */ 1, 1, 1, 1, 1, 1, 1, 1,
+    /* 10XX */ 1, 1, 1, 1, /* invalid */
+    /* 110X */ 2, 2,
+    /* 1110 */ 3,
+    /* 1111 */ 4, /* maybe, but also could be invalid */
+};
 
 #define likely(x) __builtin_expect(!!(x), 1)
 #define expect(x)                                                                                  \
@@ -46,24 +51,6 @@ void *xrealloc(void *ptr, size_t nbytes) {
     }
     return p;
 }
-/* --------------- Start arena ----------------- */
-
-/* typedef struct { */
-/*     byte *beg; */
-/*     byte *end; */
-/* } arena; */
-
-/* arena */
-/* newarena_(void) */
-/* { */
-/*     arena a = {0}; */
-/*     size cap = 1<<22; */
-/*     a.beg = (byte*)xmalloc(cap); */
-/*     a.end = a.beg + cap; */
-/*     return a; */
-/* } */
-
-/* --------------------------------------------- */
 
 /* --------------- Start s8 utils -------------- */
 void u8copy(u8 *restrict dst, const u8 *restrict src, size n) {
@@ -341,22 +328,22 @@ size_t snprintf_safe(char *buf, size_t len, const char *fmt, ...) {
     return (size_t)needed;
 }
 
-// TODO: Rewrite these
-static void _nonnull_ remove_substr(char *str, s8 sub) {
-    char *s = str, *e = str;
+static void strremove(char *str, const s8 sub) {
+    assert(sub.s[sub.len] == '\0');
 
-    do {
-        while (strncmp(e, (char *)sub.s, sub.len) == 0) {
-            e += sub.len;
+    if (sub.len > 0) {
+        char *p = str;
+        while ((p = strstr(p, (char *)sub.s)) != NULL) {
+            memmove(p, p + sub.len, strlen(p + sub.len) + 1);
         }
-    } while ((*s++ = *e++));
+    }
 }
 
 s8 nuke_whitespace(s8 z) {
-    remove_substr((char *)z.s, S("\n"));
-    remove_substr((char *)z.s, S("\t"));
-    remove_substr((char *)z.s, S(" "));
-    remove_substr((char *)z.s, S("　"));
+    strremove((char *)z.s, S("\n"));
+    strremove((char *)z.s, S("\t"));
+    strremove((char *)z.s, S(" "));
+    strremove((char *)z.s, S("　"));
 
     return fromcstr_((char *)z.s);
 }

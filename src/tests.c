@@ -118,6 +118,8 @@ static int test_deinflections(void) {
     /* -- katakana -- */
     DEINFLECT("きれい", "キレイ");
     DEINFLECT("おもしろい", "オモシロイ");
+    DEINFLECT("ضüщшерт1234asdfあいんしゅたいんhjkl6789уиопö",
+              "ضüщшерт1234asdfアインシュタインhjkl6789уиопö");
 
     /* -- ?? -- */
     DEINFLECT("目する", "目した");
@@ -166,10 +168,11 @@ static i32 test_dictionary_lookup(void) {
 
 #define TEST(call)                                                                                 \
     do {                                                                                           \
-        if ((call) == 0) {                                                                         \
+        int _rc = call;                                                                            \
+        if (_rc == 0) {                                                                            \
             exit(EXIT_FAILURE);                                                                    \
         } else {                                                                                   \
-            printf("%s: Success\n", #call);                                                        \
+            printf("%s: Success\n", #call);                                      \
         }                                                                                          \
     } while (0)
 

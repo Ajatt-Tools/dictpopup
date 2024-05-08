@@ -69,8 +69,6 @@ s8 get_sentence(void) {
 
 s8 get_windowname(void) {
 #ifdef HAVEX11
-    XTextProperty text_prop;
-
     Display *dpy = XOpenDisplay(NULL);
     if (!dpy) {
         dbg("Can't open X display for retrieving the window title. Are you "
@@ -82,7 +80,6 @@ s8 get_windowname(void) {
     int revert_to;
     XGetInputFocus(dpy, &focused_win, &revert_to);
 
-    /* --------------- */
     Atom props[] = {XInternAtom(dpy, "_NET_WM_NAME", False), XA_WM_NAME};
     Atom utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
     Atom actual_type;
@@ -95,19 +92,12 @@ s8 get_windowname(void) {
                                (props[i] == XA_WM_NAME) ? AnyPropertyType : utf8_string,
                                &actual_type, &format, &nr_items, &bytes_after, &prop) == Success &&
             prop) {
-            return fromcstr_((char *)prop);
+            break;
         }
     }
-    return (s8){0};
-    /* --------------- */
-    /* if (!XGetWMName(dpy, focused_win, &text_prop)) */
-    /* { */
-    /* 	dbg("Could not obtain window name."); */
-    /* 	return (s8){0}; */
-    /* } */
-    /* XCloseDisplay(dpy); */
 
-    return fromcstr_((char *)text_prop.value);
+    XCloseDisplay(dpy);
+    return fromcstr_((char *)prop);
 #else
     // Not implemented
     return (s8){0};

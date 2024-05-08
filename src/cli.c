@@ -9,4 +9,6 @@ int main(int argc, char **argv) {
         dictentry_print(dict[i]);
         putchar('\n');
     }
+
+    dictionary_free(&dict);
 }
