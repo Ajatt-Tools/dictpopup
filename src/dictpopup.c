@@ -62,7 +62,7 @@ static void fill_entries(possible_entries_s pe[static 1], dictentry const de) {
         msg("Please select the context.");
         pe->copiedsent = get_sentence();
         if (cfg.anki.nukeWhitespaceSentence)
-            pe->copiedsent = nuke_whitespace(pe->copiedsent);
+            nuke_whitespace(&pe->copiedsent);
 
         pe->boldsent = add_bold_tags(pe->copiedsent, pe->lookup);
     }
@@ -74,14 +74,14 @@ static void fill_entries(possible_entries_s pe[static 1], dictentry const de) {
     pe->dictname = de.dictname;
 }
 
-static void add_deinflections_to_dict(database_t db[static 1], s8 word, dictentry *dict[static 1]) {
-    s8 *deinfs_b = deinflect(word);
+static void _nonnull_ add_deinflections_to_dict(const database_t *db, s8 word,
+                                                dictentry *dict[static 1]) {
+    _drop_(frees8buffer) s8 *deinfs_b = deinflect(word);
     for (size_t i = 0; i < buf_size(deinfs_b); i++)
         db_get_dictents(db, deinfs_b[i], dict);
-    frees8buffer(&deinfs_b);
 }
 
-static dictentry *lookup(database_t db[static 1], s8 word) {
+static dictentry _nonnull_ *lookup(const database_t *db, s8 word) {
     dictentry *dict = NULL;
     db_get_dictents(db, word, &dict);
     add_deinflections_to_dict(db, word, &dict);
@@ -117,27 +117,27 @@ static int dictentry_comparer(void const *voida, void const *voidb) {
 
 dictentry *create_dictionary(dictpopup_t *d) {
     dictentry *dict = NULL;
+    s8 *word = &(d->pe.lookup);
+    assert(word->len);
 
-    database_t db = db_open(cfg.general.dbpth, true);
+    _drop_(db_close) database_t *db = db_open(cfg.general.dbpth, true);
 
     // TODO: Fix lookup name clash
-    dict = lookup(&db, d->pe.lookup);
+    dict = lookup(db, *word);
     if (!dict && cfg.general.mecab) {
-        _drop_(frees8) s8 hira = kanji2hira(d->pe.lookup);
-        dict = lookup(&db, hira);
+        _drop_(frees8) s8 hira = kanji2hira(*word);
+        dict = lookup(db, hira);
     }
     if (!dict && cfg.general.substringSearch) {
-        int first_chr_len = utf8_chr_len(d->pe.lookup.s);
-        while (!dict && d->pe.lookup.len > first_chr_len) {
-            d->pe.lookup = s8striputf8chr(d->pe.lookup);
-            d->pe.lookup.s[d->pe.lookup.len] = '\0'; // TODO: Remove necessity for this
-            if (d->pe.lookup.len < MAX_LOOKUP_LEN) { // Don't waste time looking up huge strings
-                dict = lookup(&db, d->pe.lookup);
+        int first_chr_len = utf8_chr_len(word->s);
+        while (!dict && word->len > first_chr_len) {
+            *word = s8striputf8chr(*word);
+            word->s[word->len] = '\0';        // TODO: Remove necessity for this
+            if (word->len < MAX_LOOKUP_LEN) { // Don't waste time looking up huge strings
+                dict = lookup(db, *word);
             }
         }
     }
-
-    db_close(&db);
 
     if (!dict) {
         msg("No dictionary entry found");
@@ -171,8 +171,8 @@ void create_ankicard(dictpopup_t d, dictentry de) {
 }
 
 dictpopup_t dictpopup_init(int argc, char **argv) {
-    int nextarg = parse_cmd_line_opts(argc, argv);
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
+    int nextarg = parse_cmd_line_opts(argc, argv); // Should be second to overwrite settings
 
     die_on(!db_check_exists(fromcstr_(cfg.general.dbpth)),
            "Database does not exist. You must create it first with dictpopup-create.");
@@ -187,9 +187,11 @@ dictpopup_t dictpopup_init(int argc, char **argv) {
            "Lookup is not a valid UTF-8 string");
 
     if (cfg.general.nukeWhitespaceLookup)
-        p.lookup = nuke_whitespace(p.lookup);
-
-    assert(g_utf8_validate((char *)p.lookup.s, p.lookup.len, NULL));
+        nuke_whitespace(&p.lookup);
 
     return (dictpopup_t){p};
+}
+
+void dictpopup_free(dictpopup_t *data) {
+    frees8(&data->pe.windowname);
 }

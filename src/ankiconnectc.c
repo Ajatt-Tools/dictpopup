@@ -209,16 +209,9 @@ void ankicard_free(ankicard ac) {
     g_strfreev(ac.tags);
 }
 
-/*
- * Fetch api url and cache the result
- */
 static const char *get_api_url(void) {
-    static const char *api_url = NULL;
-    if (!api_url) {
-        const char *env = getenv(AC_API_URL_EVAR);
-        api_url = env && *env ? env : DEFAULT_AC_API_URL;
-    }
-    return api_url;
+    const char *env = getenv(AC_API_URL_EVAR); // Warning: String can change
+    return env && *env ? env : DEFAULT_AC_API_URL;
 }
 
 static retval_s sendRequest(s8 request, ResponseFunc response_checker) {

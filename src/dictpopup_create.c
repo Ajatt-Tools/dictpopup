@@ -1,16 +1,18 @@
-#include <signal.h> // Catch SIGINT
 #include <stdio.h>
-#include <sys/stat.h> // mkdir
-#include <unistd.h>   // access
+#include <signal.h> // Catch SIGINT
+#include <unistd.h> // getopt
 
-#include <dirent.h>
-#include <glib.h> // for g_get_user_data_dir()
+#include <dirent.h> // opendir
 #include <zip.h>
+
+#include <glib.h> // g_get_user_data_dir()
+#include <gio/gio.h> // create_dir()
 
 #include "db.h"
 #include "messages.h"
 #include "pdjson.h"
 #include "util.h"
+#include "platformdep.h"
 
 #define error_return(retval, ...)                                                                  \
     do {                                                                                           \
@@ -29,11 +31,6 @@ const char json_typename[][16] = {
 
 static void append_definition(json_stream s[static 1], stringbuilder_s sb[static 1], s8 liststyle,
                               i32 listdepth);
-
-static s8 get_default_path(void) // Where db is stored
-{
-    return buildpath(fromcstr_((char *)g_get_user_data_dir()), S("dictpopup"));
-}
 
 static s8 unzip_file(zip_t *archive, const char *filename) {
     struct zip_stat finfo;
@@ -218,7 +215,6 @@ static void freedictentry_(dictentry de[static 1]) {
 }
 
 static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
-    /* printf("Buffer: %.*s", (int)buffer.len, (char*)buffer.s); */
     json_stream s[1];
     json_open_buffer(s, buffer.s, buffer.len);
 
@@ -376,6 +372,8 @@ static void add_frequency(database_t *db, s8 buffer) {
 
 static s8 extract_dictname(zip_t *archive) {
     _drop_(frees8) s8 buffer = unzip_file(archive, "index.json");
+    if (!buffer.len)
+      return (s8){0};
 
     json_stream s[1];
     json_open_buffer(s, buffer.s, buffer.len);
@@ -427,14 +425,14 @@ static void add_from_zip(database_t *db, char *filename) {
     for (int i = 0; (zip_stat_index(za, i, 0, &finfo)) == 0 && !sigint_received; i++) {
         s8 fn = fromcstr_((char *)finfo.name); // Warning: Casts away const!
         if (startswith(fn, S("term_bank_"))) {
-            _drop_(frees8) s8 buffer = unzip_file(za, finfo.name); // Stats
-                                                                   // again, but
-                                                                   // anyway
+            _drop_(frees8) s8 buffer = unzip_file(za, finfo.name);
+	    if (!buffer.len) continue;
+
             add_dictionary(db, buffer, dictname);
         } else if (startswith(fn, S("term_meta_bank"))) {
-            _drop_(frees8) s8 buffer = unzip_file(za, finfo.name); // Stats
-                                                                   // again, but
-                                                                   // anyway
+            _drop_(frees8) s8 buffer = unzip_file(za, finfo.name);
+	    if (!buffer.len) continue;
+
             add_frequency(db, buffer);
         }
     }
@@ -448,23 +446,9 @@ static bool askyn(const char *msg) {
     return true;
 }
 
-static void check_db_exists(s8 dbpath) {
-    _drop_(frees8) s8 data_fp = buildpath(dbpath, S("data.mdb"));
-    if (access((char *)data_fp.s, R_OK) == 0) {
-        // Maybe allow creating a backup?
-        if (askyn("A database file already exists. Would you like to delete the old one?"))
-            remove((char *)data_fp.s);
-        else
-            exit(EXIT_FAILURE);
-    }
-}
-
-static void create_path(s8 dbpath) {
-    char *dbpath_c = (char *)dbpath.s;
-    if (access(dbpath_c, R_OK) != 0) {
-        int stat = mkdir(dbpath_c, S_IRWXU | S_IRWXG | S_IXOTH);
-        die_on(stat != 0, "Error creating directory '%s': %s", dbpath_c, strerror(errno));
-    }
+static s8 get_default_dbpath(void)
+{
+    return buildpath(fromcstr_((char *)g_get_user_data_dir()), S("dictpopup"));
 }
 
 static void sigint_handler(int s) {
@@ -477,29 +461,51 @@ static void setup_sighandler(void) {
     sigaction(SIGINT, &act, NULL);
 }
 
+static void parse_cmd_line(int argc, char **argv, s8 dbpath[static 1]) {
+    int c;
+    opterr = 0;
+
+    while ((c = getopt(argc, argv, "hd:")) != -1)
+        switch (c) {
+            case 'd':
+		*dbpath = s8dup(fromcstr_(optarg));
+                break;
+            case 'h':
+                puts("See 'man dictpopup-create' for help.");
+                exit(EXIT_SUCCESS);
+            case '?':
+                fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+                exit(EXIT_FAILURE);
+        }
+}
+
 int main(int argc, char *argv[]) {
     setup_sighandler();
 
-    s8 dbpath = argc > 1 ? fromcstr_(argv[1]) : get_default_path();
-    dbg("Using database path: %s", dbpath.s);
+    _drop_(frees8) s8 dbdir = {0};
+    parse_cmd_line(argc, argv, &dbdir);
+    if (!dbdir.len)
+      dbdir = get_default_dbpath();
+    dbg("Using database path: %s", dbdir.s);
 
-    create_path(dbpath);
-    check_db_exists(dbpath);
+    if(db_check_exists(dbdir)) {
+        if (askyn("A database file already exists. Would you like to delete the old one?"))
+	    db_remove(dbdir);
+        else
+            exit(EXIT_FAILURE);
+    }
+    else
+	createdir((char *)dbdir.s);
 
-    database_t db = db_open((char *)dbpath.s, false);
 
+    _drop_(db_close) database_t *db = db_open((char *)dbdir.s, false);
     _drop_(closedir) DIR *dir = opendir(".");
-    die_on(!dir, "Error opening current directory");
+    die_on(!dir, "Error opening current directory: %s", strerror(errno));
 
     struct dirent *entry;
     while ((entry = readdir(dir)) && !sigint_received) {
         s8 fn = fromcstr_(entry->d_name);
         if (endswith(fn, S(".zip")))
-            add_from_zip(&db, (char *)fn.s);
+            add_from_zip(db, (char *)fn.s);
     }
-
-    db_close(&db);
-
-    _drop_(frees8) s8 lockfile = buildpath(dbpath, S("lock.mdb"));
-    remove((char *)lockfile.s);
 }

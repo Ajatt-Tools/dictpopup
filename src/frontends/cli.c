@@ -6,9 +6,11 @@ int main(int argc, char **argv) {
     dictentry *dict = create_dictionary(&d);
 
     for (size i = 0; i < dictlen(dict); i++) {
+	if (i)
+	  putchar('\n');
         dictentry_print(dict[i]);
-        putchar('\n');
     }
 
     dictionary_free(&dict);
+    dictpopup_free(&d);
 }

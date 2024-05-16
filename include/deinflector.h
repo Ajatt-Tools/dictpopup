@@ -6,8 +6,8 @@
  * Contains all intermediate steps, e.g. してしまった -> してしまう -> して ->
  * する
  *
- * Returns: An s8* buffer containing the deinflections. All s8 strings need to
- * be freed as well as te buffer with buf_free
+ * Returns: An s8* buffer (see buf.h) containing the deinflections.
+ * The caller of the function takes ownership of the data, and is responsible for freeing it.
  */
 s8 *deinflect(s8 word);
 

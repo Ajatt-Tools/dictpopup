@@ -72,8 +72,8 @@ static void anki_check_exists(void) {
     gtk_widget_queue_draw(exists_dot);
 }
 
-static void *jppron_caller(void *voidin) {
-    dictentry *de = (dictentry *)voidin;
+static gpointer jppron_caller(gpointer data) {
+    dictentry *de = (dictentry *)data;
     jppron(de->kanji, de->reading, cfg.pron.dirPath);
     return NULL;
 }
@@ -84,9 +84,7 @@ static void play_pronunciation(void) {
         return;
     time_last_pron = time_now;
 
-    pthread_t thread;
-    pthread_create(&thread, NULL, jppron_caller, &curent);
-    pthread_detach(thread);
+    g_thread_unref(g_thread_new("jppron", jppron_caller, &curent));
 }
 
 static void draw_dot(cairo_t *cr) {
@@ -200,7 +198,6 @@ static gboolean add_anki(GtkWidget *widget, gpointer user_data) {
     g_mutex_unlock(&vars_mutex);
 
     r->de = dictentry_dup(curent);
-    dictionary_free(&dict);
 
     GtkTextIter start, end;
     if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start,
@@ -370,7 +367,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
 /*
  * To be called by pthread_create()
  */
-static void *fill_dictionary(void *voidin) {
+static gpointer fill_dictionary(gpointer voidin) {
     dictpopup_t *data = (dictpopup_t *)voidin;
     dictentry *local_dict = create_dictionary(data);
 
@@ -397,9 +394,7 @@ static void *fill_dictionary(void *voidin) {
 int main(int argc, char *argv[]) {
     dictpopup_t d = dictpopup_init(argc, argv);
 
-    pthread_t thread;
-    pthread_create(&thread, NULL, fill_dictionary, &d);
-    pthread_detach(thread);
+    g_thread_unref(g_thread_new("Create dict", fill_dictionary, &d));
 
     window_ret_s ret = {0};
     GtkApplication *app =
@@ -410,4 +405,7 @@ int main(int argc, char *argv[]) {
 
     if (ret.create_ac)
         create_ankicard(d, ret.de);
+
+    dictionary_free(&dict);
+    dictpopup_free(&d);
 }

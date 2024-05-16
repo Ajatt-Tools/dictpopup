@@ -189,6 +189,7 @@ s8 concat_(s8 *strings) {
     return ret;
 }
 
+// TODO: Don't append sep when already there
 s8 buildpath_(s8 *pathcomps) {
 #ifdef _WIN32
     s8 sep = S("\\");
@@ -224,10 +225,10 @@ void frees8(s8 *z) {
     free(z->s);
 }
 
-void frees8buffer(s8 **buf) {
-    while (buf_size(*buf) > 0)
-        free(buf_pop(*buf).s);
-    buf_free(*buf);
+void frees8buffer(s8 *buf) {
+    while (buf_size(buf) > 0)
+        free(buf_pop(buf).s);
+    buf_free(buf);
 }
 
 /* -------------- Start dictentry / dictionary utils ---------------- */
@@ -339,17 +340,12 @@ static void strremove(char *str, const s8 sub) {
     }
 }
 
-s8 nuke_whitespace(s8 z) {
-    strremove((char *)z.s, S("\n"));
-    strremove((char *)z.s, S("\t"));
-    strremove((char *)z.s, S(" "));
-    strremove((char *)z.s, S("　"));
+// TODO: Cleaner (and non-null terminated) implementation
+void nuke_whitespace(s8 *z) {
+    strremove((char *)z->s, S("\n"));
+    strremove((char *)z->s, S("\t"));
+    strremove((char *)z->s, S(" "));
+    strremove((char *)z->s, S("　"));
 
-    return fromcstr_((char *)z.s);
-}
-
-int createdir(char *dirpath) {
-    // TODO: Recursive implementation
-    int status = mkdir(dirpath, S_IRWXU | S_IRWXG | S_IXOTH);
-    return (status == 0 || errno == EEXIST) ? 0 : -1;
+    *z = fromcstr_((char *)z->s);
 }

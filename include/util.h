@@ -11,7 +11,6 @@ typedef signed int b32;
 typedef signed int i32;
 typedef unsigned int u32;
 typedef __PTRDIFF_TYPE__ size;
-typedef char byte;
 
 #define assert(c)                                                                                  \
     while (!(c))                                                                                   \
@@ -113,7 +112,7 @@ extern u8 const utf8_chr_len_data[];
 s8 unescape(s8 str);
 
 void _nonnull_ frees8(s8 *z);
-void _nonnull_ frees8buffer(s8 **buf);
+void frees8buffer(s8 *buf);
 
 /*
  * Concatenates all s8 strings passed as argument
@@ -161,12 +160,7 @@ dictentry dictentry_at_index(dictentry *dict, size index);
 
 size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...);
 
-s8 nuke_whitespace(s8 z);
-
-/*
- * Returns: 0 on success, -1 on failure and sets errno
- */
-int _nonnull_ createdir(char *dirpath);
+void nuke_whitespace(s8 *z);
 
 /**
  * __attribute__((cleanup)) functions
@@ -197,5 +191,6 @@ DEFINE_DROP_FUNC_VOID(free)
 DEFINE_DROP_FUNC(FILE *, fclose)
 DEFINE_DROP_FUNC(DIR *, closedir)
 DEFINE_DROP_FUNC_PTR(s8, frees8)
+DEFINE_DROP_FUNC(s8 *, frees8buffer)
 
 #endif

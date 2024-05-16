@@ -1,4 +1,3 @@
-#include <alloca.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -335,8 +334,7 @@ static void jppron_create(char *audio_dir_path, s8 dbpth) {
     remove((char *)dbfile.s);
     frees8(&dbfile);
 
-    int stat = createdir((char *)dbpth.s);
-    die_on(stat != 0, "Creating directory '%s': %s", dbpth.s, strerror(errno));
+    createdir((char *)dbpth.s);
 
     _drop_(closedir) DIR *audio_dir = opendir(audio_dir_path);
     die_on(!audio_dir, "Failed to open audio directory '%s': %s", audio_dir_path, strerror(errno));
@@ -399,7 +397,7 @@ static void play_word(s8 word, s8 reading, s8 database_path) {
     _drop_(frees8) s8 normread = normalize_reading(reading);
 
     database db = opendb((char *)database_path.s, true);
-    s8 *files = getfiles(db, word);
+    _drop_(frees8buffer) s8 *files = getfiles(db, word);
 
     if (!files) {
         msg("Nothing found.");
@@ -438,7 +436,6 @@ static void play_word(s8 word, s8 reading, s8 database_path) {
         }
     }
 
-    frees8buffer(&files);
     closedb(db);
 }
 

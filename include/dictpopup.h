@@ -7,6 +7,7 @@
 typedef struct dictpopup_s dictpopup_t;
 
 dictpopup_t dictpopup_init(int argc, char **argv);
+void dictpopup_free(dictpopup_t *d);
 
 /*
  * Looks up @lookup in the database and returns all corresponding dictentries in

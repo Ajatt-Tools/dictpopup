@@ -4,41 +4,54 @@
 #include "messages.h"
 #include "util.h"
 
+struct database_s {
+    MDB_env *env;
+    MDB_dbi dbi1;
+    MDB_dbi dbi2;
+    MDB_dbi dbi3;
+    MDB_txn *txn;
+    stringbuilder_s lastdatastr;
+    u32 last_id;
+    bool readonly;
+};
+
 #define C(call)                                                                                    \
     do {                                                                                           \
         int _rc = (call);                                                                          \
         die_on(_rc != MDB_SUCCESS, "Database error: %s", mdb_strerror(_rc));                       \
     } while (0)
 
-database_t db_open(char *dbpath, bool readonly) {
-    database_t db = {.readonly = readonly};
+database_t *db_open(char *dbpath, bool readonly) {
+    dbg("Using database path: '%s'", dbpath);
+    database_t *db = new (database_t, 1);
+    db->readonly = readonly;
 
-    C(mdb_env_create(&db.env));
-    mdb_env_set_maxdbs(db.env, 3);
+    C(mdb_env_create(&db->env));
+    mdb_env_set_maxdbs(db->env, 3);
 
     if (readonly) {
-        C(mdb_env_open(db.env, dbpath, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
-        C(mdb_txn_begin(db.env, NULL, MDB_RDONLY, &db.txn));
+        C(mdb_env_open(db->env, dbpath, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
+        C(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
 
-        C(mdb_dbi_open(db.txn, "db1", MDB_DUPSORT | MDB_DUPFIXED, &db.dbi1));
-        C(mdb_dbi_open(db.txn, "db2", MDB_INTEGERKEY, &db.dbi2));
-        C(mdb_dbi_open(db.txn, "db3", 0, &db.dbi3));
+        C(mdb_dbi_open(db->txn, "db1", MDB_DUPSORT | MDB_DUPFIXED, &db->dbi1));
+        C(mdb_dbi_open(db->txn, "db2", MDB_INTEGERKEY, &db->dbi2));
+        C(mdb_dbi_open(db->txn, "db3", 0, &db->dbi3));
     } else {
         unsigned int mapsize = 2097152000; // 2Gb
-        C(mdb_env_set_mapsize(db.env, mapsize));
+        C(mdb_env_set_mapsize(db->env, mapsize));
 
         dbg("Opening db in path: %s", dbpath);
-        C(mdb_env_open(db.env, dbpath, 0, 0664));
-        C(mdb_txn_begin(db.env, NULL, 0, &db.txn));
+        C(mdb_env_open(db->env, dbpath, 0, 0664));
+        C(mdb_txn_begin(db->env, NULL, 0, &db->txn));
 
         // word -> id
-        C(mdb_dbi_open(db.txn, "db1", MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE, &db.dbi1));
+        C(mdb_dbi_open(db->txn, "db1", MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE, &db->dbi1));
         // id -> dictdef
-        C(mdb_dbi_open(db.txn, "db2", MDB_INTEGERKEY | MDB_CREATE, &db.dbi2));
+        C(mdb_dbi_open(db->txn, "db2", MDB_INTEGERKEY | MDB_CREATE, &db->dbi2));
         // word+reading -> frequency
-        C(mdb_dbi_open(db.txn, "db3", MDB_CREATE, &db.dbi3));
+        C(mdb_dbi_open(db->txn, "db3", MDB_CREATE, &db->dbi3));
 
-        db.lastdatastr = sb_init(200);
+        db->lastdatastr = sb_init(200);
     }
 
     return db;
@@ -47,19 +60,20 @@ database_t db_open(char *dbpath, bool readonly) {
 void db_close(database_t *db) {
     if (db->readonly) {
         mdb_txn_abort(db->txn);
-    } else
+    } else {
         C(mdb_txn_commit(db->txn));
+
+	const char *dbpath = NULL;
+	mdb_env_get_path(db->env, &dbpath);
+	_drop_(frees8) s8 lockfile = buildpath(fromcstr_((char*)dbpath), S("lock.mdb"));
+	remove((char *)lockfile.s);
+    }
 
     mdb_dbi_close(db->env, db->dbi1);
     mdb_dbi_close(db->env, db->dbi2);
     mdb_dbi_close(db->env, db->dbi3);
     mdb_env_close(db->env);
-
-    db->env = 0;
-    db->dbi1 = 0;
-    db->dbi2 = 0;
-    db->dbi3 = 0;
-    db->txn = 0;
+    free(db);
 }
 
 // TODO: This might be a little inefficient..
@@ -74,7 +88,7 @@ void db_put_dictent(database_t *db, s8 headword, dictentry de) {
     MDB_val key_mdb = {.mv_data = headword.s, .mv_size = headword.len};
     MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
 
-    s8 datastr = dictent_to_datastr(de);
+    _drop_(frees8) s8 datastr = dictent_to_datastr(de);
 
     if (!s8equals(datastr, sb_gets8(db->lastdatastr))) {
         db->last_id++; // Note: The above id struct updates too
@@ -89,7 +103,7 @@ void db_put_dictent(database_t *db, s8 headword, dictentry de) {
     mdb_put(db->txn, db->dbi1, &key_mdb, &id_mdb, MDB_NODUPDATA);
 }
 
-static u32 *get_ids(database_t *db, s8 word, size_t *num) {
+static u32 *get_ids(const database_t *db, s8 word, size_t *num) {
     MDB_val key_mdb = (MDB_val){.mv_data = word.s, .mv_size = (size_t)word.len};
     MDB_val val_mdb = {0};
 
@@ -113,10 +127,36 @@ static u32 *get_ids(database_t *db, s8 word, size_t *num) {
     return ret;
 }
 
+void db_put_freq(const database_t *db, const s8 word, const s8 reading, u32 freq) {
+    die_on(db->readonly, "Cannot put frequency into db in readonly mode.");
+
+    s8 key = concat(word, S("\0"), reading);
+    MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
+    MDB_val val_mdb = {.mv_data = &freq, .mv_size = sizeof(freq)};
+
+    C(mdb_put(db->txn, db->dbi3, &key_mdb, &val_mdb, MDB_NODUPDATA));
+}
+
+static int db_get_freq(const database_t *db, s8 word, s8 reading) {
+    _drop_(frees8) s8 key = concat(word, S("\0"), reading);
+    MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
+    MDB_val val_m = {0};
+
+    int rc;
+    if ((rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m)) == MDB_NOTFOUND)
+        return -1;
+    C(rc);
+
+    int freq;
+    assert(sizeof(freq) == val_m.mv_size);
+    memcpy(&freq, val_m.mv_data, sizeof(freq)); // ensures proper alignment
+    return freq;
+}
+
 /*
  * Returns: dictentry with newly allocated strings parsed from @data
  */
-static dictentry data_to_dictent(database_t *db, s8 data) {
+static dictentry data_to_dictent(const database_t *db, s8 data) {
     s8 data_split[4] = {0};
 
     s8 d = data;
@@ -147,14 +187,15 @@ static dictentry data_to_dictent(database_t *db, s8 data) {
  * Data is valid until closure of db and should not be freed.
  * WARNING: returned data is not null-terminated!
  */
-static s8 getdata(database_t *db, u32 id) {
+static s8 getdata(const database_t *db, u32 id) {
     MDB_val key = (MDB_val){.mv_data = &id, .mv_size = sizeof(id)};
     MDB_val data = {0};
     C(mdb_get(db->txn, db->dbi2, &key, &data));
     return (s8){.s = data.mv_data, .len = data.mv_size};
 }
 
-void db_get_dictents(database_t *db, s8 headword, dictentry *dict[static 1]) {
+void db_get_dictents(const database_t *db, s8 headword, dictentry *dict[static 1]) {
+    assert(headword.len);
     dbg("Looking up: %.*s", (int)headword.len, (char *)headword.s);
 
     size_t n_ids = 0;
@@ -169,33 +210,12 @@ void db_get_dictents(database_t *db, s8 headword, dictentry *dict[static 1]) {
     free(ids);
 }
 
-void db_put_freq(database_t *db, s8 word, s8 reading, u32 freq) {
-    die_on(db->readonly, "Cannot put frequency into db in readonly mode.");
-
-    s8 key = concat(word, S("\0"), reading);
-    MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
-    MDB_val val_mdb = {.mv_data = &freq, .mv_size = sizeof(freq)};
-
-    C(mdb_put(db->txn, db->dbi3, &key_mdb, &val_mdb, MDB_NODUPDATA));
-}
-
-int db_get_freq(database_t *db, s8 word, s8 reading) {
-    _drop_(frees8) s8 key = concat(word, S("\0"), reading);
-    MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
-    MDB_val val_m = {0};
-
-    int rc;
-    if ((rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m)) == MDB_NOTFOUND)
-        return -1;
-    C(rc);
-
-    int freq;
-    assert(sizeof(freq) == val_m.mv_size);
-    memcpy(&freq, val_m.mv_data, sizeof(freq)); // ensures proper alignment
-    return freq;
-}
-
 i32 db_check_exists(s8 dbpath) {
     _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
     return (access((char *)dbfile.s, R_OK) == 0);
+}
+
+void db_remove(s8 dbpath) {
+    _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
+    remove((char *)dbfile.s);
 }

@@ -395,6 +395,7 @@ static void check_concurrent(s8 word) {
 
 static void check_imperative(s8 word) {
     IF_ICHIDAN_REPLACE("ろ", "る");
+    IF_ENDSWITH_REPLACE(VERB, "れ", "る");
     IF_ENDSWITH_REPLACE(VERB, "せ", "す");
     IF_ENDSWITH_REPLACE(VERB, "け", "く");
     IF_ENDSWITH_REPLACE(VERB, "げ", "ぐ");
