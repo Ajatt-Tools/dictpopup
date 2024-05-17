@@ -19,9 +19,9 @@ jobs:
       - run: gcc --version
       - run: clang-format --version
 
-      - run: make clean analyse
-      - run: make tests
-      - run: ./tests
+      - run: cmake .
+      - run: cmake --build .
+      - run: ./run_tests
 
 on:
   push:
