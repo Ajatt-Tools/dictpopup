@@ -5,9 +5,6 @@
 #include <dirent.h> // opendir
 #include <zip.h>
 
-#include <glib.h> // g_get_user_data_dir()
-#include <gio/gio.h> // create_dir()
-
 #include "db.h"
 #include "messages.h"
 #include "pdjson.h"
@@ -22,7 +19,7 @@
 
 volatile sig_atomic_t sigint_received = 0;
 
-const char json_typename[][16] = {
+static const char json_typename[][16] = {
     [JSON_ERROR] = "ERROR",           [JSON_DONE] = "DONE",     [JSON_OBJECT] = "OBJECT",
     [JSON_OBJECT_END] = "OBJECT_END", [JSON_ARRAY] = "ARRAY",   [JSON_ARRAY_END] = "ARRAY_END",
     [JSON_STRING] = "STRING",         [JSON_NUMBER] = "NUMBER", [JSON_TRUE] = "TRUE",
@@ -442,13 +439,12 @@ static void add_from_zip(database_t *db, char *filename) {
  * Dialog which asks the user for confirmation (Yes/No)
  */
 static bool askyn(const char *msg) {
-    // TODO: Implement
     return true;
 }
 
 static s8 get_default_dbpath(void)
 {
-    return buildpath(fromcstr_((char *)g_get_user_data_dir()), S("dictpopup"));
+    return buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
 }
 
 static void sigint_handler(int s) {

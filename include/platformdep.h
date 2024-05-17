@@ -7,3 +7,4 @@ s8 get_windowname(void);
 void free_windowname(s8 windowname);
 void play_audio(s8 filepath);
 void _nonnull_ createdir(char *dirpath);
+const char *get_user_data_dir(void);

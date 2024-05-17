@@ -1,20 +1,20 @@
 #include <errno.h>
+#include <libgen.h> // dirname()
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h> // getopt
-#include <libgen.h> // dirname()
 
 #include <gio/gio.h>
 #include <glib.h>
 
 #include "messages.h"
+#include "platformdep.h"
 #include "settings.h"
 #include "util.h"
-#include "platformdep.h"
 
 settings cfg = {0};
-bool print_cfg = false;
+bool print_cfg = false;:
 
 static settings get_default_cfg(void) {
     settings default_cfg = {
@@ -65,7 +65,7 @@ int parse_cmd_line_opts(int argc, char **argv) {
                 break;
             case 'd':
                 if (optarg && *optarg) {
-		    dbg("Setting dbpath");
+                    dbg("Setting dbpath");
                     free(cfg.general.dbpth);
                     cfg.general.dbpth = strdup(optarg);
                 }

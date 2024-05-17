@@ -77,6 +77,7 @@ static void fill_entries(possible_entries_s pe[static 1], dictentry const de) {
 static void _nonnull_ add_deinflections_to_dict(const database_t *db, s8 word,
                                                 dictentry *dict[static 1]) {
     _drop_(frees8buffer) s8 *deinfs_b = deinflect(word);
+
     for (size_t i = 0; i < buf_size(deinfs_b); i++)
         db_get_dictents(db, deinfs_b[i], dict);
 }
@@ -98,12 +99,11 @@ static int indexof(char const *str, char *arr[]) {
     return INT_MAX;
 }
 
-static int dictentry_comparer(void const *voida, void const *voidb) {
-    assert(voida && voidb);
+static int _nonnull_ dictentry_comparer(void const *voida, void const *voidb) {
     dictentry a = *(dictentry *)voida;
     dictentry b = *(dictentry *)voidb;
 
-    int inda = 0, indb = 0;
+    int inda, indb;
     if (s8equals(a.dictname, b.dictname)) {
         inda = a.frequency == -1 ? INT_MAX : a.frequency;
         indb = b.frequency == -1 ? INT_MAX : b.frequency;
@@ -122,15 +122,14 @@ dictentry *create_dictionary(dictpopup_t *d) {
 
     _drop_(db_close) database_t *db = db_open(cfg.general.dbpth, true);
 
-    // TODO: Fix lookup name clash
     dict = lookup(db, *word);
-    if (!dict && cfg.general.mecab) {
+    if (dict == NULL && cfg.general.mecab) {
         _drop_(frees8) s8 hira = kanji2hira(*word);
         dict = lookup(db, hira);
     }
-    if (!dict && cfg.general.substringSearch) {
+    if (dict == NULL && cfg.general.substringSearch) {
         int first_chr_len = utf8_chr_len(word->s);
-        while (!dict && word->len > first_chr_len) {
+        while (dict == NULL && word->len > first_chr_len) {
             *word = s8striputf8chr(*word);
             word->s[word->len] = '\0';        // TODO: Remove necessity for this
             if (word->len < MAX_LOOKUP_LEN) { // Don't waste time looking up huge strings
@@ -139,7 +138,7 @@ dictentry *create_dictionary(dictpopup_t *d) {
         }
     }
 
-    if (!dict) {
+    if (dict == NULL) {
         msg("No dictionary entry found");
         exit(EXIT_FAILURE);
     }

@@ -63,10 +63,10 @@ void db_close(database_t *db) {
     } else {
         C(mdb_txn_commit(db->txn));
 
-	const char *dbpath = NULL;
-	mdb_env_get_path(db->env, &dbpath);
-	_drop_(frees8) s8 lockfile = buildpath(fromcstr_((char*)dbpath), S("lock.mdb"));
-	remove((char *)lockfile.s);
+        const char *dbpath = NULL;
+        mdb_env_get_path(db->env, &dbpath);
+        _drop_(frees8) s8 lockfile = buildpath(fromcstr_((char *)dbpath), S("lock.mdb"));
+        remove((char *)lockfile.s);
     }
 
     mdb_dbi_close(db->env, db->dbi1);

@@ -10,8 +10,8 @@
     #include <X11/Xlib.h>
 #endif
 
-#include "platformdep.h"
 #include "messages.h"
+#include "platformdep.h"
 
 #ifdef NOTIFICATIONS
 void notify(const char *title, _Bool urgent, char const *fmt, ...) {
@@ -122,11 +122,10 @@ void play_audio(s8 filepath) {
 }
 
 void createdir(char *dirpath) {
-    g_autoptr(GError) error = NULL;
-    GFile *dir = g_file_new_for_path(dirpath);
+    int ret = g_mkdir_with_parents(dirpath, 0777);
+    die_on(ret != 0, "Creating directory '%s': %s", dirpath, strerror(errno));
+}
 
-    g_file_make_directory_with_parents(dir, NULL, &error);
-    die_on(error, "Failed creating directory '%s': %s", dirpath, error->message);
-
-    g_object_unref(dir);
+const char *get_user_data_dir() {
+    return g_get_user_data_dir();
 }

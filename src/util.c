@@ -55,8 +55,7 @@ void *xrealloc(void *ptr, size_t nbytes) {
 /* --------------- Start s8 utils -------------- */
 void u8copy(u8 *restrict dst, const u8 *restrict src, size n) {
     assert(n >= 0);
-    for (; n; n--)
-        *dst++ = *src++;
+    memcpy(dst, src, n);
 }
 
 i32 u8compare(u8 *restrict a, u8 *restrict b, size n) {
@@ -301,8 +300,20 @@ void sb_append(stringbuilder_s *b, s8 str) {
     b->len += str.len;
 }
 
+void sb_append_char(stringbuilder_s *sb, char c) {
+    sb_append(sb, (s8){.s = (u8 *)&c, .len = 1});
+}
+
 s8 sb_gets8(stringbuilder_s sb) {
     return (s8){.s = sb.data, .len = sb.len};
+}
+
+char *sb_steal_str(stringbuilder_s *sb) {
+    sb_append_char(sb, '\0');
+    char *r = (char *)sb->data;
+
+    *sb = (stringbuilder_s){0};
+    return r;
 }
 
 void sb_set(stringbuilder_s *sb, s8 s) {

@@ -5,7 +5,7 @@ IndentCaseLabels: true
 IndentPPDirectives: BeforeHash
 IndentWidth: 4
 PenaltyBreakComment: 0
-SortIncludes: true
-SpaceBeforeParens: ControlStatementsExceptForEachMacros
+SortIncludes: CaseInsensitive
+SpaceBeforeParens: ControlStatementsExceptControlMacros
 UseTab: Never
 AllowShortFunctionsOnASingleLine: None
