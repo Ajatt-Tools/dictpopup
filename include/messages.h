@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef NOTIFICATIONS
     #include "platformdep.h"

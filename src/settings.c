@@ -14,7 +14,7 @@
 #include "util.h"
 
 settings cfg = {0};
-bool print_cfg = false;:
+bool print_cfg = false;
 
 static settings get_default_cfg(void) {
     settings default_cfg = {

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <signal.h> // Catch SIGINT
 #include <unistd.h> // getopt
+#include <errno.h>
 
 #include <dirent.h> // opendir
 #include <zip.h>
