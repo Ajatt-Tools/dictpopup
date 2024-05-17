@@ -1,7 +1,7 @@
-#include <stdio.h>
-#include <signal.h> // Catch SIGINT
-#include <unistd.h> // getopt
 #include <errno.h>
+#include <signal.h> // Catch SIGINT
+#include <stdio.h>
+#include <unistd.h> // getopt
 
 #include <dirent.h> // opendir
 #include <zip.h>
@@ -9,8 +9,8 @@
 #include "db.h"
 #include "messages.h"
 #include "pdjson.h"
-#include "util.h"
 #include "platformdep.h"
+#include "util.h"
 
 #define error_return(retval, ...)                                                                  \
     do {                                                                                           \
@@ -371,7 +371,7 @@ static void add_frequency(database_t *db, s8 buffer) {
 static s8 extract_dictname(zip_t *archive) {
     _drop_(frees8) s8 buffer = unzip_file(archive, "index.json");
     if (!buffer.len)
-      return (s8){0};
+        return (s8){0};
 
     json_stream s[1];
     json_open_buffer(s, buffer.s, buffer.len);
@@ -424,12 +424,14 @@ static void add_from_zip(database_t *db, char *filename) {
         s8 fn = fromcstr_((char *)finfo.name); // Warning: Casts away const!
         if (startswith(fn, S("term_bank_"))) {
             _drop_(frees8) s8 buffer = unzip_file(za, finfo.name);
-	    if (!buffer.len) continue;
+            if (!buffer.len)
+                continue;
 
             add_dictionary(db, buffer, dictname);
         } else if (startswith(fn, S("term_meta_bank"))) {
             _drop_(frees8) s8 buffer = unzip_file(za, finfo.name);
-	    if (!buffer.len) continue;
+            if (!buffer.len)
+                continue;
 
             add_frequency(db, buffer);
         }
@@ -443,8 +445,7 @@ static bool askyn(const char *msg) {
     return true;
 }
 
-static s8 get_default_dbpath(void)
-{
+static s8 get_default_dbpath(void) {
     return buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
 }
 
@@ -465,7 +466,7 @@ static void parse_cmd_line(int argc, char **argv, s8 dbpath[static 1]) {
     while ((c = getopt(argc, argv, "hd:")) != -1)
         switch (c) {
             case 'd':
-		*dbpath = s8dup(fromcstr_(optarg));
+                *dbpath = s8dup(fromcstr_(optarg));
                 break;
             case 'h':
                 puts("See 'man dictpopup-create' for help.");
@@ -482,18 +483,16 @@ int main(int argc, char *argv[]) {
     _drop_(frees8) s8 dbdir = {0};
     parse_cmd_line(argc, argv, &dbdir);
     if (!dbdir.len)
-      dbdir = get_default_dbpath();
+        dbdir = get_default_dbpath();
     dbg("Using database path: %s", dbdir.s);
 
-    if(db_check_exists(dbdir)) {
+    if (db_check_exists(dbdir)) {
         if (askyn("A database file already exists. Would you like to delete the old one?"))
-	    db_remove(dbdir);
+            db_remove(dbdir);
         else
             exit(EXIT_FAILURE);
-    }
-    else
-	createdir((char *)dbdir.s);
-
+    } else
+        createdir((char *)dbdir.s);
 
     _drop_(db_close) database_t *db = db_open((char *)dbdir.s, false);
     _drop_(closedir) DIR *dir = opendir(".");
