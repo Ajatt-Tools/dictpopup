@@ -180,9 +180,6 @@ dictpopup_t dictpopup_init(int argc, char **argv) {
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
     int nextarg = parse_cmd_line_opts(argc, argv); // Should be second to overwrite settings
 
-    die_on(!db_check_exists(fromcstr_(cfg.general.dbpth)),
-           "Database does not exist. You must create it first with dictpopup-create.");
-
     possible_entries_s p = {0};
 
     p.windowname = get_windowname();

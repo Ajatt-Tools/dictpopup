@@ -23,6 +23,9 @@ struct database_s {
 
 database_t *db_open(char *dbpath, bool readonly) {
     dbg("Using database path: '%s'", dbpath);
+    die_on(!db_check_exists(fromcstr_(dbpath)),
+           "There is no database in '%s'. You must create it first with dictpopup-create.", dbpath);
+
     database_t *db = new (database_t, 1);
     db->readonly = readonly;
 
