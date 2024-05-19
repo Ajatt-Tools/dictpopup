@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 
 #include <glib.h>
 
@@ -177,6 +178,7 @@ static s8 convert_to_utf8(char *str) {
 }
 
 dictpopup_t dictpopup_init(int argc, char **argv) {
+    setlocale(LC_ALL, "");
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
     int nextarg = parse_cmd_line_opts(argc, argv); // Should be second to overwrite settings
 
