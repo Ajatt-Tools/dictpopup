@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(dictpopup C)
 
-set(CMAKE_C_COMPILER gcc)
+include(GNUInstallDirs)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
@@ -9,16 +9,17 @@ pkg_check_modules(NOTIFY REQUIRED libnotify)
 find_package(LibZip REQUIRED)
 find_package(CURL REQUIRED)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+set(CMAKE_C_COMPILER gcc)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDEBUG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes -Wdouble-promotion -Wshadow \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
 	     -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
 	     -O0 -ggdb")
-else()
+else ()
     add_compile_options(-Ofast -flto -march=native)
-endif()
+endif ()
 
 add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER} ${LIBZIP_DEFINITIONS} ${CURL_DEFINITIONS})
 set(SRCS src/ankiconnectc.c src/database.c src/db.c src/deinflector.c src/dictpopup.c src/jppron.c src/platformdep.c src/settings.c src/util.c src/pdjson.c)
@@ -63,8 +64,8 @@ find_program(CLANG_FORMAT_EXECUTABLE clang-format)
 file(GLOB ALL_SRC_FILES "src/*.c" "tests/*.c" "include/*.h")
 function(run_clang_format target)
     add_custom_target(${target}
-        COMMAND ${CLANG_FORMAT_EXECUTABLE} --dry-run --Werror ${ARGN}
-        COMMENT "Running clang-format on ${ARGN}"
+            COMMAND ${CLANG_FORMAT_EXECUTABLE} --dry-run --Werror ${ARGN}
+            COMMENT "Running clang-format on ${ARGN}"
     )
 endfunction()
 run_clang_format(clang_format_check ${ALL_SRC_FILES})
@@ -75,6 +76,8 @@ run_clang_format(clang_format_check ${ALL_SRC_FILES})
 ############################################################
 install(TARGETS dictpopup dictpopup-create DESTINATION bin)
 install(FILES config.ini DESTINATION etc)
+install(DIRECTORY man1/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+        FILES_MATCHING PATTERN "*.1")
 
 
 ############################################################
