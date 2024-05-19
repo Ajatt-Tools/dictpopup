@@ -13,7 +13,7 @@ typedef struct {
     char **tags;
 } ankicard;
 
-void ankicard_free(ankicard ac);
+void ankicard_free(ankicard *ac);
 
 /*
  * Print the contents of an ankicard

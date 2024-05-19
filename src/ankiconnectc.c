@@ -272,7 +272,7 @@ static char *check_card(ankicard const ac) {
                               : NULL;
 }
 
-s8 form_addNote_req(ankicard ac) {
+static s8 form_addNote_req(ankicard ac) {
     stringbuilder_s sb = sb_init(1 << 9);
 
     sb_append(&sb, S("{"

@@ -41,7 +41,7 @@ target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES} ${
 add_executable(dictpopup-create src/dictpopup_create.c ${SRCS})
 target_include_directories(dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-create PRIVATE ${GTK3_LIBRARY_DIRS} ${LIBZIP_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
-target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb)
+target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb ${CURL_LIBRARIES} -lmecab)
 
 
 ############################################################

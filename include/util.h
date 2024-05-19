@@ -194,6 +194,6 @@ DEFINE_DROP_FUNC_VOID(free)
 DEFINE_DROP_FUNC(FILE *, fclose)
 DEFINE_DROP_FUNC(DIR *, closedir)
 DEFINE_DROP_FUNC_PTR(s8, frees8)
-DEFINE_DROP_FUNC_PTR(s8, frees8buffer)
+DEFINE_DROP_FUNC(s8 *, frees8buffer)
 
 #endif

@@ -307,7 +307,7 @@ void sb_append_char(stringbuilder_s *sb, char c) {
 /*
  * Returns the corresponding s8 to @sb
  */
-s8 sb_get8(stringbuilder_s sb) {
+s8 sb_gets8(stringbuilder_s sb) {
     return (s8){.s = sb.data, .len = sb.len};
 }
 
