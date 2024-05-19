@@ -87,6 +87,6 @@ install(DIRECTORY man1/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
 set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "butterkeks")
 set(CPACK_PACKAGE_VERSION 0.1.5)
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "curl,libgtk-3-0,libzip4,mecab,libnotify4,liblmdb0")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "curl,libgtk-3-0,libzip4,mecab,libnotify4,liblmdb-dev")
 set(CPACK_PACKAGE_CONTACT "butterkeks@fedora.email")
 include(CPack)
