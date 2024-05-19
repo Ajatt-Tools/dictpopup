@@ -130,12 +130,12 @@ static u32 *get_ids(const database_t *db, s8 word, size_t *num) {
     return ret;
 }
 
-void db_put_freq(const database_t *db, const s8 word, const s8 reading, u32 freq) {
+void db_put_freq(const database_t *db, frequency_entry fe) {
     die_on(db->readonly, "Cannot put frequency into db in readonly mode.");
 
-    s8 key = concat(word, S("\0"), reading);
+    s8 key = concat(fe.word, S("\0"), fe.reading);
     MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
-    MDB_val val_mdb = {.mv_data = &freq, .mv_size = sizeof(freq)};
+    MDB_val val_mdb = {.mv_data = &fe.frequency, .mv_size = sizeof(fe.frequency)};
 
     C(mdb_put(db->txn, db->dbi3, &key_mdb, &val_mdb, MDB_NODUPDATA));
 }

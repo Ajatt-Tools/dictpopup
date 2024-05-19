@@ -18,6 +18,13 @@
         return retval;                                                                             \
     } while (0)
 
+#define return_on(cond)                                                                  \
+    do {                                                                                           \
+        if (unlikely(cond)) {                                                                      \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
 volatile sig_atomic_t sigint_received = 0;
 
 static const char json_typename[][16] = {
@@ -26,6 +33,13 @@ static const char json_typename[][16] = {
     [JSON_STRING] = "STRING",         [JSON_NUMBER] = "NUMBER", [JSON_TRUE] = "TRUE",
     [JSON_FALSE] = "FALSE",           [JSON_NULL] = "NULL",
 };
+
+enum tag_type { TAG_UNKNOWN, TAG_DIV, TAG_SPAN, TAG_UL, TAG_OL, TAG_LI, TAG_RUBY_RT };
+
+static void frequency_entry_free(frequency_entry *fe) {
+    frees8(&(fe->word));
+    frees8(&(fe->reading));
+}
 
 static void append_definition(json_stream s[static 1], stringbuilder_s sb[static 1], s8 liststyle,
                               i32 listdepth);
@@ -65,11 +79,11 @@ static void add_dictent_to_db(database_t *db, dictentry de) {
     if (de.definition.len == 0)
         dbg("Could not parse a definition for entry with kanji: \"%s\" and "
             "reading: \"%s\". In dictionary: \"%s\"",
-            de.kanji.s, de.reading.s, de.dictname.s);
+            (char *)de.kanji.s, (char *)de.reading.s, (char *)de.dictname.s);
     else if (de.kanji.len == 0 && de.reading.len == 0)
         dbg("Could not obtain kanji nor reading for entry with definition: "
             "\"%s\", in dictionary: \"%s\"",
-            de.definition.s, de.dictname.s);
+            (char *)de.definition.s, (char *)de.dictname.s);
     else {
         if (de.kanji.len > 0)
             db_put_dictent(db, de.kanji, de);
@@ -90,8 +104,6 @@ static s8 parse_liststyletype(s8 lst) {
     else
         return s8dup(lst); // そのまま
 }
-
-enum tag_type { TAG_UNKNOWN, TAG_DIV, TAG_SPAN, TAG_UL, TAG_OL, TAG_LI };
 
 static void append_structured_content(json_stream *s, stringbuilder_s sb[static 1], s8 liststyle,
                                       i32 listdepth) {
@@ -114,6 +126,7 @@ static void append_structured_content(json_stream *s, stringbuilder_s sb[static 
                 value = json_get_string_(s);
 
                 // Content needs to come last for this to work
+                // TODO: Switch to a hash table
                 if (s8equals(value, S("div")))
                     tag = TAG_DIV;
                 else if (s8equals(value, S("ul"))) {
@@ -127,6 +140,8 @@ static void append_structured_content(json_stream *s, stringbuilder_s sb[static 
                 } else if (s8equals(value, S("li"))) {
                     tag = TAG_LI;
                     // TODO: Default numbers for tag ol
+                } else if (s8equals(value, S("rt"))) {
+                    tag = TAG_RUBY_RT;
                 } else
                     tag = TAG_UNKNOWN;
             } else if ((tag == TAG_UL || tag == TAG_LI) && s8equals(value, S("style"))) {
@@ -152,6 +167,11 @@ static void append_structured_content(json_stream *s, stringbuilder_s sb[static 
                 else
                     dbg("Could not parse style of list. Skipping..");
             } else if (s8equals(value, S("content"))) {
+                if (tag == TAG_RUBY_RT) {
+                    json_skip(s);
+                    continue;
+                }
+
                 if (tag == TAG_DIV || tag == TAG_LI) {
                     if (sb->len != 0 && sb->data[sb->len - 1] != '\n')
                         sb_append(sb, S("\n"));
@@ -212,16 +232,69 @@ static void freedictentry_(dictentry de[static 1]) {
     frees8(&de->definition);
 }
 
+static dictentry parse_dictionary_entry(json_stream *s) {
+    enum json_type type;
+    dictentry de = {0};
+
+    /* first entry */
+    type = json_next(s);
+    assert(type == JSON_STRING);
+    de.kanji = s8dup(json_get_string_(s));
+    /* ----------- */
+
+    /* second entry */
+    type = json_next(s);
+    assert(type == JSON_STRING);
+    de.reading = s8dup(json_get_string_(s));
+    /* ----------- */
+
+    /* third entry */
+    type = json_next(s);
+    assert(type == JSON_STRING || type == JSON_NULL);
+    // Skip
+    /* ----------- */
+
+    /* fourth entry */
+    type = json_next(s);
+    assert(type == JSON_STRING);
+    // Skip
+    /* ----------- */
+
+    /* fifth entry */
+    type = json_next(s);
+    assert(type == JSON_NUMBER);
+    // Skip
+    /* ----------- */
+
+    /* sixth entry */
+    stringbuilder_s sb = sb_init(100);
+    append_definition(s, &sb, (s8){0}, 0);
+    de.definition = sb_steals8(sb);
+    /* ----------- */
+
+    /* seventh entry */
+    type = json_next(s);
+    assert(type == JSON_NUMBER);
+    // Skip
+    /* ----------- */
+
+    /* eighth entry */
+    type = json_next(s);
+    assert(type == JSON_STRING);
+    // Skip
+    /* ----------- */
+
+    json_skip_until(s, JSON_ARRAY_END);
+    return de;
+}
+
 static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
     json_stream s[1];
     json_open_buffer(s, buffer.s, buffer.len);
 
-    enum json_type type;
-    type = json_next(s);
-    if (type != JSON_ARRAY) {
+    enum json_type type = json_next(s);
+    if (type != JSON_ARRAY)
         err("Dictionary format not supported.");
-        return;
-    }
 
     while (!sigint_received) {
         type = json_next(s);
@@ -232,72 +305,82 @@ static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
             err("%s", json_get_error(s));
             break;
         } else if (type == JSON_ARRAY) {
-            dictentry de = {.dictname = dictname};
-
-            /* first entry */
-            type = json_next(s);
-            assert(type == JSON_STRING);
-            de.kanji = s8dup(json_get_string_(s));
-            /* ----------- */
-
-            /* second entry */
-            type = json_next(s);
-            assert(type == JSON_STRING);
-            de.reading = s8dup(json_get_string_(s));
-            /* ----------- */
-
-            /* third entry */
-            type = json_next(s);
-            assert(type == JSON_STRING || type == JSON_NULL);
-            // Skip
-            /* ----------- */
-
-            /* fourth entry */
-            type = json_next(s);
-            assert(type == JSON_STRING);
-            // Skip
-            /* ----------- */
-
-            /* fifth entry */
-            type = json_next(s);
-            assert(type == JSON_NUMBER);
-            // Skip
-            /* ----------- */
-
-            /* sixth entry */
-            stringbuilder_s sb = sb_init(100);
-            append_definition(s, &sb, (s8){0}, 0);
-            de.definition = sb_steals8(sb);
-            /* ----------- */
-
-            /* seventh entry */
-            type = json_next(s);
-            assert(type == JSON_NUMBER);
-            // Skip
-            /* ----------- */
-
-            /* eighth entry */
-            type = json_next(s);
-            assert(type == JSON_STRING);
-            // Skip
-            /* ----------- */
-
+            dictentry de = parse_dictionary_entry(s);
+            de.dictname = dictname;
             add_dictent_to_db(db, de);
+
             freedictentry_(&de);
-            json_skip_until(s, JSON_ARRAY_END);
         }
     }
 
     json_close(s); // TODO: json_reset instead of close
 }
 
+static frequency_entry parse_frequency_entry(json_stream *s) {
+    frequency_entry fe = {0};
+
+    /* first entry */
+    enum json_type type = json_next(s);
+    assert(type == JSON_STRING);
+    fe.word = s8dup(json_get_string_(s));
+    /* ----------- */
+
+    /* second entry */
+    type = json_next(s);
+    assert(type == JSON_STRING);
+    if (!s8equals(json_get_string_(s), S("freq"))) {
+        dbg("Entry is not a frequency");
+
+        json_skip_until(s, JSON_ARRAY_END);
+        frees8(&fe.word);
+        return (frequency_entry){0};
+    }
+    /* ----------- */
+
+    /* third entry */
+    // INFO: No handling for no reading or no freqency
+    type = json_next(s);
+    if (type == JSON_OBJECT) {
+        type = json_next(s);
+        while (type != JSON_OBJECT_END && type != JSON_DONE && type != JSON_ERROR) {
+            if (type == JSON_STRING && s8equals(json_get_string_(s), S("reading"))) {
+                type = json_next(s);
+                assert(type == JSON_STRING);
+                fe.reading = s8dup(json_get_string_(s));
+            } else if (type == JSON_STRING && s8equals(json_get_string_(s), S("frequency"))) {
+                type = json_next(s);
+                assert(type == JSON_NUMBER);
+                fe.frequency = atoi(json_get_string(s, NULL));
+            } else {
+                dbg("Skipping unknown frequency entry");
+                json_skip(s);
+            }
+
+            type = json_next(s);
+        }
+
+        assert(type == JSON_OBJECT_END);
+    } else if (type == JSON_NUMBER)
+        fe.frequency = atoi(json_get_string(s, NULL));
+    else {
+        dbg("Unexpected frequency entry format");
+
+        json_skip_until(s, JSON_ARRAY_END);
+        frees8(&fe.word);
+        return (frequency_entry){0};
+    }
+    /* ----------- */
+
+    json_skip_until(s, JSON_ARRAY_END);
+    return fe;
+}
+
 static void add_frequency(database_t *db, s8 buffer) {
     json_stream s[1];
     json_open_buffer(s, buffer.s, buffer.len);
 
-    enum json_type type;
-    type = json_next(s);
-    assert(type == JSON_ARRAY);
+    enum json_type type = json_next(s);
+    return_on(type != JSON_ARRAY);
 
     while (!sigint_received) {
         type = json_next(s);
@@ -308,59 +391,9 @@ static void add_frequency(database_t *db, s8 buffer) {
             err("%s", json_get_error(s));
             break;
         } else if (type == JSON_ARRAY) {
-            /* first entry */
-            type = json_next(s);
-            assert(type == JSON_STRING);
-            s8 word = s8dup(json_get_string_(s));
-            /* ----------- */
-
-            /* second entry */
-            type = json_next(s);
-            assert(type == JSON_STRING);
-            if (!s8equals(json_get_string_(s), S("freq"))) {
-                dbg("Entry is not a frequency");
-                json_skip_until(s, JSON_ARRAY); // Doesn't work with embedded
-                                                // arrays
-                continue;
-            }
-            /* ----------- */
-
-            /* third entry */
-            s8 reading = {0};
-            int freq = -1;
-
-            type = json_next(s);
-            if (type == JSON_OBJECT) {
-                type = json_next(s);
-                while (type != JSON_OBJECT_END && type != JSON_DONE && type != JSON_ERROR) {
-                    if (type == JSON_STRING && s8equals(json_get_string_(s), S("reading"))) {
-                        type = json_next(s);
-                        assert(type == JSON_STRING);
-                        reading = s8dup(json_get_string_(s));
-                    } else if (type == JSON_STRING &&
-                               s8equals(json_get_string_(s), S("frequency"))) {
-                        type = json_next(s);
-                        assert(type == JSON_NUMBER);
-                        freq = atoi(json_get_string(s, NULL)); // TODO: Error
-                                                               // handling
-                    } else
-                        json_skip(s);
-
-                    type = json_next(s);
-                }
-
-                assert(type == JSON_OBJECT_END);
-            } else if (type == JSON_NUMBER)
-                freq = atoi(json_get_string(s, NULL)); // TODO: Error handling
-            else
-                assert(0);
-            /* ----------- */
-
-            db_put_freq(db, word, reading, freq);
-            frees8(&reading);
-            frees8(&word);
-
-            json_skip_until(s, JSON_ARRAY_END);
+            frequency_entry fe = parse_frequency_entry(s);
+            db_put_freq(db, fe);
+            frequency_entry_free(&fe);
         } else
             assert(0);
     }
@@ -411,12 +444,12 @@ static zip_t *open_zip(char *filename) {
 }
 
 static void add_from_zip(database_t *db, char *filename) {
-    zip_t *za;
-    if (!(za = open_zip(filename)))
+    zip_t *za = open_zip(filename);
+    if (!za)
         return;
 
     _drop_(frees8) s8 dictname = extract_dictname(za);
-    printf("Processing dictionary: %s\n", dictname.s);
+    printf("Processing dictionary: %s\n", (char *)dictname.s);
 
     struct zip_stat finfo;
     zip_stat_init(&finfo);
@@ -474,9 +507,12 @@ static void parse_cmd_line(int argc, char **argv, s8 dbpath[static 1]) {
             case '?':
                 fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
                 exit(EXIT_FAILURE);
+            default:
+                abort();
         }
 }
 
+#ifndef UNIT_TEST
 int main(int argc, char *argv[]) {
     setup_sighandler();
 
@@ -484,7 +520,7 @@ int main(int argc, char *argv[]) {
     parse_cmd_line(argc, argv, &dbdir);
     if (!dbdir.len)
         dbdir = get_default_dbpath();
-    dbg("Using database path: %s", dbdir.s);
+    dbg("Using database path: %s", (char *)dbdir.s);
 
     if (db_check_exists(dbdir)) {
         if (askyn("A database file already exists. Would you like to delete the old one?"))
@@ -505,3 +541,4 @@ int main(int argc, char *argv[]) {
             add_from_zip(db, (char *)fn.s);
     }
 }
+#endif

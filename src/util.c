@@ -315,7 +315,10 @@ s8 sb_gets8(stringbuilder_s sb) {
  * Frees the string builder and returns the corresponding s8.
  */
 s8 sb_steals8(stringbuilder_s sb) {
-    return sb_gets8(sb); // sb doesn't need freeing if allocated on stack
+    s8 ret = {0};
+    ret.len = sb.len;
+    ret.s = (u8 *)sb_steal_str(&sb);
+    return ret;
 }
 
 char *sb_steal_str(stringbuilder_s *sb) {

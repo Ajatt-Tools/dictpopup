@@ -1,5 +1,4 @@
 #include <cgreen/cgreen.h>
-#include <cgreen/mocks.h>
 
 #include "ankiconnectc.c"
 #include "util.h"

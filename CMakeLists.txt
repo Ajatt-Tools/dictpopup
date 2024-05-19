@@ -51,9 +51,11 @@ find_package(cgreen)
 # if (CGREEN_FOUND)
 enable_testing()
 add_executable(run_tests tests/main.c tests/deinflector_tests.c tests/ankiconnect_tests.c
-        src/deinflector.c src/util.c)
+        src/deinflector.c src/util.c
+        tests/parser_tests.c src/pdjson.c src/db.c src/platformdep.c)
+target_compile_definitions(run_tests PUBLIC UNIT_TEST)
 target_include_directories(run_tests PRIVATE ${GTK3_INCLUDE_DIRS} include/ src/)
-target_link_libraries(run_tests PRIVATE cgreen ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES} ${CURL_LIBRARIES} -llmdb -lmecab)
+target_link_libraries(run_tests PRIVATE cgreen ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES} ${CURL_LIBRARIES} -llmdb -lmecab -lzip)
 add_test(test_all run_tests)
 # endif()
 
