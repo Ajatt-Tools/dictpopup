@@ -169,6 +169,13 @@ void create_ankicard(dictpopup_t d, dictentry de) {
         err("Error adding card: %s", ac_resp.data.string);
 }
 
+static s8 convert_to_utf8(char *str) {
+    g_autoptr(GError) err;
+    s8 ret = fromcstr_(g_locale_to_utf8(str, -1, NULL, NULL, &err));
+    die_on(err, "Converting to UTF-8: %s", err->message);
+    return ret;
+}
+
 dictpopup_t dictpopup_init(int argc, char **argv) {
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
     int nextarg = parse_cmd_line_opts(argc, argv); // Should be second to overwrite settings
@@ -179,7 +186,7 @@ dictpopup_t dictpopup_init(int argc, char **argv) {
     possible_entries_s p = {0};
 
     p.windowname = get_windowname();
-    p.lookup = argc - nextarg > 0 ? fromcstr_(argv[nextarg]) : get_selection();
+    p.lookup = argc - nextarg > 0 ? convert_to_utf8(argv[nextarg]) : get_selection();
 
     die_on(!p.lookup.len, "No selection and no argument provided. Exiting..");
     die_on(!g_utf8_validate((char *)p.lookup.s, p.lookup.len, NULL),
@@ -193,4 +200,5 @@ dictpopup_t dictpopup_init(int argc, char **argv) {
 
 void dictpopup_free(dictpopup_t *data) {
     frees8(&data->pe.windowname);
+    frees8(&data->pe.lookup);
 }
