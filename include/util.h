@@ -111,6 +111,8 @@ extern u8 const utf8_chr_len_data[];
  */
 s8 unescape(s8 str);
 
+void strip_trailing_whitespace(s8 *str);
+
 void _nonnull_ frees8(s8 *z);
 void frees8buffer(s8 *buf);
 

@@ -220,6 +220,24 @@ s8 buildpath_(s8 *pathcomps) {
     return retpath;
 }
 
+static b32 whitespace(u8 c)
+{
+    switch (c) {
+        case '\t': case '\n': case '\b': case '\f': case '\r': case ' ':
+            return 1;
+    }
+    return 0;
+}
+
+void strip_trailing_whitespace(s8 *str) {
+    u8 *lastchr = str->s + str->len - 1;
+    while (str->len > 0 && whitespace(*lastchr)) {
+        str->len--;
+        lastchr--;
+    }
+    (str->s)[str->len] = '\0';
+}
+
 void frees8(s8 *z) {
     free(z->s);
 }
@@ -324,7 +342,6 @@ s8 sb_steals8(stringbuilder_s sb) {
 char *sb_steal_str(stringbuilder_s *sb) {
     sb_append_char(sb, '\0');
     char *r = (char *)sb->data;
-
     *sb = (stringbuilder_s){0};
     return r;
 }

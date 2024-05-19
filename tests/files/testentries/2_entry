@@ -1,0 +1,188 @@
+[
+  "面白い",
+  "おもしろい",
+  "",
+  "adj-i",
+  0,
+  [
+      {
+	  "type": "structured-content",
+	  "content": [
+	      {
+		  "tag": "span",
+		  "content": [
+		      {
+			  "tag": "span",
+			  "style": {
+			      "fontWeight": "bold"
+			  },
+			  "content": "おもしろい"
+		      },
+		      {
+			  "tag": "span",
+			  "style": {
+			      "fontWeight": "normal"
+			  },
+			  "content": "【面白い】面白い／愉快／痛快"
+		      }
+		  ]
+	      },
+	      {
+		  "tag": "div",
+		  "data": {
+		      "name": "意味"
+		  },
+		  "content": {
+		      "tag": "span",
+		      "content": "心が楽しく、おかしく、気持ちが晴れるようなさま。"
+		  }
+	      },
+	      {
+		  "tag": "div",
+		  "data": {
+		      "name": "使い方"
+		  },
+		  "content": [
+		      {
+			  "tag": "div",
+			  "content": [
+			      {
+				  "tag": "span",
+				  "style": {
+				      "fontWeight": "bold"
+				  },
+				  "content": "📚使い方\n"
+			      },
+			      {
+				  "tag": "ul",
+				  "style": {
+				      "listStyleType": "none"
+				  },
+				  "content": [
+				      {
+					  "tag": "li",
+					  "style": {
+					      "fontWeight": "bold",
+					      "listStyleType": "circle"
+					  },
+					  "content": [
+					      {
+						  "tag": "a",
+						  "href": "?query=面白い 【形】&wildcards=off",
+						  "content": "面白い 【形】"
+					      },
+					      {
+						  "tag": "span",
+						  "style": {
+						      "fontWeight": "normal",
+						      "listStyleType": "none"
+						  },
+						  "content": " ▽面白いように魚が釣れた ▽その学説は面白い"
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "li",
+					  "style": {
+					      "fontWeight": "bold",
+					      "listStyleType": "circle"
+					  },
+					  "content": [
+					      {
+						  "tag": "a",
+						  "href": "?query=愉快 【名・形動】&wildcards=off",
+						  "content": "愉快 【名・形動】"
+					      },
+					      {
+						  "tag": "span",
+						  "style": {
+						      "fontWeight": "normal",
+						      "listStyleType": "none"
+						  },
+						  "content": " ▽毎日愉快に過ごしている ▽愉快な仲間"
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "li",
+					  "style": {
+					      "fontWeight": "bold",
+					      "listStyleType": "circle"
+					  },
+					  "content": [
+					      {
+						  "tag": "a",
+						  "href": "?query=痛快 【名・形動】&wildcards=off",
+						  "content": "痛快 【名・形動】"
+					      },
+					      {
+						  "tag": "span",
+						  "style": {
+						      "fontWeight": "normal",
+						      "listStyleType": "none"
+						  },
+						  "content": " ▽彼の発言は痛快だった ▽逆転勝ちした痛快な試合"
+					      }
+					  ]
+				      }
+				  ]
+			      }
+			  ]
+		      }
+		  ]
+	      },
+	      {
+		  "tag": "div",
+		  "data": {
+		      "name": "使い分け"
+		  },
+		  "content": [
+		      {
+			  "tag": "div",
+			  "content": [
+			      {
+				  "tag": "span",
+				  "style": {
+				      "fontWeight": "bold"
+				  },
+				  "content": "🔄使い分け\n"
+			      },
+			      {
+				  "tag": "ul",
+				  "style": {
+				      "listStyleType": "none"
+				  },
+				  "content": [
+				      {
+					  "tag": "li",
+					  "style": {
+					      "listStyleType": "１"
+					  },
+					  "content": "「面白い」は、広い意味を持つ語。喜ばしく、心がひかれるさまをいう。おかしいの意味のときは「愉快」に重なり、胸がすくの意味では「痛快」に重なる。また、一風変わっていたり新鮮であったりして、興味をひかれるさまにもいうが、この意味では他の二語とは重ならない。\n"
+				      },
+				      {
+					  "tag": "li",
+					  "style": {
+					      "listStyleType": "２"
+					  },
+					  "content": "「愉快」は、おかしくて笑いを誘うようなさまをいう。\n"
+				      },
+				      {
+					  "tag": "li",
+					  "style": {
+					      "listStyleType": "３"
+					  },
+					  "content": "「痛快」は、楽しく、胸の晴れるさま、胸のつかえが取り払われてすっとするようなさまをいう。また、単に豪快で気分のよいさまなどにも用いる。「痛快な飲みっぷり」「痛快な男」\n"
+				      }
+				  ]
+			      }
+			  ]
+		      }
+		  ]
+	      }
+	  ]
+      }
+  ],
+  0,
+  ""
+]

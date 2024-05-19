@@ -93,6 +93,7 @@ static void add_dictent_to_db(database_t *db, dictentry de) {
 }
 
 static s8 parse_liststyletype(s8 lst) {
+    // TODO: This is a memory leak
     if (startswith(lst, S("\"")) && endswith(lst, S("\"")))
         return s8dup(cuttail(cuthead(lst, 1), 1));
     else if (s8equals(lst, S("circle")))
@@ -145,8 +146,7 @@ static void append_structured_content(json_stream *s, stringbuilder_s sb[static 
                 } else
                     tag = TAG_UNKNOWN;
             } else if ((tag == TAG_UL || tag == TAG_LI) && s8equals(value, S("style"))) {
-                // TODO: json_peek for the very unlikely event that there is an
-                // array
+                // TODO: json_peek for the very unlikely event that there is an array
                 type = json_next(s);
 
                 if (type == JSON_OBJECT) {
@@ -270,6 +270,7 @@ static dictentry parse_dictionary_entry(json_stream *s) {
     stringbuilder_s sb = sb_init(100);
     append_definition(s, &sb, (s8){0}, 0);
     de.definition = sb_steals8(sb);
+    strip_trailing_whitespace(&(de.definition));
     /* ----------- */
 
     /* seventh entry */

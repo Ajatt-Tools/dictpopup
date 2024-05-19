@@ -1,0 +1,942 @@
+[
+  "面白い",
+  "おもしろい",
+  "",
+  "adj-i",
+  0,
+  [
+      {
+	  "type": "structured-content",
+	  "content": [
+	      {
+		  "tag": "span",
+		  "data": {
+		      "name": "見出部"
+		  },
+		  "content": [
+		      {
+			  "tag": "span",
+			  "style": {
+			      "fontWeight": "bold"
+			  },
+			  "data": {
+			      "name": "見出仮名"
+			  },
+			  "content": [
+			      "おも",
+			      {
+				  "tag": "span",
+				  "style": {
+				      "marginRight": 0.5
+				  },
+				  "data": {
+				      "name": "語構成"
+				  }
+			      },
+			      "しろ",
+			      {
+				  "tag": "span",
+				  "data": {
+				      "name": "活用分節"
+				  },
+				  "content": "・"
+			      },
+			      "い"
+			  ]
+		      },
+		      {
+			  "tag": "span",
+			  "style": {
+			      "fontSize": "0.7em",
+			      "verticalAlign": "super",
+			      "marginRight": 0.25,
+			      "marginLeft": 0.25
+			  },
+			  "data": {
+			      "name": "アクセントG"
+			  },
+			  "content": {
+			      "tag": "span",
+			      "data": {
+				  "name": "アクセント"
+			      },
+			      "content": {
+				  "tag": "span",
+				  "data": {
+				      "name": "accent"
+				  },
+				  "content": "[4]"
+			      }
+			  }
+		      },
+		      {
+			  "tag": "span",
+			  "data": {
+			      "name": "表記G"
+			  },
+			  "content": [
+			      "【",
+			      {
+				  "tag": "span",
+				  "data": {
+				      "name": "標準表記"
+				  },
+				  "content": "面白い"
+			      },
+			      "】"
+			  ]
+		      }
+		  ]
+	      },
+	      {
+		  "tag": "div",
+		  "data": {
+		      "name": "解説部"
+		  },
+		  "content": {
+		      "tag": "div",
+		      "data": {
+			  "name": "大語義"
+		      },
+		      "content": [
+			  {
+			      "tag": "span",
+			      "data": {
+				  "name": "品詞G"
+			      },
+			      "content": {
+				  "tag": "span",
+				  "data": {
+				      "name": "品詞subG"
+				  },
+				  "content": [
+				      "（",
+				      {
+					  "tag": "span",
+					  "data": {
+					      "name": "品詞"
+					  },
+					  "content": "形"
+				      },
+				      "）"
+				  ]
+			      }
+			  },
+			  {
+			      "tag": "div",
+			      "data": {
+				  "name": "文語形"
+			      },
+			      "content": [
+				  {
+				      "tag": "span",
+				      "style": {
+					  "verticalAlign": "text-bottom",
+					  "marginRight": 0.25
+				      },
+				      "content": {
+					  "tag": "img",
+					  "height": 1.0,
+					  "width": 1.0,
+					  "sizeUnits": "em",
+					  "appearance": "monochrome",
+					  "title": "文",
+					  "collapsible": false,
+					  "collapsed": false,
+					  "background": false,
+					  "path": "daijirin2/文-default.svg"
+				      }
+				  },
+				  {
+				      "tag": "span",
+				      "style": {
+					  "fontSize": "0.6em",
+					  "verticalAlign": "super"
+				      },
+				      "data": {
+					  "name": "品詞用法"
+				      },
+				      "content": "(ク)"
+				  },
+				  "おもしろ",
+				  {
+				      "tag": "span",
+				      "data": {
+					  "name": "活用分節"
+				      },
+				      "content": "・"
+				  },
+				  "し"
+			      ]
+			  },
+			  {
+			      "tag": "div",
+			      "data": {
+				  "name": "準大語義"
+			      },
+			      "content": {
+				  "tag": "div",
+				  "data": {
+				      "name": "中語義"
+				  },
+				  "content": [
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "補説G"
+					  },
+					  "content": [
+					      "〔",
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "補説"
+						  },
+						  "content": [
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語例"
+							  },
+							  "content": [
+							      "「面",
+							      {
+								  "tag": "span",
+								  "style": {
+								      "fontWeight": "normal",
+								      "fontSize": "0.6em",
+								      "verticalAlign": "super"
+								  },
+								  "data": {
+								      "name": "ルビG"
+								  },
+								  "content": "(おも)"
+							      },
+							      "白し」"
+							  ]
+						      },
+						      "で、目の前がぱっと明るくなる感じを表すのが原義といわれる"
+						  ]
+					      },
+					      "〕"
+					  ]
+				      },
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "語義G"
+					  },
+					  "content": [
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語義Gnum"
+						  },
+						  "content": "①"
+					      },
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語釈"
+						  },
+						  "content": "楽しい。愉快だ。"
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「昨日見た映画は",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "かった」"
+						  ]
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「勉強が",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "くて仕方がない」"
+						  ]
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "語義G"
+					  },
+					  "content": [
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語義Gnum"
+						  },
+						  "content": "②"
+					      },
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語釈"
+						  },
+						  "content": "興味をそそる。興味深い。"
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「何か",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "い話はないか」"
+						  ]
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「最後にきて",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "い展開を見せる」"
+						  ]
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "語義G"
+					  },
+					  "content": [
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語義Gnum"
+						  },
+						  "content": "③"
+					      },
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語釈"
+						  },
+						  "content": "こっけいだ。おかしい。"
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "いしぐさで人を笑わせる」"
+						  ]
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "語義G"
+					  },
+					  "content": [
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語義Gnum"
+						  },
+						  "content": "④"
+					      },
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語釈"
+						  },
+						  "content": "（多く、打ち消しの語を伴う）心にかなう。好ましい。望ましい。"
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「病状が",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "くない」"
+						  ]
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "くない結果に終わる」"
+						  ]
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「私に",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "からぬ感情を抱いている」"
+						  ]
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "語義G"
+					  },
+					  "content": [
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語義Gnum"
+						  },
+						  "content": "⑤"
+					      },
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語釈"
+						  },
+						  "content": "景色などが明るく広々とした感じで、気分がはればれとするようだ。明るく目が覚めるようだ。"
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「十日あまりなれば、月",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "し",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "出典"
+							  },
+							  "content": [
+							      "／",
+							      {
+								  "tag": "span",
+								  "data": {
+								      "name": "書名"
+								  },
+								  "content": "土左日記"
+							      }
+							  ]
+						      },
+						      "」"
+						  ]
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "語義G"
+					  },
+					  "content": [
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語義Gnum"
+						  },
+						  "content": "⑥"
+					      },
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "語釈"
+						  },
+						  "content": "心をひかれる。趣が深い。風流だ。"
+					      },
+					      {
+						  "tag": "div",
+						  "data": {
+						      "name": "用例"
+						  },
+						  "content": [
+						      "「昔を思ひやりてみれば",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語幹相当部"
+							  },
+							  "content": "━"
+						      },
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "活用分節"
+							  },
+							  "content": "・"
+						      },
+						      "かりける所なり",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "出典"
+							  },
+							  "content": [
+							      "／",
+							      {
+								  "tag": "span",
+								  "data": {
+								      "name": "書名"
+								  },
+								  "content": "土左日記"
+							      }
+							  ]
+						      },
+						      "」"
+						  ]
+					      }
+					  ]
+				      },
+				      {
+					  "tag": "div",
+					  "data": {
+					      "name": "補説G"
+					  },
+					  "content": [
+					      "〔",
+					      {
+						  "tag": "span",
+						  "data": {
+						      "name": "補説"
+						  },
+						  "content": [
+						      "類義の語に",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語例"
+							  },
+							  "content": "「おかしい」"
+						      },
+						      "があるが、",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語例"
+							  },
+							  "content": "「おかしい」"
+						      },
+						      "は格好・表情・しぐさ・話し方などが普通と違っていて、笑いたくなる意を表す。それに対して",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "語例"
+							  },
+							  "content": "「おもしろい」"
+						      },
+						      "は対象が普通の基準から見ると新鮮・奇抜で変化に富んでいて、興味をそそる意を表す"
+						  ]
+					      },
+					      "〕"
+					  ]
+				      }
+				  ]
+			      }
+			  },
+			  {
+			      "tag": "div",
+			      "style": {
+				  "marginTop": 0.5
+			      },
+			      "data": {
+				  "name": "派生G"
+			      },
+			      "content": [
+				  {
+				      "tag": "span",
+				      "style": {
+					  "verticalAlign": "text-bottom",
+					  "marginRight": 0.25
+				      },
+				      "content": {
+					  "tag": "img",
+					  "height": 1.0,
+					  "width": 2.0,
+					  "sizeUnits": "em",
+					  "appearance": "monochrome",
+					  "title": "派生",
+					  "collapsible": false,
+					  "collapsed": false,
+					  "background": false,
+					  "path": "daijirin2/派生-default.svg"
+				      }
+				  },
+				  {
+				      "tag": "span",
+				      "data": {
+					  "name": "派生語"
+				      },
+				      "content": [
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "派生見出"
+					      },
+					      "content": [
+						  {
+						      "tag": "span",
+						      "data": {
+							  "name": "親見出仮名"
+						      },
+						      "content": "━"
+						  },
+						  "が",
+						  {
+						      "tag": "span",
+						      "data": {
+							  "name": "活用分節"
+						      },
+						      "content": "・"
+						  },
+						  "る"
+					      ]
+					  },
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "品詞G"
+					      },
+					      "content": {
+						  "tag": "span",
+						  "data": {
+						      "name": "品詞subG"
+						  },
+						  "content": [
+						      "（",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "品詞"
+							  },
+							  "content": [
+							      "動",
+							      {
+								  "tag": "span",
+								  "style": {
+								      "fontSize": "0.6em",
+								      "verticalAlign": "super"
+								  },
+								  "data": {
+								      "name": "品詞行"
+								  },
+								  "content": "(ラ)"
+							      },
+							      {
+								  "tag": "span",
+								  "data": {
+								      "name": "品詞活用"
+								  },
+								  "content": "五"
+							      },
+							      "［",
+							      {
+								  "tag": "span",
+								  "data": {
+								      "name": "品詞活用"
+								  },
+								  "content": "四"
+							      },
+							      "］"
+							  ]
+						      },
+						      "）"
+						  ]
+					      }
+					  }
+				      ]
+				  },
+				  "・",
+				  {
+				      "tag": "span",
+				      "data": {
+					  "name": "派生語"
+				      },
+				      "content": [
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "派生見出"
+					      },
+					      "content": [
+						  {
+						      "tag": "span",
+						      "data": {
+							  "name": "親見出仮名"
+						      },
+						      "content": "━"
+						  },
+						  "げ"
+					      ]
+					  },
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "品詞G"
+					      },
+					      "content": {
+						  "tag": "span",
+						  "data": {
+						      "name": "品詞subG"
+						  },
+						  "content": [
+						      "（",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "品詞"
+							  },
+							  "content": "形動"
+						      },
+						      "）"
+						  ]
+					      }
+					  }
+				      ]
+				  },
+				  "・",
+				  {
+				      "tag": "span",
+				      "data": {
+					  "name": "派生語"
+				      },
+				      "content": [
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "派生見出"
+					      },
+					      "content": [
+						  {
+						      "tag": "span",
+						      "data": {
+							  "name": "親見出仮名"
+						      },
+						      "content": "━"
+						  },
+						  "さ"
+					      ]
+					  },
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "品詞G"
+					      },
+					      "content": {
+						  "tag": "span",
+						  "data": {
+						      "name": "品詞subG"
+						  },
+						  "content": [
+						      "（",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "品詞"
+							  },
+							  "content": "名"
+						      },
+						      "）"
+						  ]
+					      }
+					  }
+				      ]
+				  },
+				  "・",
+				  {
+				      "tag": "span",
+				      "data": {
+					  "name": "派生語"
+				      },
+				      "content": [
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "派生見出"
+					      },
+					      "content": [
+						  {
+						      "tag": "span",
+						      "data": {
+							  "name": "親見出仮名"
+						      },
+						      "content": "━"
+						  },
+						  "み"
+					      ]
+					  },
+					  {
+					      "tag": "span",
+					      "data": {
+						  "name": "品詞G"
+					      },
+					      "content": {
+						  "tag": "span",
+						  "data": {
+						      "name": "品詞subG"
+						  },
+						  "content": [
+						      "（",
+						      {
+							  "tag": "span",
+							  "data": {
+							      "name": "品詞"
+							  },
+							  "content": "名"
+						      },
+						      "）"
+						  ]
+					      }
+					  }
+				      ]
+				  }
+			      ]
+			  }
+		      ]
+		  }
+	      }
+	  ]
+      }
+  ],
+  2277200000,
+  ""
+]

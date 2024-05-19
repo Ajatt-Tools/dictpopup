@@ -1,5 +1,6 @@
 #include "dictpopup_create.c"
 #include <cgreen/cgreen.h>
+#include <glib.h>
 
 TestSuite *parser_tests(void);
 
@@ -29,10 +30,50 @@ Ensure(Parser, skips_furigana) {
 
     dictentry parsed = parse_dictionary_entry(s);
 
-    dictentry expected = {.kanji = S("々"), .reading = S("のま"),
-        .definition = S("▪ kanji repetition mark\n➡  see:同の字点\n  kanji iteration mark\n• 々\n• ノマ")};
-    assert_that(parsed.definition.s, is_equal_to_string((char *)expected.definition.s));
+    const char *expected =
+        "▪ kanji repetition mark\n➡  see:同の字点\n  kanji iteration mark\n• 々\n• ノマ";
+    assert_that(parsed.definition.s, is_equal_to_string(expected));
 
+    dictentry_free(&parsed);
+    json_close(s);
+}
+
+Ensure(Parser, correctly_parses_structured_content1) {
+    json_stream s[1];
+
+    char *str_to_parse = NULL;
+    g_file_get_contents("../tests/files/testentries/1_entry", &str_to_parse, NULL, NULL);
+    json_open_string(s, str_to_parse);
+    json_next(s);
+
+    dictentry parsed = parse_dictionary_entry(s);
+
+    char *expected = NULL;
+    g_file_get_contents("../tests/files/testentries/1_expected", &expected, NULL, NULL);
+    assert_that(parsed.definition.s, is_equal_to_string(expected));
+
+    g_free(str_to_parse);
+    g_free(expected);
+    dictentry_free(&parsed);
+    json_close(s);
+}
+
+Ensure(Parser, correctly_parses_structured_content2) {
+    json_stream s[1];
+
+    char *str_to_parse = NULL;
+    g_file_get_contents("../tests/files/testentries/2_entry", &str_to_parse, NULL, NULL);
+    json_open_string(s, str_to_parse);
+    json_next(s);
+
+    dictentry parsed = parse_dictionary_entry(s);
+
+    char *expected = NULL;
+    g_file_get_contents("../tests/files/testentries/2_expected", &expected, NULL, NULL);
+    assert_that(parsed.definition.s, is_equal_to_string(expected));
+
+    g_free(str_to_parse);
+    g_free(expected);
     dictentry_free(&parsed);
     json_close(s);
 }
@@ -57,6 +98,8 @@ Ensure(Parser, correctly_parses_frequency_entry) {
 TestSuite *parser_tests(void) {
     TestSuite *suite = create_test_suite();
     add_test_with_context(suite, Parser, skips_furigana);
+    add_test_with_context(suite, Parser, correctly_parses_structured_content1);
+    add_test_with_context(suite, Parser, correctly_parses_structured_content2);
     add_test_with_context(suite, Parser, correctly_parses_frequency_entry);
     return suite;
 }
