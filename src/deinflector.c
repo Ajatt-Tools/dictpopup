@@ -148,7 +148,7 @@ s8 kanji2hira(s8 input) {
     }
 
     mecab_destroy(mecab);
-    return sb_gets8(sb);
+    return sb_steals8(sb);
 }
 
 /**

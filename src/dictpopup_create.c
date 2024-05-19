@@ -267,7 +267,7 @@ static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
             /* sixth entry */
             stringbuilder_s sb = sb_init(100);
             append_definition(s, &sb, (s8){0}, 0);
-            de.definition = sb_gets8(sb);
+            de.definition = sb_steals8(sb);
             /* ----------- */
 
             /* seventh entry */

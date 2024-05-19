@@ -138,6 +138,7 @@ void sb_append(stringbuilder_s *b, s8 str);
 void sb_append_char(stringbuilder_s *sb, char c);
 char *sb_steal_str(stringbuilder_s *sb);
 s8 sb_gets8(stringbuilder_s sb);
+s8 sb_steals8(stringbuilder_s sb);
 void _nonnull_ sb_set(stringbuilder_s *sb, s8 s);
 void _nonnull_ sb_free(stringbuilder_s *sb);
 /* ------------------------------------------------------------------_ */
@@ -193,6 +194,6 @@ DEFINE_DROP_FUNC_VOID(free)
 DEFINE_DROP_FUNC(FILE *, fclose)
 DEFINE_DROP_FUNC(DIR *, closedir)
 DEFINE_DROP_FUNC_PTR(s8, frees8)
-DEFINE_DROP_FUNC(s8 *, frees8buffer)
+DEFINE_DROP_FUNC_PTR(s8, frees8buffer)
 
 #endif

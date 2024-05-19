@@ -304,8 +304,18 @@ void sb_append_char(stringbuilder_s *sb, char c) {
     sb_append(sb, (s8){.s = (u8 *)&c, .len = 1});
 }
 
-s8 sb_gets8(stringbuilder_s sb) {
+/*
+ * Returns the corresponding s8 to @sb
+ */
+s8 sb_get8(stringbuilder_s sb) {
     return (s8){.s = sb.data, .len = sb.len};
+}
+
+/*
+ * Frees the string builder and returns the corresponding s8.
+ */
+s8 sb_steals8(stringbuilder_s sb) {
+    return sb_gets8(sb); // sb doesn't need freeing if allocated on stack
 }
 
 char *sb_steal_str(stringbuilder_s *sb) {
