@@ -14,7 +14,6 @@
 
 typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
 
-
 static int get_array_len(const char *array[static 1]) {
     int n = 0;
     while (*array++)
