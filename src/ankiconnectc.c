@@ -65,6 +65,19 @@ static char *json_escape_str(const char *str) {
 
 typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
 
+/* ------ Callback functions ------ */
+static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata) {
+    retval_s *ret = userdata;
+    assert(ret);
+
+    *ret =
+        (retval_s){.data.boolean = (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0),
+                   .ok = true};
+
+    return nmemb;
+}
+/* -------------------------------- */
+
 void ac_print_ankicard(ankicard ac) {
     puts("Ankicard:");
     printf("deck: %s\n", ac.deck);
@@ -135,44 +148,38 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     return ret;
 }
 
-static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata) {
-    retval_s *ret = userdata;
-    assert(ret);
-
-    *ret =
-        (retval_s){.data.boolean = (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0),
-                   .ok = true};
-
-    return nmemb;
+static s8 form_search_req(bool include_suspended, char *deck, char *field, char *entry) {
+    return concat(S("{ \"action\": \"findCards\", \"version\": 6, \"params\": "
+                    "{ \"query\" : \"\\\""),
+                  fromcstr_(deck ? "deck:" : ""), fromcstr_(deck ? deck : ""), S("\\\" \\\""),
+                  fromcstr_(field), S(":"), fromcstr_(entry), S("\\\" "),
+                  include_suspended ? S("") : S("-is:suspended"), S("\" } }"));
 }
 
 /*
  * @entry: The entry to search for
- * @field: The field where @entry should be searched in
+ * @field: The field where @entry should be searched in.
  * @deck: The deck to search in. Can be null.
  *
  * Returns: Error msg on error, null otherwise
  */
 retval_s ac_search(bool include_suspended, char *deck, char *field, char *entry) {
 
-    _drop_(frees8) s8 req =
-        concat(S("{ \"action\": \"findCards\", \"version\": 6, \"params\": "
-                 "{ \"query\" : \"\\\""),
-               fromcstr_(deck ? "deck:" : ""), fromcstr_(deck ? deck : ""), S("\\\" \\\""),
-               fromcstr_(field), S(":"), fromcstr_(entry), S("\\\" "),
-               include_suspended ? S("") : S("-is:suspended"), S("\" } }"));
+    _drop_(frees8) s8 req = form_search_req(include_suspended, deck, field, entry);
+    return sendRequest(req, search_checker);
+}
 
-    retval_s ret = sendRequest(req, search_checker);
-    return ret;
+static s8 form_gui_search_req(const char *deck, const char *field, const char *entry) {
+    return concat(
+        S("{ \"action\": \"guiBrowse\", \"version\": 6, \"params\": { \"query\" : \"\\\""),
+        deck ? S("deck:") : S(""), deck ? fromcstr_((char *)deck) : S(""), S("\\\" \\\""),
+        fromcstr_((char *)field), S(":"), fromcstr_((char *)entry), S("\\\"\" } }"));
 }
 
 retval_s ac_gui_search(const char *deck, const char *field, const char *entry) {
-    g_autofree char *request =
-        g_strdup_printf("{ \"action\": \"guiBrowse\", \"version\": 6, \"params\": { \"query\" : "
-                        "\"\\\"%s%s\\\" \\\"%s:%s\\\"\" } }",
-                        deck ? "deck:" : "", deck ? deck : "", field, entry);
 
-    return sendRequest(fromcstr_(request), NULL);
+    _drop_(frees8) s8 req = form_gui_search_req(deck, field, entry);
+    return sendRequest(req, NULL);
 }
 
 retval_s ac_get_notetypes() {
@@ -180,17 +187,21 @@ retval_s ac_get_notetypes() {
     return (retval_s){0};
 }
 
+static s8 form_store_file_req(char const *filename, char const *path) {
+    return concat(
+        S("{ \"action\": \"storeMediaFile\", \"version\": 6, \"params\": { \"filename\" : \""),
+        fromcstr_((char *)filename), S("\", \"path\": \""), fromcstr_((char *)path),
+        S("\", \"deleteExisting\": false } }"));
+}
+
 /*
  * Stores the file at @path in the Anki media collection under the name
  * @filename. Doesn't overwrite existing files.
  */
 retval_s ac_store_file(char const *filename, char const *path) {
-    g_autofree char *request =
-        g_strdup_printf("{ \"action\": \"storeMediaFile\", \"version\": 6, \"params\": { "
-                        "\"filename\" : \"%s\", \"path\": \"%s\", \"deleteExisting\": false } }",
-                        filename, path);
 
-    return sendRequest(fromcstr_(request), NULL); // TODO: Check error response
+    _drop_(frees8) s8 req = form_store_file_req(filename, path);
+    return sendRequest(req, NULL); // TODO: Check error response
 }
 
 static int get_array_len(const char *array[static 1]) {

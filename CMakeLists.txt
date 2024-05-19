@@ -48,13 +48,14 @@ target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb)
 # Tests
 ############################################################
 find_package(cgreen)
-if (CGREEN_FOUND)
-  enable_testing()
-  add_executable(run_tests tests/main.c tests/deinflector_tests.c src/deinflector.c src/util.c)
-  target_include_directories(run_tests PRIVATE ${GTK3_INCLUDE_DIRS} include/)
-  target_link_libraries(run_tests PRIVATE cgreen ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES} ${CURL_LIBRARIES} -llmdb -lmecab)
-  add_test(test_all run_tests)
-endif()
+# if (CGREEN_FOUND)
+enable_testing()
+add_executable(run_tests tests/main.c tests/deinflector_tests.c tests/ankiconnect_tests.c
+        src/deinflector.c src/util.c)
+target_include_directories(run_tests PRIVATE ${GTK3_INCLUDE_DIRS} include/ src/)
+target_link_libraries(run_tests PRIVATE cgreen ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES} ${CURL_LIBRARIES} -llmdb -lmecab)
+add_test(test_all run_tests)
+# endif()
 
 
 ############################################################
