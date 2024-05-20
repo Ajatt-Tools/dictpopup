@@ -42,7 +42,7 @@ Then install with:
 git clone "https://github.com/btrkeks/dictpopup.git"
 cd dictpopup
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target install
+sudo cmake --build build --target install
 ```
 
 ### Windows
