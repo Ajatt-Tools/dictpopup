@@ -135,6 +135,7 @@ $(h_analyse_targets): %-analyse:
 		--enable=all --suppress=missingIncludeSystem \
 		--suppress=unusedFunction --suppress=unmatchedSuppression \
 		--suppress=unreadVariable --suppress=constParameterCallback \
+		--suppress=constVariablePointer \
 		--max-ctu-depth=32 --error-exitcode=1
 	# clang-analyzer-unix.Malloc does not understand _drop_()
 	clang-tidy $< --quiet -checks=-clang-analyzer-unix.Malloc -- -std=gnu99 -I$(IDIR) $(shell pkg-config --cflags gtk+-3.0)

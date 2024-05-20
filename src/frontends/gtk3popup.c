@@ -136,7 +136,7 @@ static void update_dictname_info(void) {
 
 static void update_frequency_info(void) {
     char tmp[10] = {0};
-    const char *freqstr = curent.frequency == -1 ? "" : tmp;
+    const char *freqstr = curent.frequency == 0 ? "" : tmp;
     if (freqstr == tmp)
         snprintf_safe(tmp, arrlen(tmp), "%d", curent.frequency);
     gtk_label_set_text(GTK_LABEL(lbl_freq), freqstr);

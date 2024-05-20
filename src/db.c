@@ -142,17 +142,17 @@ void db_put_freq(const database_t *db, frequency_entry fe) {
     C(mdb_put(db->txn, db->dbi3, &key_mdb, &val_mdb, MDB_NODUPDATA));
 }
 
-static int db_get_freq(const database_t *db, s8 word, s8 reading) {
+static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
     _drop_(frees8) s8 key = concat(word, S("\0"), reading);
     MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
     MDB_val val_m = {0};
 
     int rc;
     if ((rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m)) == MDB_NOTFOUND)
-        return -1;
+        return 0;
     C(rc);
 
-    int freq;
+    u32 freq;
     assert(sizeof(freq) == val_m.mv_size);
     memcpy(&freq, val_m.mv_data, sizeof(freq)); // ensures proper alignment
     return freq;

@@ -150,7 +150,7 @@ typedef struct {
     s8 kanji;
     s8 reading;
     s8 definition;
-    int frequency;
+    u32 frequency;
 } dictentry;
 
 dictentry dictentry_dup(dictentry de);

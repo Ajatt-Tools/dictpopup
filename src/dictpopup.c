@@ -106,8 +106,8 @@ static int _nonnull_ dictentry_comparer(void const *voida, void const *voidb) {
 
     int inda, indb;
     if (s8equals(a.dictname, b.dictname)) {
-        inda = a.frequency == -1 ? INT_MAX : a.frequency;
-        indb = b.frequency == -1 ? INT_MAX : b.frequency;
+        inda = a.frequency == 0 ? INT_MAX : a.frequency;
+        indb = b.frequency == 0 ? INT_MAX : b.frequency;
     } else {
         inda = indexof((char *)a.dictname.s, cfg.general.dictSortOrder);
         indb = indexof((char *)b.dictname.s, cfg.general.dictSortOrder);
@@ -172,8 +172,8 @@ void create_ankicard(dictpopup_t d, dictentry de) {
 
 static s8 convert_to_utf8(char *str) {
     g_autoptr(GError) error = NULL;
-    s8 ret = fromcstr_(g_locale_to_utf8(str, -1, NULL, NULL, &err));
-    die_on(err, "Converting to UTF-8: %s", err->message);
+    s8 ret = fromcstr_(g_locale_to_utf8(str, -1, NULL, NULL, &error));
+    die_on(error, "Converting to UTF-8: %s", error->message);
     return ret;
 }
 
