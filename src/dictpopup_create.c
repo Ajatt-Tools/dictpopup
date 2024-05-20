@@ -18,12 +18,16 @@
         return retval;                                                                             \
     } while (0)
 
-#define return_on(cond)                                                                  \
+#define return_on(cond, fmt, ...)                                                                  \
     do {                                                                                           \
         if (unlikely(cond)) {                                                                      \
+            msg(fmt, ##__VA_ARGS__);                                                               \
             return;                                                                                \
         }                                                                                          \
     } while (0)
+
+DEFINE_DROP_FUNC_PTR(json_stream, json_close)
+DEFINE_DROP_FUNC(struct zip_file *, zip_fclose)
 
 volatile sig_atomic_t sigint_received = 0;
 
@@ -52,7 +56,7 @@ static s8 unzip_file(zip_t *archive, const char *filename) {
 
     s8 buffer = news8(finfo.size); // automatically null-terminated
 
-    struct zip_file *index_file = zip_fopen(archive, filename, 0);
+    _drop_(zip_fclose) struct zip_file *index_file = zip_fopen(archive, filename, 0);
     if (!index_file)
         error_return((s8){0}, "Error opening file '%s': %s\n", filename, zip_strerror(archive));
 
@@ -62,7 +66,6 @@ static s8 unzip_file(zip_t *archive, const char *filename) {
     if ((size_t)buffer.len != finfo.size)
         dbg("Did not read all of %s!", filename);
 
-    zip_fclose(index_file);
     return buffer;
 }
 
@@ -206,9 +209,9 @@ static void append_definition(json_stream s[static 1], stringbuilder_s sb[static
         type = json_next(s);
 
         while (type != JSON_ARRAY_END && type != JSON_ERROR && type != JSON_DONE) {
-            if (type == JSON_STRING)
+            if (type == JSON_STRING) {
                 sb_append(sb, json_get_string_(s));
-            else if (type == JSON_OBJECT)
+            } else if (type == JSON_OBJECT)
                 append_structured_content(s, sb, liststyle, listdepth);
             else
                 dbg("Encountered unknown type '%s' within definition.", json_typename[type]);
@@ -290,31 +293,29 @@ static dictentry parse_dictionary_entry(json_stream *s) {
 }
 
 static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
-    json_stream s[1];
-    json_open_buffer(s, buffer.s, buffer.len);
+    _drop_(json_close) json_stream s;
+    json_open_buffer(&s, buffer.s, buffer.len);
 
-    enum json_type type = json_next(s);
-    if (type != JSON_ARRAY)
-        err("Dictionary format not supported.");
+    enum json_type type = json_next(&s);
+    return_on(type != JSON_ARRAY, "Dictionary format of '%.*s' not supported.", (int)dictname.len,
+              (char *)dictname.s);
 
     while (!sigint_received) {
-        type = json_next(s);
+        type = json_next(&s);
 
         if (type == JSON_DONE)
             break;
         else if (type == JSON_ERROR) {
-            err("%s", json_get_error(s));
+            err("%s", json_get_error(&s));
             break;
         } else if (type == JSON_ARRAY) {
-            dictentry de = parse_dictionary_entry(s);
+            dictentry de = parse_dictionary_entry(&s);
             de.dictname = dictname;
             add_dictent_to_db(db, de);
 
             freedictentry_(&de);
         }
     }
-
-    json_close(s); // TODO: json_reset instead of close
 }
 
 static frequency_entry parse_frequency_entry(json_stream *s) {
@@ -377,29 +378,27 @@ static frequency_entry parse_frequency_entry(json_stream *s) {
 }
 
 static void add_frequency(database_t *db, s8 buffer) {
-    json_stream s[1];
-    json_open_buffer(s, buffer.s, buffer.len);
+    _drop_(json_close) json_stream s;
+    json_open_buffer(&s, buffer.s, buffer.len);
 
-    enum json_type type = json_next(s);
-    return_on(type != JSON_ARRAY);
+    enum json_type type = json_next(&s);
+    return_on(type != JSON_ARRAY, "Format of frequency dictionary not supported");
 
     while (!sigint_received) {
-        type = json_next(s);
+        type = json_next(&s);
 
         if (type == JSON_ARRAY_END || type == JSON_DONE)
             break;
         else if (type == JSON_ERROR) {
-            err("%s", json_get_error(s));
+            err("%s", json_get_error(&s));
             break;
         } else if (type == JSON_ARRAY) {
-            frequency_entry fe = parse_frequency_entry(s);
+            frequency_entry fe = parse_frequency_entry(&s);
             db_put_freq(db, fe);
             frequency_entry_free(&fe);
         } else
             assert(0);
     }
-
-    json_close(s);
 }
 
 static s8 extract_dictname(zip_t *archive) {
@@ -407,26 +406,23 @@ static s8 extract_dictname(zip_t *archive) {
     if (!buffer.len)
         return (s8){0};
 
-    json_stream s[1];
-    json_open_buffer(s, buffer.s, buffer.len);
+    _drop_(json_close) json_stream s;
+    json_open_buffer(&s, buffer.s, buffer.len);
 
     s8 dictname = {0};
-    enum json_type type;
     for (;;) {
-        type = json_next(s);
-        s8 value;
+        enum json_type type = json_next(&s);
         if (type == JSON_STRING) {
-            value = json_get_string_(s);
+            s8 value = json_get_string_(&s);
             if (s8equals(value, S("title"))) {
-                json_next(s);
-                dictname = s8dup(json_get_string_(s));
+                json_next(&s);
+                dictname = s8dup(json_get_string_(&s));
                 break;
             } else
-                json_skip(s);
+                json_skip(&s);
         }
     }
 
-    json_close(s);
     return dictname;
 }
 
