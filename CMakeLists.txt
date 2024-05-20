@@ -78,7 +78,7 @@ run_clang_format(clang_format_check ${ALL_SRC_FILES})
 # Install
 ############################################################
 install(TARGETS dictpopup dictpopup-create DESTINATION bin)
-install(FILES config.ini DESTINATION etc)
+install(FILES config.ini DESTINATION share)
 install(DIRECTORY man1/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
         FILES_MATCHING PATTERN "*.1")
 

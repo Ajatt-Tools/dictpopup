@@ -4,7 +4,6 @@ dictpopup-create
 cmake-build-debug/
 cmake-build-release/
 .cmake
-Makefile
 .idea
 CMakeFiles
 .gdb_history
