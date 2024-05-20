@@ -23,8 +23,7 @@ jobs:
       - run: make analyse
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
       - run: cmake --build build
-      - run: cd build
-      - run: ./run_tests
+      - run: cd build && ./run_tests
 
 on:
   push:
