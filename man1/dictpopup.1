@@ -1,18 +1,20 @@
 .TH DICTPOPUP 1
 .SH SYNOPSIS
 .B dictpopup
-[\fB\-cdh\fR]
-[\fIsearch\fR]...
+[\fB\-ch\fR]
+[\fILOOKUP\fR]...
 .SH DESCRIPTION
 .B dictpopup
-looks up selected Japanese text in Yomichan dictionaries
-and displays the search result in a gtk3 window. 
-It does this by means of an index made by
-.BR dictpopup\-create (1).
+looks up selected Japanese text in a database created by
+.BR dictpopup\-create (1)
+and displays the search result in a gtk3 window.
+.sp
+Debug messages can be enabled by defining the environment variable DP_DEBUG, e.g.:
+.sp
+.nf
+    \&$ DP_DEBUG=1 dictpopup "面白い"
+.fi
 .SH OPTIONS
-.TP
-.BR \-d
-Enable debug messages.
 .TP
 .BR \-c
 Print parsed config.

@@ -12,6 +12,11 @@
 #include "platformdep.h"
 #include "util.h"
 
+typedef struct {
+    s8 dbpath;
+    s8 dictspath;
+} config;
+
 #define error_return(retval, ...)                                                                  \
     do {                                                                                           \
         err(__VA_ARGS__);                                                                          \
@@ -475,10 +480,6 @@ static bool askyn(const char *msg) {
     return true;
 }
 
-static s8 get_default_dbpath(void) {
-    return buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
-}
-
 static void sigint_handler(int s) {
     sigint_received = 1;
 }
@@ -489,14 +490,17 @@ static void setup_sighandler(void) {
     sigaction(SIGINT, &act, NULL);
 }
 
-static void parse_cmd_line(int argc, char **argv, s8 dbpath[static 1]) {
+static void parse_cmd_line(int argc, char **argv, config *cfg) {
     int c;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "hd:")) != -1)
+    while ((c = getopt(argc, argv, "hd:i:")) != -1)
         switch (c) {
             case 'd':
-                *dbpath = s8dup(fromcstr_(optarg));
+                cfg->dbpath = s8dup(fromcstr_(optarg));
+                break;
+            case 'i':
+                cfg->dictspath = s8dup(fromcstr_(optarg));
                 break;
             case 'h':
                 puts("See 'man dictpopup-create' for help.");
@@ -509,31 +513,43 @@ static void parse_cmd_line(int argc, char **argv, s8 dbpath[static 1]) {
         }
 }
 
+static void set_default_values(config *cfg) {
+    if (!cfg->dbpath.len) {
+        cfg->dbpath = buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
+        msg("Storing database in: %.*s", (int)cfg->dbpath.len, (char *)cfg->dbpath.s);
+    }
+
+    if (!cfg->dictspath.len) {
+        msg("Using current directory as dictionary path.");
+        cfg->dbpath = S(".");
+    }
+}
+
 #ifndef UNIT_TEST
 int main(int argc, char *argv[]) {
     setup_sighandler();
 
-    _drop_(frees8) s8 dbdir = {0};
-    parse_cmd_line(argc, argv, &dbdir);
-    if (!dbdir.len)
-        dbdir = get_default_dbpath();
-    dbg("Using database path: %s", (char *)dbdir.s);
+    config cfg = {0};
+    parse_cmd_line(argc, argv, &cfg);
+    set_default_values(&cfg);
 
-    if (db_check_exists(dbdir)) {
+    if (db_check_exists(cfg.dbpath)) {
         if (askyn("A database file already exists. Would you like to delete the old one?"))
-            db_remove(dbdir);
+            db_remove(cfg.dbpath);
         else
             exit(EXIT_FAILURE);
     } else
-        createdir((char *)dbdir.s);
+        createdir((char *)cfg.dbpath.s);
 
     _drop_(db_close) database_t *db = db_open((char *)dbdir.s, false);
     _drop_(closedir) DIR *dir = opendir(".");
+    _drop_(db_close) database_t *db = db_open((char *)cfg.dbpath.s, false);
+    _drop_(closedir) DIR *dir = opendir((char *)cfg.dictspath.s);
     die_on(!dir, "Error opening current directory: %s", strerror(errno));
 
     struct dirent *entry;
     while ((entry = readdir(dir)) && !sigint_received) {
-        s8 fn = fromcstr_(entry->d_name);
+        _drop_(frees8) s8 fn = buildpath(cfg.dictspath, fromcstr_(entry->d_name));
         if (endswith(fn, S(".zip")))
             add_from_zip(db, (char *)fn.s);
     }

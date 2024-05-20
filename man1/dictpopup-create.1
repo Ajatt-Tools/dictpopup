@@ -1,11 +1,17 @@
 .TH DICTPOPUP\-CREATE 1
+
 .SH SYNOPSIS
-.B dictpopup\-create
-[\fILOCATION\fR]...
+\fBdictpopup\-create\fR [\fIOPTION\fR]...
+
 .SH DESCRIPTION
 .B dictpopup\-create
-creates a database used by 
-.BR dictpopup (1)
-from the Yomichan dictionary files in the current directory.
-By default, the database is stored in $XDG_DATA_HOME/dictpopup
-which can be overriden by providing \fILOCATION\fR.
+parses Yomichan dictionary files to create a database used by
+.BR dictpopup (1).
+
+.SH OPTIONS
+.TP
+\fB\-i\fR \fIPATH\fR
+Specify the directory containing the dictionaries to parse. The default is the current directory.
+.TP
+\fB\-d\fR \fIPATH\fR
+Specify the directory where the database will be stored. The default is ~/.local/share/dictpopup.
