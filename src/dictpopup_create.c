@@ -78,8 +78,7 @@ static s8 json_get_string_(json_stream *json) {
     size_t slen = 0;
     s8 r = {0};
     r.s = (u8 *)json_get_string(json, &slen);
-    r.len = slen > 0 ? (size)(slen - 1) : 0; // API includes terminating 0 in
-                                             // length
+    r.len = slen > 0 ? (size)(slen - 1) : 0; // API includes terminating 0 in length
     return r;
 }
 
@@ -109,7 +108,7 @@ static s8 parse_liststyletype(s8 lst) {
     else if (s8equals(lst, S("square")))
         return S("▪");
     else if (s8equals(lst, S("none")))
-        return S(" ");
+        return S("  ");
     else
         return s8dup(lst); // そのまま
 }
@@ -221,6 +220,9 @@ static void append_definition(json_stream s[static 1], stringbuilder_s sb[static
             else
                 dbg("Encountered unknown type '%s' within definition.", json_typename[type]);
 
+            if (json_get_depth(s) == 3)
+                sb_append_char(sb, '\n');
+
             type = json_next(s);
         }
 
@@ -238,6 +240,16 @@ static void freedictentry_(dictentry de[static 1]) {
     frees8(&de->kanji);
     frees8(&de->reading);
     frees8(&de->definition);
+}
+
+static s8 parse_definition(json_stream *s) {
+    stringbuilder_s sb = sb_init(100);
+
+    append_definition(s, &sb, (s8){0}, 0);
+
+    s8 def = sb_steals8(sb);
+    strip_trailing_whitespace(&def);
+    return def;
 }
 
 static dictentry parse_dictionary_entry(json_stream *s) {
@@ -275,10 +287,7 @@ static dictentry parse_dictionary_entry(json_stream *s) {
     /* ----------- */
 
     /* sixth entry */
-    stringbuilder_s sb = sb_init(100);
-    append_definition(s, &sb, (s8){0}, 0);
-    de.definition = sb_steals8(sb);
-    strip_trailing_whitespace(&(de.definition));
+    de.definition = parse_definition(s);
     /* ----------- */
 
     /* seventh entry */
@@ -319,6 +328,8 @@ static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
             add_dictent_to_db(db, de);
 
             freedictentry_(&de);
+        } else {
+            dbg("Encountered unknown entry while parsing dictionary");
         }
     }
 }
@@ -541,8 +552,6 @@ int main(int argc, char *argv[]) {
     } else
         createdir((char *)cfg.dbpath.s);
 
-    _drop_(db_close) database_t *db = db_open((char *)dbdir.s, false);
-    _drop_(closedir) DIR *dir = opendir(".");
     _drop_(db_close) database_t *db = db_open((char *)cfg.dbpath.s, false);
     _drop_(closedir) DIR *dir = opendir((char *)cfg.dictspath.s);
     die_on(!dir, "Error opening current directory: %s", strerror(errno));
