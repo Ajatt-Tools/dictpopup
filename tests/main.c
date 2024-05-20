@@ -4,7 +4,6 @@ TestSuite *deinflector_tests(void);
 TestSuite *ankiconnect_tests(void);
 TestSuite *parser_tests(void);
 
-
 int main(int argc, char **argv) {
     TestSuite *suite = create_test_suite();
     add_suite(suite, deinflector_tests());

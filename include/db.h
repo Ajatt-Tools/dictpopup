@@ -11,9 +11,9 @@
 typedef struct database_s database_t;
 
 typedef struct {
- s8 word;
- s8 reading;
- size_t frequency;
+    s8 word;
+    s8 reading;
+    size_t frequency;
 } frequency_entry;
 
 database_t *_nonnull_ db_open(char *dbpath, bool readonly);

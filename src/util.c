@@ -217,10 +217,14 @@ s8 buildpath_(s8 *pathcomps) {
     return retpath;
 }
 
-static b32 whitespace(u8 c)
-{
+static b32 whitespace(u8 c) {
     switch (c) {
-        case '\t': case '\n': case '\b': case '\f': case '\r': case ' ':
+        case '\t':
+        case '\n':
+        case '\b':
+        case '\f':
+        case '\r':
+        case ' ':
             return 1;
     }
     return 0;
