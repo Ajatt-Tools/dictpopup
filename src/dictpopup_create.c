@@ -532,7 +532,7 @@ static void set_default_values(config *cfg) {
 
     if (!cfg->dictspath.len) {
         msg("Using current directory as dictionary path.");
-        cfg->dbpath = S(".");
+        cfg->dictspath = S(".");
     }
 }
 
