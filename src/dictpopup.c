@@ -171,7 +171,7 @@ void create_ankicard(dictpopup_t d, dictentry de) {
 }
 
 static s8 convert_to_utf8(char *str) {
-    g_autoptr(GError) err;
+    g_autoptr(GError) error = NULL;
     s8 ret = fromcstr_(g_locale_to_utf8(str, -1, NULL, NULL, &err));
     die_on(err, "Converting to UTF-8: %s", err->message);
     return ret;
