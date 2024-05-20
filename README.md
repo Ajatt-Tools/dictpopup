@@ -41,14 +41,9 @@ Then install with:
 ```bash
 git clone "https://github.com/btrkeks/dictpopup.git"
 cd dictpopup
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-sudo cmake --build build --target install
+make
+sudo make install
 ```
-
-### Windows
-The manual installation instructions above should also work for Windows under MSYS2, so someone
-experienced might get it to run. But note that the default config location is currently hard coded for Linux.
-I will provide an installer in the future.
 
 ## Setup
 After the program installation you need to create a database where the dictionary entries are read from.
