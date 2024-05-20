@@ -45,6 +45,11 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target install
 ```
 
+### Windows
+The manual installation instructions above should also work for Windows under MSYS2, so someone
+experienced might get it to run. But note that the default config location is currently hard coded for Linux.
+I will provide an installer in the future.
+
 ## Setup
 After the program installation you need to create a database where the dictionary entries are read from.
 This is done via `dictpopup-create` which creates the database from all Yomichan dictionaries in the current directory.
