@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(dictpopup C)
 
 include(GNUInstallDirs)
+include(CTest)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
@@ -47,17 +48,18 @@ target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb ${
 ############################################################
 # Tests
 ############################################################
-find_package(cgreen)
-# if (CGREEN_FOUND)
+find_package(cgreen QUIET) # Temporary workaround for allowing the user to build without it
 enable_testing()
-add_executable(run_tests tests/main.c tests/deinflector_tests.c tests/ankiconnect_tests.c
+add_executable(run_tests EXCLUDE_FROM_ALL tests/main.c tests/deinflector_tests.c tests/ankiconnect_tests.c
         src/deinflector.c src/util.c
         tests/parser_tests.c src/pdjson.c src/db.c src/platformdep.c)
 target_compile_definitions(run_tests PUBLIC UNIT_TEST)
 target_include_directories(run_tests PRIVATE ${GTK3_INCLUDE_DIRS} include/ src/)
 target_link_libraries(run_tests PRIVATE cgreen ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES} ${CURL_LIBRARIES} -llmdb -lmecab -lzip)
-add_test(test_all run_tests)
-# endif()
+add_test(
+        NAME all_tests
+        COMMAND $<TARGET_FILE:run_tests>
+)
 
 
 ############################################################
