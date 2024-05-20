@@ -379,7 +379,7 @@ static fileinfo getfileinfo(database db, s8 fn) {
             len++;
 
         data_split[i] = news8(len);
-        u8copy(data_split[i].s, d.s, data_split[i].len);
+        memcpy(data_split[i].s, d.s, data_split[i].len);
 
         d.s += data_split[i].len + 1;
         d.len -= data_split[i].len + 1;

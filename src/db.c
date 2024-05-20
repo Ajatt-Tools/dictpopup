@@ -172,7 +172,7 @@ static dictentry data_to_dictent(const database_t *db, s8 data) {
         while (len < d.len && d.s[len] != '\0')
             len++;
         data_split[i] = news8(len);
-        u8copy(data_split[i].s, d.s, data_split[i].len);
+        memcpy(data_split[i].s, d.s, data_split[i].len);
 
         d.s += data_split[i].len + 1;
         d.len -= data_split[i].len + 1;

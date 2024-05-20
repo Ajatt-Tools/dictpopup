@@ -53,11 +53,6 @@ void *xrealloc(void *ptr, size_t nbytes) {
 }
 
 /* --------------- Start s8 utils -------------- */
-void u8copy(u8 *restrict dst, const u8 *restrict src, size n) {
-    assert(n >= 0);
-    memcpy(dst, src, n);
-}
-
 i32 u8compare(u8 *restrict a, u8 *restrict b, size n) {
     for (; n; n--) {
         i32 d = *a++ - *b++;
@@ -71,11 +66,13 @@ i32 u8compare(u8 *restrict a, u8 *restrict b, size n) {
  * Copy src into dst returning the remaining portion of dst.
  */
 s8 s8copy(s8 dst, s8 src) {
-    assert(dst.len >= src.len);
+    assert(dst.len >= src.len && src.len >= 0);
 
-    u8copy(dst.s, src.s, src.len);
-    dst.s += src.len;
-    dst.len -= src.len;
+    if (src.s && dst.s) { // Passing null to memcpy is undefined behaviour ...
+        memcpy(dst.s, src.s, src.len);
+        dst.s += src.len;
+        dst.len -= src.len;
+    }
     return dst;
 }
 
@@ -84,9 +81,9 @@ s8 news8(size len) {
                 .len = len};
 }
 
-s8 s8dup(s8 s) {
-    s8 r = news8(s.len);
-    u8copy(r.s, s.s, s.len);
+s8 s8dup(s8 src) {
+    s8 r = news8(src.len);
+    s8copy(r, src);
     return r;
 }
 

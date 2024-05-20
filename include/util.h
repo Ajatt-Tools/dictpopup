@@ -58,7 +58,6 @@ typedef struct {
  */
 s8 news8(size len);
 
-void u8copy(u8 *restrict dst, const u8 *restrict src, size n);
 i32 u8compare(u8 *a, u8 *b, size n);
 /*
  * Copies @src into @dst returning the remaining portion of @dst
@@ -68,7 +67,7 @@ s8 s8copy(s8 dst, s8 src);
 /*
  * Returns a copy of s
  */
-s8 s8dup(s8 s);
+s8 s8dup(s8 src);
 /*
  * Turns @z into an s8 string, reusing the pointer.
  */
