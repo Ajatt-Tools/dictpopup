@@ -1,0 +1,39 @@
+[[
+  "強い",
+  "つよい",
+  "1 adj-i",
+  "adj-i",
+  1999800,
+  [
+    {
+      "content":
+	[
+	  {
+	    "content":
+	     [
+	       {"content":"strong","tag":"li"},
+	       {"content":"potent","tag":"li"},
+	       {"content":"competent","tag":"li"},
+	       {"content":"domineering","tag":"li"},
+	       {"content":"tough","tag":"li"}
+	     ],
+	    "data":{"content":"glossary"},
+	    "lang":"en",
+	    "style":{"listStyleType":"circle"},"tag":"ul"},
+	  {
+	    "content":
+	      [
+		{"content":"その釣り人は釣り糸に強い引きを感じた。","tag":"li"},
+		{"content":"The angler felt a strong tug on the line.","lang":"en","style":{"listStyleType":"'🇬🇧 '"},"tag":"li"}
+	      ],
+	    "data":{"content":"examples"},
+	    "lang":"ja",
+	    "style":{"listStyleType":"'🇯🇵 '"},"tag":"ul"
+	  }
+	],
+      "type":"structured-content"
+    }
+  ],
+  1236070,
+  "⭐ ichi news9k"
+]]

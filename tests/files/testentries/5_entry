@@ -1,0 +1,35 @@
+[[
+    "強い",
+    "つよい",
+    "子",
+    "adj-i",
+    -1,
+    [
+	{
+	    "type": "structured-content",
+	    "content": {
+		"tag": "a",
+		"href": "?query=強い雨&wildcards=off",
+		"content": "強い雨"
+	    }
+	},
+	{
+	    "type": "structured-content",
+	    "content": {
+		"tag": "a",
+		"href": "?query=強い相互作用&wildcards=off",
+		"content": "強い相互作用"
+	    }
+	},
+	{
+	    "type": "structured-content",
+	    "content": {
+		"tag": "a",
+		"href": "?query=強い台風&wildcards=off",
+		"content": "強い台風"
+	    }
+	}
+    ],
+    10763000000,
+    ""
+]]
