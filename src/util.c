@@ -53,12 +53,6 @@ void *xrealloc(void *ptr, size_t nbytes) {
 }
 
 /* --------------- Start s8 utils -------------- */
-void u8copy(u8 *restrict dst, const u8 *restrict src, size n) {
-    assert(n >= 0);
-    for (; n; n--)
-        *dst++ = *src++;
-}
-
 i32 u8compare(u8 *restrict a, u8 *restrict b, size n) {
     for (; n; n--) {
         i32 d = *a++ - *b++;
@@ -72,11 +66,13 @@ i32 u8compare(u8 *restrict a, u8 *restrict b, size n) {
  * Copy src into dst returning the remaining portion of dst.
  */
 s8 s8copy(s8 dst, s8 src) {
-    assert(dst.len >= src.len);
+    assert(dst.len >= src.len && src.len >= 0);
 
-    u8copy(dst.s, src.s, src.len);
-    dst.s += src.len;
-    dst.len -= src.len;
+    if (src.s && dst.s) { // Passing null to memcpy is undefined behaviour ...
+        memcpy(dst.s, src.s, src.len);
+        dst.s += src.len;
+        dst.len -= src.len;
+    }
     return dst;
 }
 
@@ -85,9 +81,9 @@ s8 news8(size len) {
                 .len = len};
 }
 
-s8 s8dup(s8 s) {
-    s8 r = news8(s.len);
-    u8copy(r.s, s.s, s.len);
+s8 s8dup(s8 src) {
+    s8 r = news8(src.len);
+    s8copy(r, src);
     return r;
 }
 
@@ -189,6 +185,7 @@ s8 concat_(s8 *strings) {
     return ret;
 }
 
+// TODO: Don't append sep when already there
 s8 buildpath_(s8 *pathcomps) {
 #ifdef _WIN32
     s8 sep = S("\\");
@@ -220,14 +217,36 @@ s8 buildpath_(s8 *pathcomps) {
     return retpath;
 }
 
+static b32 whitespace(u8 c) {
+    switch (c) {
+        case '\t':
+        case '\n':
+        case '\b':
+        case '\f':
+        case '\r':
+        case ' ':
+            return 1;
+    }
+    return 0;
+}
+
+void strip_trailing_whitespace(s8 *str) {
+    u8 *lastchr = str->s + str->len - 1;
+    while (str->len > 0 && whitespace(*lastchr)) {
+        str->len--;
+        lastchr--;
+    }
+    (str->s)[str->len] = '\0';
+}
+
 void frees8(s8 *z) {
     free(z->s);
 }
 
-void frees8buffer(s8 **buf) {
-    while (buf_size(*buf) > 0)
-        free(buf_pop(*buf).s);
-    buf_free(*buf);
+void frees8buffer(s8 *buf) {
+    while (buf_size(buf) > 0)
+        free(buf_pop(buf).s);
+    buf_free(buf);
 }
 
 /* -------------- Start dictentry / dictionary utils ---------------- */
@@ -300,8 +319,32 @@ void sb_append(stringbuilder_s *b, s8 str) {
     b->len += str.len;
 }
 
+void sb_append_char(stringbuilder_s *sb, char c) {
+    sb_append(sb, (s8){.s = (u8 *)&c, .len = 1});
+}
+
+/*
+ * Returns the corresponding s8 to @sb
+ */
 s8 sb_gets8(stringbuilder_s sb) {
     return (s8){.s = sb.data, .len = sb.len};
+}
+
+/*
+ * Frees the string builder and returns the corresponding s8.
+ */
+s8 sb_steals8(stringbuilder_s sb) {
+    s8 ret = {0};
+    ret.len = sb.len;
+    ret.s = (u8 *)sb_steal_str(&sb);
+    return ret;
+}
+
+char *sb_steal_str(stringbuilder_s *sb) {
+    sb_append_char(sb, '\0');
+    char *r = (char *)sb->data;
+    *sb = (stringbuilder_s){0};
+    return r;
 }
 
 void sb_set(stringbuilder_s *sb, s8 s) {
@@ -339,17 +382,12 @@ static void strremove(char *str, const s8 sub) {
     }
 }
 
-s8 nuke_whitespace(s8 z) {
-    strremove((char *)z.s, S("\n"));
-    strremove((char *)z.s, S("\t"));
-    strremove((char *)z.s, S(" "));
-    strremove((char *)z.s, S("　"));
+// TODO: Cleaner (and non-null terminated) implementation
+void nuke_whitespace(s8 *z) {
+    strremove((char *)z->s, S("\n"));
+    strremove((char *)z->s, S("\t"));
+    strremove((char *)z->s, S(" "));
+    strremove((char *)z->s, S("　"));
 
-    return fromcstr_((char *)z.s);
-}
-
-int createdir(char *dirpath) {
-    // TODO: Recursive implementation
-    int status = mkdir(dirpath, S_IRWXU | S_IRWXG | S_IXOTH);
-    return (status == 0 || errno == EEXIST) ? 0 : -1;
+    *z = fromcstr_((char *)z->s);
 }

@@ -11,7 +11,6 @@ typedef signed int b32;
 typedef signed int i32;
 typedef unsigned int u32;
 typedef __PTRDIFF_TYPE__ size;
-typedef char byte;
 
 #define assert(c)                                                                                  \
     while (!(c))                                                                                   \
@@ -59,7 +58,6 @@ typedef struct {
  */
 s8 news8(size len);
 
-void u8copy(u8 *restrict dst, const u8 *restrict src, size n);
 i32 u8compare(u8 *a, u8 *b, size n);
 /*
  * Copies @src into @dst returning the remaining portion of @dst
@@ -69,7 +67,7 @@ s8 s8copy(s8 dst, s8 src);
 /*
  * Returns a copy of s
  */
-s8 s8dup(s8 s);
+s8 s8dup(s8 src);
 /*
  * Turns @z into an s8 string, reusing the pointer.
  */
@@ -112,8 +110,10 @@ extern u8 const utf8_chr_len_data[];
  */
 s8 unescape(s8 str);
 
+void strip_trailing_whitespace(s8 *str);
+
 void _nonnull_ frees8(s8 *z);
-void _nonnull_ frees8buffer(s8 **buf);
+void frees8buffer(s8 *buf);
 
 /*
  * Concatenates all s8 strings passed as argument
@@ -136,7 +136,10 @@ typedef struct {
 
 stringbuilder_s sb_init(size_t init_cap);
 void sb_append(stringbuilder_s *b, s8 str);
+void sb_append_char(stringbuilder_s *sb, char c);
+char *sb_steal_str(stringbuilder_s *sb);
 s8 sb_gets8(stringbuilder_s sb);
+s8 sb_steals8(stringbuilder_s sb);
 void _nonnull_ sb_set(stringbuilder_s *sb, s8 s);
 void _nonnull_ sb_free(stringbuilder_s *sb);
 /* ------------------------------------------------------------------_ */
@@ -161,12 +164,7 @@ dictentry dictentry_at_index(dictentry *dict, size index);
 
 size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...);
 
-s8 nuke_whitespace(s8 z);
-
-/*
- * Returns: 0 on success, -1 on failure and sets errno
- */
-int _nonnull_ createdir(char *dirpath);
+void nuke_whitespace(s8 *z);
 
 /**
  * __attribute__((cleanup)) functions
@@ -197,5 +195,6 @@ DEFINE_DROP_FUNC_VOID(free)
 DEFINE_DROP_FUNC(FILE *, fclose)
 DEFINE_DROP_FUNC(DIR *, closedir)
 DEFINE_DROP_FUNC_PTR(s8, frees8)
+DEFINE_DROP_FUNC(s8 *, frees8buffer)
 
 #endif

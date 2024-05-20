@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <libgen.h> // dirname()
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +9,7 @@
 #include <glib.h>
 
 #include "messages.h"
+#include "platformdep.h"
 #include "settings.h"
 #include "util.h"
 
@@ -49,7 +51,6 @@ static void set_runtime_defaults(void) {
     if (!cfg.general.dbpth) {
         cfg.general.dbpth =
             (char *)buildpath(fromcstr_((char *)g_get_user_data_dir()), S("dictpopup")).s;
-        dbg("Using default database path: '%s'", cfg.general.dbpth);
     }
 }
 
@@ -57,13 +58,20 @@ int parse_cmd_line_opts(int argc, char **argv) {
     int c;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "ch")) != -1)
+    while ((c = getopt(argc, argv, "chd:")) != -1)
         switch (c) {
             case 'c':
                 print_cfg = 1;
                 break;
+            case 'd':
+                if (optarg && *optarg) {
+                    dbg("Setting dbpath");
+                    free(cfg.general.dbpth);
+                    cfg.general.dbpth = strdup(optarg);
+                }
+                break;
             case 'h':
-                puts("See 'man dictpopup' or 'man dictpopup-create' for help.");
+                puts("See 'man dictpopup' for help.");
                 exit(EXIT_SUCCESS);
             case '?':
                 fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
@@ -264,39 +272,49 @@ static void copy_ready_callback(GObject *source_object, GAsyncResult *res, gpoin
         dbg("Successfully copied default config file to ~/.config/dictpopup/config.ini.");
 }
 
-static void copy_default_config(char *cfgpth) {
-    // TODO: Make this OS independent
+static void copy_default_config(char *cfgfile) {
+    // TODO: Make default loc OS independent
     const char *default_config_location = "/usr/local/share/dictpopup/config.ini";
-    _drop_(frees8) s8 config_dir =
-        buildpath(fromcstr_((char *)g_get_user_config_dir()), S("dictpopup"));
 
-    int status = createdir((char *)config_dir.s);
-    if (status != 0) {
-        dbg("Could not create config directory '%s': %s", (char *)config_dir.s, strerror(errno));
-        return;
-    }
+    char *cfgdir = dirname(cfgfile);
+    createdir(cfgdir);
 
     GFile *source = g_file_new_for_path(default_config_location);
-    GFile *dest = g_file_new_for_path(cfgpth);
+    GFile *dest = g_file_new_for_path(cfgfile);
     g_file_copy_async(source, dest, G_FILE_COPY_NONE, G_PRIORITY_LOW, NULL, NULL, NULL,
                       copy_ready_callback, NULL);
+    g_object_unref(source);
+    g_object_unref(dest);
+}
+
+/*
+ * The caller takes ownership of the data.
+ */
+static s8 get_config_filepath(void) {
+#if defined(__linux__)
+    char *env = getenv("DICTPOPUP_CONFIG");
+    if (env && *env)
+        return buildpath(fromcstr_(env), S("config.ini"));
+    else
+#endif
+        return buildpath(fromcstr_((char *)g_get_user_config_dir()), S("dictpopup"),
+                         S("config.ini"));
 }
 
 void read_user_settings(int fieldmapping_max) {
     cfg = get_default_cfg(); // TODO: Put this to the end and only set missing values
 
-    g_autoptr(GKeyFile) kf = g_key_file_new();
     g_autoptr(GError) error = NULL;
-    _drop_(frees8) s8 cfgpth =
-        buildpath(fromcstr_((char *)g_get_user_config_dir()), S("dictpopup"), S("config.ini"));
-    if (!g_key_file_load_from_file(kf, (char *)cfgpth.s, G_KEY_FILE_NONE, &error)) {
-        if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
-            err("Could not find a config file in: \"%s\". Copying default config.. ", cfgpth.s);
-        else
-            err("Error opening \"%s\": %s. Falling back to default config.", cfgpth.s,
+    g_autoptr(GKeyFile) kf = g_key_file_new();
+    _drop_(frees8) s8 cfgfile = get_config_filepath();
+    dbg("Using config file: '%.*s'", (int)cfgfile.len, (char *)cfgfile.s);
+    if (!g_key_file_load_from_file(kf, (char *)cfgfile.s, G_KEY_FILE_NONE, &error)) {
+        if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
+            err("Could not find a config file in: \"%s\". Copying default config.. ", cfgfile.s);
+            copy_default_config((char *)cfgfile.s); // Uses the default config from above though
+        } else
+            err("Error opening \"%s\": %s. Falling back to default config.", cfgfile.s,
                 error->message);
-
-        copy_default_config((char *)cfgpth.s);
     } else {
         read_general(kf);
         read_anki(kf);

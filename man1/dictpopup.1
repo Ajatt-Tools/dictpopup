@@ -1,0 +1,23 @@
+.TH DICTPOPUP 1
+.SH SYNOPSIS
+.B dictpopup
+[\fB\-ch\fR]
+[\fILOOKUP\fR]...
+.SH DESCRIPTION
+.B dictpopup
+looks up selected Japanese text in a database created by
+.BR dictpopup\-create (1)
+and displays the search result in a gtk3 window.
+.sp
+Debug messages can be enabled by defining the environment variable DP_DEBUG, e.g.:
+.sp
+.nf
+    \&$ DP_DEBUG=1 dictpopup "面白い"
+.fi
+.SH OPTIONS
+.TP
+.BR \-c
+Print parsed config.
+.TP
+.BR \-h
+Output a redirection to this man page.

@@ -7,120 +7,18 @@
 
 #include "ankiconnectc.h"
 
+#include <util.h>
+
 #define AC_API_URL_EVAR "ANKICONNECT_API_URL"
 #define DEFAULT_AC_API_URL "http://localhost:8765"
 
-/* START UTILS */
-typedef uint8_t u8;
-typedef int32_t i32;
-typedef uint32_t u32;
-typedef ptrdiff_t size;
+typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
 
-// clang-format off
-#define new(type, num) xcalloc(num, sizeof(type))
-// clang-format on
-static void *xcalloc(size_t nmemb, size_t nbytes) {
-    void *p = calloc(nmemb, nbytes);
-    if (!p) {
-        perror("calloc");
-        abort();
-    }
-    return p;
-}
-
-static void *xrealloc(void *ptr, size_t nbytes) {
-    void *p = realloc(ptr, nbytes);
-    if (!p) {
-        perror("realloc");
-        abort();
-    }
-    return p;
-}
-
-#define assert(c)                                                                                  \
-    while (!(c))                                                                                   \
-    __builtin_unreachable()
-#define countof(a) (size)(sizeof(a) / sizeof(*(a)))
-#define lengthof(s) (countof("" s "") - 1)
-#define s8(s)                                                                                      \
-    (s8) {                                                                                         \
-        (u8 *)s, countof(s) - 1                                                                    \
-    }
-
-typedef struct {
-    u8 *s;
-    size len;
-} s8;
-
-static s8 s8fromcstr(char *z) {
-    s8 s = {0};
-    s.s = (u8 *)z;
-    s.len = z ? strlen(z) : 0;
-    return s;
-}
-
-typedef struct {
-    u8 *data;
-    size len;
-    size cap;
-} stringbuilder_s;
-
-static void sb_init(stringbuilder_s *b, size_t init_cap) {
-    b->len = 0;
-    b->cap = init_cap;
-    b->data = new (u8, b->cap);
-}
-
-static void sb_append(stringbuilder_s *b, s8 str) {
-    if (b->cap < b->len + str.len) {
-        while (b->cap < b->len + str.len) {
-            b->cap *= 2;
-
-            if (b->cap < 0)
-                abort();
-        }
-
-        b->data = xrealloc(b->data, b->cap);
-    }
-
-    memcpy(b->data + b->len, str.s, str.len);
-    b->len += str.len;
-}
-
-static void sb_append_c(stringbuilder_s *b, char c) {
-    if (b->cap < b->len + 1) {
-        while (b->cap < b->len + 1) {
-            b->cap *= 2;
-
-            if (b->cap < 0)
-                abort();
-        }
-
-        b->data = xrealloc(b->data, b->cap);
-        if (!b->data)
-            abort();
-    }
-
-    b->data[b->len++] = c;
-}
-
-static s8 sb_get_s8(stringbuilder_s sb) {
-    return (s8){.s = sb.data, .len = sb.len};
-}
-
-static char *sb_steal_str(stringbuilder_s *sb) {
-    char *r = (char *)sb->data;
-    if (sb->cap < sb->len + 1)
-        r = xrealloc(r, sb->len + 1);
-    r[sb->len] = '\0';
-
-    *sb = (stringbuilder_s){0};
-    return r;
-}
-
-static void sb_free(stringbuilder_s *sb) {
-    free(sb->data);
-    *sb = (stringbuilder_s){0};
+static int get_array_len(const char *array[static 1]) {
+    int n = 0;
+    while (*array++)
+        n++;
+    return n;
 }
 
 /*
@@ -135,37 +33,36 @@ static char *json_escape_str(const char *str) {
     /* Best would be to use something like glibs g_strescape, but
     it appears that ankiconnect can't handle unicode escape sequences */
 
-    stringbuilder_s sb;
-    sb_init(&sb, strlen(str) + 20); // 20 is some random initial extra space
+    stringbuilder_s sb = sb_init(strlen(str) + 20);
 
     while (*str) {
         switch (*str) {
             case '\b':
-                sb_append(&sb, s8("\\b"));
+                sb_append(&sb, S("\\b"));
                 break;
             case '\f':
-                sb_append(&sb, s8("\\f"));
+                sb_append(&sb, S("\\f"));
                 break;
             case '\n':
-                sb_append(&sb, s8("<br>"));
+                sb_append(&sb, S("<br>"));
                 break;
             case '\r':
-                sb_append(&sb, s8("\\r"));
+                sb_append(&sb, S("\\r"));
                 break;
             case '\t':
-                sb_append(&sb, s8("&#9")); // html tab
+                sb_append(&sb, S("&#9")); // html tab
                 break;
             case '\v':
-                sb_append(&sb, s8("\\v"));
+                sb_append(&sb, S("\\v"));
                 break;
             case '"':
-                sb_append(&sb, s8("\\\""));
+                sb_append(&sb, S("\\\""));
                 break;
             case '\\':
-                sb_append(&sb, s8("\\\\"));
+                sb_append(&sb, S("\\\\"));
                 break;
             default:
-                sb_append_c(&sb, *str);
+                sb_append_char(&sb, *str);
         }
 
         str++;
@@ -173,9 +70,55 @@ static char *json_escape_str(const char *str) {
 
     return sb_steal_str(&sb);
 }
-/* ------ END UTILS ------------ */
 
-typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
+/*
+ * @array: An array of strings to be json escaped
+ * @n: number of elements in array or -1 if @array is null terminated.
+ *
+ * Returns: A null terminated copy of @array with every string json escaped.
+ */
+static char **json_escape_str_array(int n, const char **array) {
+    if (!array)
+        return NULL;
+
+    if (n < 0)
+        n = get_array_len(array);
+
+    char **r = new (char *, n + 1);
+    for (int i = 0; i < n; i++)
+        r[i] = json_escape_str(array[i]);
+    r[n] = NULL;
+
+    return r;
+}
+
+/* ------ Callback functions ------ */
+static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata) {
+    retval_s *ret = userdata;
+    assert(ret);
+
+    *ret =
+        (retval_s){.data.boolean = (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0),
+                   .ok = true};
+
+    return nmemb;
+}
+
+static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *userdata) {
+    assert(userdata);
+    retval_s *ret = userdata;
+
+    if (strstr(ptr, "\"error\": null"))
+        *ret = (retval_s){.ok = true};
+    else {
+        char *err = (char *)s8dup((s8){.s = (u8 *)ptr, .len = nmemb}).s;
+        *ret = (retval_s){.data.string = err, .ok = false};
+        // TODO: This is a memory leak
+    }
+
+    return nmemb;
+}
+/* ------- End Callback functions ----------- */
 
 void ac_print_ankicard(ankicard ac) {
     puts("Ankicard:");
@@ -199,26 +142,21 @@ void ac_print_ankicard(ankicard ac) {
         puts("Tags: none");
 }
 
-void ankicard_free(ankicard ac) {
-    free(ac.deck);
-    free(ac.notetype);
+void ankicard_free(ankicard *ac) {
+    free(ac->deck);
+    free(ac->notetype);
 
     // TODO: It's no longer allocated by glib
-    g_strfreev(ac.fieldnames);
-    g_strfreev(ac.fieldentries);
-    g_strfreev(ac.tags);
+    g_strfreev(ac->fieldnames);
+    g_strfreev(ac->fieldentries);
+    g_strfreev(ac->tags);
 }
 
-/*
- * Fetch api url and cache the result
- */
+DEFINE_DROP_FUNC_PTR(ankicard, ankicard_free)
+
 static const char *get_api_url(void) {
-    static const char *api_url = NULL;
-    if (!api_url) {
-        const char *env = getenv(AC_API_URL_EVAR);
-        api_url = env && *env ? env : DEFAULT_AC_API_URL;
-    }
-    return api_url;
+    const char *env = getenv(AC_API_URL_EVAR); // Warning: String can change
+    return env && *env ? env : DEFAULT_AC_API_URL;
 }
 
 static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
@@ -254,54 +192,38 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     return ret;
 }
 
-static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata) {
-    retval_s *ret = userdata;
-    assert(ret);
-
-    *ret =
-        (retval_s){.data.boolean = (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0),
-                   .ok = true};
-
-    return nmemb;
+static s8 form_search_req(bool include_suspended, char *deck, char *field, char *entry) {
+    return concat(S("{ \"action\": \"findCards\", \"version\": 6, \"params\": "
+                    "{ \"query\" : \"\\\""),
+                  fromcstr_(deck ? "deck:" : ""), fromcstr_(deck ? deck : ""), S("\\\" \\\""),
+                  fromcstr_(field), S(":"), fromcstr_(entry), S("\\\" "),
+                  include_suspended ? S("") : S("-is:suspended"), S("\" } }"));
 }
 
 /*
  * @entry: The entry to search for
- * @field: The field where @entry should be searched in
+ * @field: The field where @entry should be searched in.
  * @deck: The deck to search in. Can be null.
  *
  * Returns: Error msg on error, null otherwise
  */
 retval_s ac_search(bool include_suspended, char *deck, char *field, char *entry) {
 
-    stringbuilder_s sb;
-    sb_init(&sb, 200);
+    _drop_(frees8) s8 req = form_search_req(include_suspended, deck, field, entry);
+    return sendRequest(req, search_checker);
+}
 
-    sb_append(&sb, s8("{ \"action\": \"findCards\", \"version\": 6, \"params\": "
-                      "{ \"query\" : \"\\\""));
-    sb_append(&sb, s8fromcstr(deck ? "deck:" : ""));
-    sb_append(&sb, s8fromcstr(deck ? deck : ""));
-    sb_append(&sb, s8("\\\" \\\""));
-    sb_append(&sb, s8fromcstr(field));
-    sb_append_c(&sb, ':');
-    sb_append(&sb, s8fromcstr(entry));
-    sb_append(&sb, s8("\\\" "));
-    if (!include_suspended)
-        sb_append(&sb, s8("-is:suspended"));
-    sb_append(&sb, s8("\" } }"));
-
-    retval_s ret = sendRequest(sb_get_s8(sb), search_checker);
-    sb_free(&sb);
-    return ret;
+static s8 form_gui_search_req(const char *deck, const char *field, const char *entry) {
+    return concat(
+        S("{ \"action\": \"guiBrowse\", \"version\": 6, \"params\": { \"query\" : \"\\\""),
+        deck ? S("deck:") : S(""), deck ? fromcstr_((char *)deck) : S(""), S("\\\" \\\""),
+        fromcstr_((char *)field), S(":"), fromcstr_((char *)entry), S("\\\"\" } }"));
 }
 
 retval_s ac_gui_search(const char *deck, const char *field, const char *entry) {
-    g_autofree char *request =
-        g_strdup_printf("{ \"action\": \"guiBrowse\", \"version\": 6, \"params\": { \"query\" : "
-                        "\"\\\"%s%s\\\" \\\"%s:%s\\\"\" } }",
-                        deck ? "deck:" : "", deck ? deck : "", field, entry);
 
-    return sendRequest(s8fromcstr(request), NULL);
+    _drop_(frees8) s8 req = form_gui_search_req(deck, field, entry);
+    return sendRequest(req, NULL);
 }
 
 retval_s ac_get_notetypes() {
@@ -309,47 +231,21 @@ retval_s ac_get_notetypes() {
     return (retval_s){0};
 }
 
+static s8 form_store_file_req(char const *filename, char const *path) {
+    return concat(
+        S("{ \"action\": \"storeMediaFile\", \"version\": 6, \"params\": { \"filename\" : \""),
+        fromcstr_((char *)filename), S("\", \"path\": \""), fromcstr_((char *)path),
+        S("\", \"deleteExisting\": false } }"));
+}
+
 /*
  * Stores the file at @path in the Anki media collection under the name
  * @filename. Doesn't overwrite existing files.
  */
 retval_s ac_store_file(char const *filename, char const *path) {
-    g_autofree char *request =
-        g_strdup_printf("{ \"action\": \"storeMediaFile\", \"version\": 6, \"params\": { "
-                        "\"filename\" : \"%s\", \"path\": \"%s\", \"deleteExisting\": false } }",
-                        filename, path);
 
-    return sendRequest(s8fromcstr(request), NULL); // TODO: Error response
-                                                   // cheking
-}
-
-// Non-macro version:
-static int get_array_len(const char *array[static 1]) {
-    int n = 0;
-    while (*array++)
-        n++;
-    return n;
-}
-
-/*
- * @array: An array of strings to be json escaped
- * @n: number of elements in array or -1 if @array is null terminated.
- *
- * Returns: A null terminated copy of @array with every string json escaped.
- */
-static char **json_escape_str_array(int n, const char **array) {
-    if (!array)
-        return NULL;
-
-    if (n < 0)
-        n = get_array_len(array);
-
-    char **r = new (char *, n + 1);
-    for (int i = 0; i < n; i++)
-        r[i] = json_escape_str(array[i]);
-    r[n] = NULL;
-
-    return r;
+    _drop_(frees8) s8 req = form_store_file_req(filename, path);
+    return sendRequest(req, NULL); // TODO: Check error response
 }
 
 /*
@@ -366,21 +262,6 @@ static ankicard ankicard_dup_json_esc(const ankicard ac) {
                       .tags = ac.tags ? json_escape_str_array(-1, (const char **)ac.tags) : NULL};
 }
 
-static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *userdata) {
-    assert(userdata);
-    retval_s *ret = userdata;
-
-    if (strstr(ptr, "\"error\": null"))
-        *ret = (retval_s){.ok = true};
-    else {
-        char *err = strndup(ptr, nmemb);
-        *ret = (retval_s){.data.string = err, .ok = false};
-        // TODO: This is a memory leak
-    }
-
-    return nmemb;
-}
-
 static char *check_card(ankicard const ac) {
     return !ac.deck           ? "No deck specified."
            : !ac.notetype     ? "No notetype specified."
@@ -390,62 +271,62 @@ static char *check_card(ankicard const ac) {
                               : NULL;
 }
 
+static s8 form_addNote_req(ankicard ac) {
+    stringbuilder_s sb = sb_init(1 << 9);
+
+    sb_append(&sb, S("{"
+                     "\"action\": \"addNote\","
+                     "\"version\": 6,"
+                     "\"params\": {"
+                     "\"note\": {"
+                     "\"deckName\": \""));
+    sb_append(&sb, fromcstr_(ac.deck));
+    sb_append(&sb, S("\","
+                     "\"modelName\": \""));
+    sb_append(&sb, fromcstr_(ac.notetype));
+    sb_append(&sb, S("\","
+                     "\"fields\": {"));
+
+    assert(ac.fieldnames && ac.fieldentries);
+    for (size_t i = 0; i < ac.num_fields; i++) {
+        if (i)
+            sb_append(&sb, S(","));
+        sb_append(&sb, S("\""));
+        sb_append(&sb, fromcstr_(ac.fieldnames[i]));
+        sb_append(&sb, S("\" : \""));
+        sb_append(&sb, fromcstr_(ac.fieldentries[i] ? ac.fieldentries[i] : ""));
+        sb_append(&sb, S("\""));
+    }
+
+    sb_append(&sb, S("},"
+                     "\"options\": {"
+                     "\"allowDuplicate\": true"
+                     "},"
+                     "\"tags\": ["));
+
+    if (ac.tags) {
+        for (size_t i = 0; ac.tags[i]; i++) {
+            if (i)
+                sb_append(&sb, S(","));
+            sb_append(&sb, S("\""));
+            sb_append(&sb, fromcstr_(ac.tags[i]));
+            sb_append(&sb, S("\""));
+        }
+    }
+
+    sb_append(&sb, S("]"
+                     "}"
+                     "}"
+                     "}"));
+
+    return sb_steals8(sb);
+}
+
 retval_s ac_addNote(ankicard const ac) {
     if (check_card(ac))
         return (retval_s){.data.string = check_card(ac), .ok = false};
 
-    ankicard ac_je = ankicard_dup_json_esc(ac);
-
-    stringbuilder_s sb;
-    sb_init(&sb, 1 << 9);
-
-    sb_append(&sb, s8("{"
-                      "\"action\": \"addNote\","
-                      "\"version\": 6,"
-                      "\"params\": {"
-                      "\"note\": {"
-                      "\"deckName\": \""));
-    sb_append(&sb, s8fromcstr(ac_je.deck));
-    sb_append(&sb, s8("\","
-                      "\"modelName\": \""));
-    sb_append(&sb, s8fromcstr(ac_je.notetype));
-    sb_append(&sb, s8("\","
-                      "\"fields\": {"));
-
-    assert(ac_je.fieldnames && ac_je.fieldentries);
-    for (size_t i = 0; i < ac_je.num_fields; i++) {
-        if (i)
-            sb_append(&sb, s8(","));
-        sb_append(&sb, s8("\""));
-        sb_append(&sb, s8fromcstr(ac_je.fieldnames[i]));
-        sb_append(&sb, s8("\" : \""));
-        sb_append(&sb, s8fromcstr(ac_je.fieldentries[i] ? ac_je.fieldentries[i] : ""));
-        sb_append(&sb, s8("\""));
-    }
-
-    sb_append(&sb, s8("},"
-                      "\"options\": {"
-                      "\"allowDuplicate\": true"
-                      "},"
-                      "\"tags\": ["));
-
-    if (ac_je.tags) {
-        for (size_t i = 0; ac_je.tags[i]; i++) {
-            if (i)
-                sb_append(&sb, s8(","));
-            sb_append(&sb, s8("\""));
-            sb_append(&sb, s8fromcstr(ac_je.tags[i]));
-            sb_append(&sb, s8("\""));
-        }
-    }
-
-    sb_append(&sb, s8("]"
-                      "}"
-                      "}"
-                      "}"));
-
-    retval_s ret = sendRequest(sb_get_s8(sb), check_add_response);
-    sb_free(&sb);
-    ankicard_free(ac_je);
-    return ret;
+    _drop_(ankicard_free) ankicard ac_je = ankicard_dup_json_esc(ac);
+    _drop_(frees8) s8 req = form_addNote_req(ac_je);
+    return sendRequest(req, check_add_response);
 }

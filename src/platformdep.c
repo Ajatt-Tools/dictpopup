@@ -1,16 +1,19 @@
 #include "util.h"
 #include <gtk/gtk.h>
-#include <libnotify/notify.h>
+
+#ifdef NOTIFICATIONS
+    #include <libnotify/notify.h>
+#endif
 
 #ifdef HAVEX11 // for window title
     #include <X11/Xatom.h>
     #include <X11/Xlib.h>
-    #include <X11/Xutil.h>
-    #include <X11/extensions/Xfixes.h>
 #endif
 
 #include "messages.h"
+#include "platformdep.h"
 
+#ifdef NOTIFICATIONS
 void notify(const char *title, _Bool urgent, char const *fmt, ...) {
     va_list argp;
     va_start(argp, fmt);
@@ -31,6 +34,7 @@ void notify(const char *title, _Bool urgent, char const *fmt, ...) {
     }
     g_object_unref(G_OBJECT(n));
 }
+#endif
 
 // Instead of gtk one could also use: https://github.com/jtanx/libclipboard
 s8 get_selection(void) {
@@ -97,7 +101,10 @@ s8 get_windowname(void) {
     }
 
     XCloseDisplay(dpy);
-    return fromcstr_((char *)prop);
+
+    s8 ret = s8dup(fromcstr_((char *)prop)); // s.t. cann be freed with free
+    XFree(prop);
+    return ret;
 #else
     // Not implemented
     return (s8){0};
@@ -108,10 +115,17 @@ void play_audio(s8 filepath) {
     _drop_(frees8) s8 cmd =
         concat(S("ffplay -nodisp -nostats -hide_banner -autoexit '"), filepath, S("'"));
 
-    GError *error = NULL;
+    g_autoptr(GError) error = NULL;
     g_spawn_command_line_sync((char *)cmd.s, NULL, NULL, NULL, &error);
-    if (error) {
-        err("Failed to play file %s: %s", filepath.s, error->message);
-        g_error_free(error);
-    }
+    if (error)
+        err("Failed to play file %s: %s", (char *)filepath.s, error->message);
+}
+
+void createdir(char *dirpath) {
+    int ret = g_mkdir_with_parents(dirpath, 0777);
+    die_on(ret != 0, "Creating directory '%s': %s", dirpath, strerror(errno));
+}
+
+const char *get_user_data_dir() {
+    return g_get_user_data_dir();
 }

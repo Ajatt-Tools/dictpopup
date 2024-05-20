@@ -41,12 +41,14 @@ Then install with:
 ```bash
 git clone "https://github.com/btrkeks/dictpopup.git"
 cd dictpopup
-make && sudo make install
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target install
 ```
-#### If you do not use X11
-In this case you can replace the `make` command above with `make O_HAVEX11=0`.\
-This will disable X11 related code, which is currently responsible for obtaining the window title of the focused window.
-But please note that Wayland does not support moving windows. Thus the popup will always be displayed at the top left corner under Wayland.
+
+### Windows
+The manual installation instructions above should also work for Windows under MSYS2, so someone
+experienced might get it to run. But note that the default config location is currently hard coded for Linux.
+I will provide an installer in the future.
 
 ## Setup
 After the program installation you need to create a database where the dictionary entries are read from.

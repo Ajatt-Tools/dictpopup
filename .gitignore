@@ -1,3 +1,10 @@
 \*.o
 dictpopup
 dictpopup-create
+cmake-build-debug/
+cmake-build-release/
+.cmake
+.idea
+CMakeFiles
+.gdb_history
+misc/

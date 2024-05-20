@@ -8,9 +8,17 @@ IDIR=include
 SDIR=src
 LDIR=lib
 
-CPPFLAGS += -D_POSIX_C_SOURCE=200809L -DNOTIFICATIONS -I$(IDIR)
-LDLIBS +=-lcurl -lmecab -pthread $(shell pkg-config --libs gtk+-3.0) $(shell pkg-config --libs libnotify) -llmdb
-# LDLIBS+=-ffunction-sections -fdata-sections -Wl,--gc-sections
+CPPFLAGS += -D_POSIX_C_SOURCE=200809L -I$(IDIR)
+CFLAGS := -Werror $(shell pkg-config --cflags gtk+-3.0) $(CFLAGS)
+DEBUG_CFLAGS = -DDEBUG \
+	     -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion -Wshadow \
+	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
+	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
+	     -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
+	     -O0 -ggdb
+RELEASE_CFLAGS = -Ofast -flto -march=native
+NOTIF_FLAGS := -DNOTIFICATIONS $(shell pkg-config --cflags libnotify) $(shell pkg-config --libs libnotify)
+LDLIBS +=-lcurl -lmecab $(shell pkg-config --libs gtk+-3.0) -llmdb -lzip
 
 O_HAVEX11 := 1  # X11 integration
 ifeq ($(strip $(O_HAVEX11)),1)
@@ -18,29 +26,16 @@ ifeq ($(strip $(O_HAVEX11)),1)
 	LDLIBS += -lXfixes -lX11
 endif
 
-CFLAGS := -Werror $(shell pkg-config --cflags gtk+-3.0) $(shell pkg-config --cflags libnotify)
-DEBUG_CFLAGS=-DDEBUG \
-	     -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion -Wshadow \
-	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
-	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
-	     -fsanitize=leak,address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
-	     -O0 -ggdb
-RELEASE_CFLAGS=-O3 -flto -march=native
 
-FILES=dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
-FILES_H=ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
-SRC=$(addprefix $(SDIR)/,$(FILES))
-SRC_H=$(addprefix $(IDIR)/,$(FILES_H))
+FILES = dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
+FILES_H = ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
+SRC = $(addprefix $(SDIR)/,$(FILES))
+SRC_H = $(addprefix $(IDIR)/,$(FILES_H))
 
-
-CFLAGS_CREATE=-I$(IDIR) -D_POSIX_C_SOURCE=200809L $(shell pkg-config --cflags glib-2.0)
-LDLIBS_CREATE=-lzip $(shell pkg-config --libs glib-2.0) -llmdb
-
-FILES_CREATE=db.c pdjson.c util.c
-FILES_H_CREATE=db.h pdjson.h util.h buf.h
-
-SRC_CREATE=$(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
-SRC_H_CREATE=$(addprefix $(IDIR)/,$(FILES_H_CREATE))
+FILES_CREATE = db.c pdjson.c util.c platformdep.c
+FILES_H_CREATE = db.h pdjson.h util.h buf.h platformdep.h
+SRC_CREATE = $(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
+SRC_H_CREATE = $(addprefix $(IDIR)/,$(FILES_H_CREATE))
 
 bins := dictpopup dictpopup-create
 
@@ -50,16 +45,17 @@ all: CFLAGS+=$(RELEASE_CFLAGS)
 debug: $(bins)
 debug: CFLAGS+=$(DEBUG_CFLAGS)
 
-dictpopup: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/gtk3popup.c $(SRC) $(LDLIBS)
+dictpopup: $(SRC) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_FLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRC) $(LDLIBS)
 
-dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE)
-	$(CC) $(CFLAGS_CREATE) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS_CREATE)
+dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE) $(SDIR)/dictpopup_create.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS)
 
-cli: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/cli.c $(SRC) $(LDLIBS)
-deinflector: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) -I$(IDIR) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/util.c $(LDLIBS)
+cli: $(SRC) $(SRC_H) $(SDIR)/frontends/cli.c
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/frontends/cli.c $(SRC) $(LDLIBS)
+
+deinflector: $(SRC) $(SRC_H) $(SDIR)/deinflector.c
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/util.c $(LDLIBS)
 
 release:
 	version=$$(git describe); prefix=dictpopup-$${version#v}; \
@@ -90,10 +86,10 @@ uninstall:
 	      $(CONFIG_DIR)/config.ini
 
 clean:
-	rm -f dictpopup dictpopup-create tests cli deinflector
+	rm -f dictpopup dictpopup-create cli deinflector
 
 tests: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/tests.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/tests.c $(SRC) $(LDLIBS) -lcheck
 
 check test: tests
 	./tests

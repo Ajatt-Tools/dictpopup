@@ -1,0 +1,1134 @@
+[
+    [
+        "面白い",
+        "おもしろい",
+        "",
+        "adj-i",
+        0,
+        [
+            {
+                "type": "structured-content",
+                "content": [
+                    {
+                        "tag": "span",
+                        "data": {
+                            "name": "見出部"
+                        },
+                        "content": [
+                            {
+                                "tag": "span",
+                                "style": {
+                                    "fontWeight": "bold"
+                                },
+                                "data": {
+                                    "name": "見出仮名"
+                                },
+                                "content": [
+                                    "おも",
+                                    {
+                                        "tag": "span",
+                                        "style": {
+                                            "marginRight": 0.5
+                                        },
+                                        "data": {
+                                            "name": "語構成"
+                                        }
+                                    },
+                                    "しろ",
+                                    {
+                                        "tag": "span",
+                                        "data": {
+                                            "name": "活用分節"
+                                        },
+                                        "content": "・"
+                                    },
+                                    "い"
+                                ]
+                            },
+                            {
+                                "tag": "span",
+                                "style": {
+                                    "fontSize": "0.7em",
+                                    "verticalAlign": "super",
+                                    "marginRight": 0.25,
+                                    "marginLeft": 0.25
+                                },
+                                "data": {
+                                    "name": "アクセントG"
+                                },
+                                "content": {
+                                    "tag": "span",
+                                    "data": {
+                                        "name": "アクセント"
+                                    },
+                                    "content": {
+                                        "tag": "span",
+                                        "data": {
+                                            "name": "accent"
+                                        },
+                                        "content": "[4]"
+                                    }
+                                }
+                            },
+                            {
+                                "tag": "span",
+                                "data": {
+                                    "name": "表記G"
+                                },
+                                "content": [
+                                    "【",
+                                    {
+                                        "tag": "span",
+                                        "data": {
+                                            "name": "標準表記"
+                                        },
+                                        "content": "面白い"
+                                    },
+                                    "】"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "tag": "div",
+                        "data": {
+                            "name": "解説部"
+                        },
+                        "content": {
+                            "tag": "div",
+                            "data": {
+                                "name": "大語義"
+                            },
+                            "content": [
+                                {
+                                    "tag": "span",
+                                    "data": {
+                                        "name": "品詞G"
+                                    },
+                                    "content": {
+                                        "tag": "span",
+                                        "data": {
+                                            "name": "品詞subG"
+                                        },
+                                        "content": [
+                                            "（",
+                                            {
+                                                "tag": "span",
+                                                "data": {
+                                                    "name": "品詞"
+                                                },
+                                                "content": "形"
+                                            },
+                                            "）"
+                                        ]
+                                    }
+                                },
+                                {
+                                    "tag": "div",
+                                    "data": {
+                                        "name": "文語形"
+                                    },
+                                    "content": [
+                                        {
+                                            "tag": "span",
+                                            "style": {
+                                                "verticalAlign": "text-bottom",
+                                                "marginRight": 0.25
+                                            },
+                                            "content": {
+                                                "tag": "img",
+                                                "height": 1.0,
+                                                "width": 1.0,
+                                                "sizeUnits": "em",
+                                                "appearance": "monochrome",
+                                                "title": "文",
+                                                "collapsible": false,
+                                                "collapsed": false,
+                                                "background": false,
+                                                "path": "daijirin2/文-default.svg"
+                                            }
+                                        },
+                                        {
+                                            "tag": "span",
+                                            "style": {
+                                                "fontSize": "0.6em",
+                                                "verticalAlign": "super"
+                                            },
+                                            "data": {
+                                                "name": "品詞用法"
+                                            },
+                                            "content": "(ク)"
+                                        },
+                                        "おもしろ",
+                                        {
+                                            "tag": "span",
+                                            "data": {
+                                                "name": "活用分節"
+                                            },
+                                            "content": "・"
+                                        },
+                                        "し"
+                                    ]
+                                },
+                                {
+                                    "tag": "div",
+                                    "data": {
+                                        "name": "準大語義"
+                                    },
+                                    "content": {
+                                        "tag": "div",
+                                        "data": {
+                                            "name": "中語義"
+                                        },
+                                        "content": [
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "補説G"
+                                                },
+                                                "content": [
+                                                    "〔",
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "補説"
+                                                        },
+                                                        "content": [
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語例"
+                                                                },
+                                                                "content": [
+                                                                    "「面",
+                                                                    {
+                                                                        "tag": "span",
+                                                                        "style": {
+                                                                            "fontWeight": "normal",
+                                                                            "fontSize": "0.6em",
+                                                                            "verticalAlign": "super"
+                                                                        },
+                                                                        "data": {
+                                                                            "name": "ルビG"
+                                                                        },
+                                                                        "content": "(おも)"
+                                                                    },
+                                                                    "白し」"
+                                                                ]
+                                                            },
+                                                            "で、目の前がぱっと明るくなる感じを表すのが原義といわれる"
+                                                        ]
+                                                    },
+                                                    "〕"
+                                                ]
+                                            },
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "語義G"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語義Gnum"
+                                                        },
+                                                        "content": "①"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語釈"
+                                                        },
+                                                        "content": "楽しい。愉快だ。"
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「昨日見た映画は",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "かった」"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「勉強が",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "くて仕方がない」"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "語義G"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語義Gnum"
+                                                        },
+                                                        "content": "②"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語釈"
+                                                        },
+                                                        "content": "興味をそそる。興味深い。"
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「何か",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "い話はないか」"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「最後にきて",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "い展開を見せる」"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "語義G"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語義Gnum"
+                                                        },
+                                                        "content": "③"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語釈"
+                                                        },
+                                                        "content": "こっけいだ。おかしい。"
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "いしぐさで人を笑わせる」"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "語義G"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語義Gnum"
+                                                        },
+                                                        "content": "④"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語釈"
+                                                        },
+                                                        "content": "（多く、打ち消しの語を伴う）心にかなう。好ましい。望ましい。"
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「病状が",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "くない」"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "くない結果に終わる」"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「私に",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "からぬ感情を抱いている」"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "語義G"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語義Gnum"
+                                                        },
+                                                        "content": "⑤"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語釈"
+                                                        },
+                                                        "content": "景色などが明るく広々とした感じで、気分がはればれとするようだ。明るく目が覚めるようだ。"
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「十日あまりなれば、月",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "し",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "出典"
+                                                                },
+                                                                "content": [
+                                                                    "／",
+                                                                    {
+                                                                        "tag": "span",
+                                                                        "data": {
+                                                                            "name": "書名"
+                                                                        },
+                                                                        "content": "土左日記"
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "」"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "語義G"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語義Gnum"
+                                                        },
+                                                        "content": "⑥"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "語釈"
+                                                        },
+                                                        "content": "心をひかれる。趣が深い。風流だ。"
+                                                    },
+                                                    {
+                                                        "tag": "div",
+                                                        "data": {
+                                                            "name": "用例"
+                                                        },
+                                                        "content": [
+                                                            "「昔を思ひやりてみれば",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語幹相当部"
+                                                                },
+                                                                "content": "━"
+                                                            },
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "活用分節"
+                                                                },
+                                                                "content": "・"
+                                                            },
+                                                            "かりける所なり",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "出典"
+                                                                },
+                                                                "content": [
+                                                                    "／",
+                                                                    {
+                                                                        "tag": "span",
+                                                                        "data": {
+                                                                            "name": "書名"
+                                                                        },
+                                                                        "content": "土左日記"
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "」"
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "div",
+                                                "data": {
+                                                    "name": "補説G"
+                                                },
+                                                "content": [
+                                                    "〔",
+                                                    {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "補説"
+                                                        },
+                                                        "content": [
+                                                            "類義の語に",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語例"
+                                                                },
+                                                                "content": "「おかしい」"
+                                                            },
+                                                            "があるが、",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語例"
+                                                                },
+                                                                "content": "「おかしい」"
+                                                            },
+                                                            "は格好・表情・しぐさ・話し方などが普通と違っていて、笑いたくなる意を表す。それに対して",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "語例"
+                                                                },
+                                                                "content": "「おもしろい」"
+                                                            },
+                                                            "は対象が普通の基準から見ると新鮮・奇抜で変化に富んでいて、興味をそそる意を表す"
+                                                        ]
+                                                    },
+                                                    "〕"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "tag": "div",
+                                    "style": {
+                                        "marginTop": 0.5
+                                    },
+                                    "data": {
+                                        "name": "派生G"
+                                    },
+                                    "content": [
+                                        {
+                                            "tag": "span",
+                                            "style": {
+                                                "verticalAlign": "text-bottom",
+                                                "marginRight": 0.25
+                                            },
+                                            "content": {
+                                                "tag": "img",
+                                                "height": 1.0,
+                                                "width": 2.0,
+                                                "sizeUnits": "em",
+                                                "appearance": "monochrome",
+                                                "title": "派生",
+                                                "collapsible": false,
+                                                "collapsed": false,
+                                                "background": false,
+                                                "path": "daijirin2/派生-default.svg"
+                                            }
+                                        },
+                                        {
+                                            "tag": "span",
+                                            "data": {
+                                                "name": "派生語"
+                                            },
+                                            "content": [
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "派生見出"
+                                                    },
+                                                    "content": [
+                                                        {
+                                                            "tag": "span",
+                                                            "data": {
+                                                                "name": "親見出仮名"
+                                                            },
+                                                            "content": "━"
+                                                        },
+                                                        "が",
+                                                        {
+                                                            "tag": "span",
+                                                            "data": {
+                                                                "name": "活用分節"
+                                                            },
+                                                            "content": "・"
+                                                        },
+                                                        "る"
+                                                    ]
+                                                },
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "品詞G"
+                                                    },
+                                                    "content": {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "品詞subG"
+                                                        },
+                                                        "content": [
+                                                            "（",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "品詞"
+                                                                },
+                                                                "content": [
+                                                                    "動",
+                                                                    {
+                                                                        "tag": "span",
+                                                                        "style": {
+                                                                            "fontSize": "0.6em",
+                                                                            "verticalAlign": "super"
+                                                                        },
+                                                                        "data": {
+                                                                            "name": "品詞行"
+                                                                        },
+                                                                        "content": "(ラ)"
+                                                                    },
+                                                                    {
+                                                                        "tag": "span",
+                                                                        "data": {
+                                                                            "name": "品詞活用"
+                                                                        },
+                                                                        "content": "五"
+                                                                    },
+                                                                    "［",
+                                                                    {
+                                                                        "tag": "span",
+                                                                        "data": {
+                                                                            "name": "品詞活用"
+                                                                        },
+                                                                        "content": "四"
+                                                                    },
+                                                                    "］"
+                                                                ]
+                                                            },
+                                                            "）"
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "・",
+                                        {
+                                            "tag": "span",
+                                            "data": {
+                                                "name": "派生語"
+                                            },
+                                            "content": [
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "派生見出"
+                                                    },
+                                                    "content": [
+                                                        {
+                                                            "tag": "span",
+                                                            "data": {
+                                                                "name": "親見出仮名"
+                                                            },
+                                                            "content": "━"
+                                                        },
+                                                        "げ"
+                                                    ]
+                                                },
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "品詞G"
+                                                    },
+                                                    "content": {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "品詞subG"
+                                                        },
+                                                        "content": [
+                                                            "（",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "品詞"
+                                                                },
+                                                                "content": "形動"
+                                                            },
+                                                            "）"
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "・",
+                                        {
+                                            "tag": "span",
+                                            "data": {
+                                                "name": "派生語"
+                                            },
+                                            "content": [
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "派生見出"
+                                                    },
+                                                    "content": [
+                                                        {
+                                                            "tag": "span",
+                                                            "data": {
+                                                                "name": "親見出仮名"
+                                                            },
+                                                            "content": "━"
+                                                        },
+                                                        "さ"
+                                                    ]
+                                                },
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "品詞G"
+                                                    },
+                                                    "content": {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "品詞subG"
+                                                        },
+                                                        "content": [
+                                                            "（",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "品詞"
+                                                                },
+                                                                "content": "名"
+                                                            },
+                                                            "）"
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "・",
+                                        {
+                                            "tag": "span",
+                                            "data": {
+                                                "name": "派生語"
+                                            },
+                                            "content": [
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "派生見出"
+                                                    },
+                                                    "content": [
+                                                        {
+                                                            "tag": "span",
+                                                            "data": {
+                                                                "name": "親見出仮名"
+                                                            },
+                                                            "content": "━"
+                                                        },
+                                                        "み"
+                                                    ]
+                                                },
+                                                {
+                                                    "tag": "span",
+                                                    "data": {
+                                                        "name": "品詞G"
+                                                    },
+                                                    "content": {
+                                                        "tag": "span",
+                                                        "data": {
+                                                            "name": "品詞subG"
+                                                        },
+                                                        "content": [
+                                                            "（",
+                                                            {
+                                                                "tag": "span",
+                                                                "data": {
+                                                                    "name": "品詞"
+                                                                },
+                                                                "content": "名"
+                                                            },
+                                                            "）"
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ],
+        2277200000,
+        ""
+    ],
+["面白い", "おもしろい", "⭐", "adj-i", 200, [{"type": "structured-content", "content": {"tag": "div", "content": [{"tag": "span", "style": {"verticalAlign": "text-bottom", "marginRight": 0.25}, "data": {"code": "adj-i"}, "content": {"tag": "img", "height": 1.2, "width": 4.65, "sizeUnits": "em", "appearance": "auto", "title": "adjective (keiyoushi)", "collapsible": false, "collapsed": false, "background": false, "path": "jitendex/adjective.svg"}}, {"tag": "ol", "content": [{"tag": "li", "style": {"listStyleType": "\"① \""}, "data": {"sense-number": "1"}, "content": [{"tag": "ul", "data": {"content": "glossary"}, "content": [{"tag": "li", "content": "interesting"}, {"tag": "li", "content": "fascinating"}, {"tag": "li", "content": "intriguing"}, {"tag": "li", "content": "enthralling"}]}, {"tag": "ul", "style": {"marginBottom": 0.5}, "content": [{"tag": "li", "lang": "ja", "style": {"fontSize": "120%", "listStyleType": "circle"}, "data": {"content": "example-sentence-a"}, "content": [{"tag": "ruby", "content": ["新", {"tag": "rt", "content": "しん"}]}, {"tag": "ruby", "content": ["聞", {"tag": "rt", "content": "ぶん"}]}, "には", {"tag": "ruby", "content": ["何", {"tag": "rt", "content": "なに"}]}, "も", {"tag": "span", "style": {"textDecorationLine": "underline"}, "content": [{"tag": "ruby", "content": ["面", {"tag": "rt", "content": "おも"}]}, {"tag": "ruby", "content": ["白", {"tag": "rt", "content": "しろ"}]}, "い"]}, "ことは", {"tag": "ruby", "content": ["載", {"tag": "rt", "content": "の"}]}, "っていない。"]}, {"tag": "li", "lang": "en", "style": {"fontSize": "70%", "listStyleType": "none"}, "data": {"content": "example-sentence-b"}, "content": "There is nothing interesting in the newspaper."}]}]}, {"tag": "li", "style": {"listStyleType": "\"② \""}, "data": {"sense-number": "2"}, "content": [{"tag": "ul", "data": {"content": "glossary"}, "content": [{"tag": "li", "content": "amusing"}, {"tag": "li", "content": "funny"}, {"tag": "li", "content": "comical"}]}, {"tag": "ul", "style": {"marginBottom": 0.5}, "content": [{"tag": "li", "lang": "ja", "style": {"fontSize": "120%", "listStyleType": "circle"}, "data": {"content": "example-sentence-a"}, "content": ["これは", {"tag": "ruby", "content": ["私", {"tag": "rt", "content": "わたし"}]}, "が", {"tag": "ruby", "content": ["読", {"tag": "rt", "content": "よ"}]}, "んだ", {"tag": "ruby", "content": ["中", {"tag": "rt", "content": "なか"}]}, "で", {"tag": "ruby", "content": ["一", {"tag": "rt", "content": "いち"}]}, {"tag": "ruby", "content": ["番", {"tag": "rt", "content": "ばん"}]}, {"tag": "span", "style": {"textDecorationLine": "underline"}, "content": [{"tag": "ruby", "content": ["面", {"tag": "rt", "content": "おも"}]}, {"tag": "ruby", "content": ["白", {"tag": "rt", "content": "しろ"}]}, "い"]}, {"tag": "ruby", "content": ["本", {"tag": "rt", "content": "ほん"}]}, "です。"]}, {"tag": "li", "lang": "en", "style": {"fontSize": "70%", "listStyleType": "none"}, "data": {"content": "example-sentence-b"}, "content": "This is the funniest book in my reading."}, {"tag": "li", "lang": "ja", "style": {"fontSize": "120%", "listStyleType": "circle"}, "data": {"content": "example-sentence-a"}, "content": [{"tag": "ruby", "content": ["彼", {"tag": "rt", "content": "かの"}]}, {"tag": "ruby", "content": ["女", {"tag": "rt", "content": "じょ"}]}, "は", {"tag": "ruby", "content": ["子", {"tag": "rt", "content": "こ"}]}, {"tag": "ruby", "content": ["供", {"tag": "rt", "content": "ども"}]}, "たちに", {"tag": "span", "style": {"textDecorationLine": "underline"}, "content": [{"tag": "ruby", "content": ["面", {"tag": "rt", "content": "おも"}]}, {"tag": "ruby", "content": ["白", {"tag": "rt", "content": "しろ"}]}, "い"]}, {"tag": "ruby", "content": ["話", {"tag": "rt", "content": "はなし"}]}, "をしてあげた。"]}, {"tag": "li", "lang": "en", "style": {"fontSize": "70%", "listStyleType": "none"}, "data": {"content": "example-sentence-b"}, "content": "She told her children an amusing story."}]}]}, {"tag": "li", "style": {"listStyleType": "\"③ \""}, "data": {"sense-number": "3"}, "content": [{"tag": "ul", "data": {"content": "glossary"}, "content": [{"tag": "li", "content": "enjoyable"}, {"tag": "li", "content": "fun"}, {"tag": "li", "content": "entertaining"}, {"tag": "li", "content": "pleasant"}, {"tag": "li", "content": "agreeable"}]}, {"tag": "ul", "style": {"marginBottom": 0.5}, "content": [{"tag": "li", "lang": "ja", "style": {"fontSize": "120%", "listStyleType": "circle"}, "data": {"content": "example-sentence-a"}, "content": ["この", {"tag": "ruby", "content": ["本", {"tag": "rt", "content": "ほん"}]}, "は", {"tag": "span", "style": {"textDecorationLine": "underline"}, "content": [{"tag": "ruby", "content": ["面", {"tag": "rt", "content": "おも"}]}, {"tag": "ruby", "content": ["白", {"tag": "rt", "content": "しろ"}]}, "い"]}, {"tag": "ruby", "content": ["読", {"tag": "rt", "content": "よ"}]}, "み", {"tag": "ruby", "content": ["物", {"tag": "rt", "content": "もの"}]}, "です。"]}, {"tag": "li", "lang": "en", "style": {"fontSize": "70%", "listStyleType": "none"}, "data": {"content": "example-sentence-b"}, "content": "This book makes pleasant reading."}, {"tag": "li", "lang": "ja", "style": {"fontSize": "120%", "listStyleType": "circle"}, "data": {"content": "example-sentence-a"}, "content": [{"tag": "ruby", "content": ["野", {"tag": "rt", "content": "や"}]}, {"tag": "ruby", "content": ["鳥", {"tag": "rt", "content": "ちょう"}]}, "を", {"tag": "ruby", "content": ["観", {"tag": "rt", "content": "かん"}]}, {"tag": "ruby", "content": ["察", {"tag": "rt", "content": "さつ"}]}, "するのはとても", {"tag": "span", "style": {"textDecorationLine": "underline"}, "content": [{"tag": "ruby", "content": ["面", {"tag": "rt", "content": "おも"}]}, {"tag": "ruby", "content": ["白", {"tag": "rt", "content": "しろ"}]}, "い"]}, "。"]}, {"tag": "li", "lang": "en", "style": {"fontSize": "70%", "listStyleType": "none"}, "data": {"content": "example-sentence-b"}, "content": "Watching wild birds is great fun."}]}]}, {"tag": "li", "style": {"listStyleType": "\"④ \""}, "data": {"sense-number": "4"}, "content": [{"tag": "ul", "data": {"content": "glossary"}, "content": [{"tag": "li", "content": "good"}, {"tag": "li", "content": "satisfactory"}, {"tag": "li", "content": "favourable"}, {"tag": "li", "content": "desirable"}, {"tag": "li", "content": "encouraging"}]}, {"tag": "ul", "style": {"marginBottom": 0.5}, "content": {"tag": "li", "style": {"listStyleType": "\"📝 \"", "marginTop": 0.5}, "data": {"content": "sense-note"}, "content": "usu. in the negative"}}]}]}]}}], 1533580, ""],
+["面白い", "おもしろい", "", "adj-i", 1, ["おも‐しろ・い【×面白い】（形）《カロ・カツ（ク）・イ・イ・ケレ・○》\n① 満足できる内容であり心ひかれる。愉快だ。楽しい。「あの人は―」\n② 発展が期待でき興味深い。「なかなか―意見だ」\n③ 笑い出したくなる。おかしい。こっけいだ。\n④ 好ましい。「どうも結果が―・くない」\n〔文〕おもしろ・し（ク）\n「面（おも）」は目前の情景で、それが広々とひらける意から。\n④は、多くあとに打ち消しの語を伴う。"], 18600, ""],
+    [
+        "面白い",
+        "おもしろい",
+        "",
+        "adj-i",
+        0,
+        [
+            {
+                "type": "structured-content",
+                "content": [
+                    {
+                        "tag": "span",
+                        "content": [
+                            {
+                                "tag": "span",
+                                "style": {
+                                    "fontWeight": "bold"
+                                },
+                                "content": "おもしろい"
+                            },
+                            {
+                                "tag": "span",
+                                "style": {
+                                    "fontWeight": "normal"
+                                },
+                                "content": "【面白い】面白い／愉快／痛快"
+                            }
+                        ]
+                    },
+                    {
+                        "tag": "div",
+                        "data": {
+                            "name": "意味"
+                        },
+                        "content": {
+                            "tag": "span",
+                            "content": "心が楽しく、おかしく、気持ちが晴れるようなさま。"
+                        }
+                    },
+                    {
+                        "tag": "div",
+                        "data": {
+                            "name": "使い方"
+                        },
+                        "content": [
+                            {
+                                "tag": "div",
+                                "content": [
+                                    {
+                                        "tag": "span",
+                                        "style": {
+                                            "fontWeight": "bold"
+                                        },
+                                        "content": "📚使い方\n"
+                                    },
+                                    {
+                                        "tag": "ul",
+                                        "style": {
+                                            "listStyleType": "none"
+                                        },
+                                        "content": [
+                                            {
+                                                "tag": "li",
+                                                "style": {
+                                                    "fontWeight": "bold",
+                                                    "listStyleType": "circle"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "a",
+                                                        "href": "?query=面白い 【形】&wildcards=off",
+                                                        "content": "面白い 【形】"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "style": {
+                                                            "fontWeight": "normal",
+                                                            "listStyleType": "none"
+                                                        },
+                                                        "content": " ▽面白いように魚が釣れた ▽その学説は面白い"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "li",
+                                                "style": {
+                                                    "fontWeight": "bold",
+                                                    "listStyleType": "circle"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "a",
+                                                        "href": "?query=愉快 【名・形動】&wildcards=off",
+                                                        "content": "愉快 【名・形動】"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "style": {
+                                                            "fontWeight": "normal",
+                                                            "listStyleType": "none"
+                                                        },
+                                                        "content": " ▽毎日愉快に過ごしている ▽愉快な仲間"
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "tag": "li",
+                                                "style": {
+                                                    "fontWeight": "bold",
+                                                    "listStyleType": "circle"
+                                                },
+                                                "content": [
+                                                    {
+                                                        "tag": "a",
+                                                        "href": "?query=痛快 【名・形動】&wildcards=off",
+                                                        "content": "痛快 【名・形動】"
+                                                    },
+                                                    {
+                                                        "tag": "span",
+                                                        "style": {
+                                                            "fontWeight": "normal",
+                                                            "listStyleType": "none"
+                                                        },
+                                                        "content": " ▽彼の発言は痛快だった ▽逆転勝ちした痛快な試合"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "tag": "div",
+                        "data": {
+                            "name": "使い分け"
+                        },
+                        "content": [
+                            {
+                                "tag": "div",
+                                "content": [
+                                    {
+                                        "tag": "span",
+                                        "style": {
+                                            "fontWeight": "bold"
+                                        },
+                                        "content": "🔄使い分け\n"
+                                    },
+                                    {
+                                        "tag": "ul",
+                                        "style": {
+                                            "listStyleType": "none"
+                                        },
+                                        "content": [
+                                            {
+                                                "tag": "li",
+                                                "style": {
+                                                    "listStyleType": "１"
+                                                },
+                                                "content": "「面白い」は、広い意味を持つ語。喜ばしく、心がひかれるさまをいう。おかしいの意味のときは「愉快」に重なり、胸がすくの意味では「痛快」に重なる。また、一風変わっていたり新鮮であったりして、興味をひかれるさまにもいうが、この意味では他の二語とは重ならない。\n"
+                                            },
+                                            {
+                                                "tag": "li",
+                                                "style": {
+                                                    "listStyleType": "２"
+                                                },
+                                                "content": "「愉快」は、おかしくて笑いを誘うようなさまをいう。\n"
+                                            },
+                                            {
+                                                "tag": "li",
+                                                "style": {
+                                                    "listStyleType": "３"
+                                                },
+                                                "content": "「痛快」は、楽しく、胸の晴れるさま、胸のつかえが取り払われてすっとするようなさまをいう。また、単に豪快で気分のよいさまなどにも用いる。「痛快な飲みっぷり」「痛快な男」\n"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        0,
+        ""
+    ]
+]

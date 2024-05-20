@@ -1,4 +1,3 @@
-#include <alloca.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +22,7 @@
     #define access _access
 #endif
 
-const char json_typename[][16] = {
+static const char json_typename[][16] = {
     [JSON_ERROR] = "ERROR",           [JSON_DONE] = "DONE",     [JSON_OBJECT] = "OBJECT",
     [JSON_OBJECT_END] = "OBJECT_END", [JSON_ARRAY] = "ARRAY",   [JSON_ARRAY_END] = "ARRAY_END",
     [JSON_STRING] = "STRING",         [JSON_NUMBER] = "NUMBER", [JSON_TRUE] = "TRUE",
@@ -335,8 +334,7 @@ static void jppron_create(char *audio_dir_path, s8 dbpth) {
     remove((char *)dbfile.s);
     frees8(&dbfile);
 
-    int stat = createdir((char *)dbpth.s);
-    die_on(stat != 0, "Creating directory '%s': %s", dbpth.s, strerror(errno));
+    createdir((char *)dbpth.s);
 
     _drop_(closedir) DIR *audio_dir = opendir(audio_dir_path);
     die_on(!audio_dir, "Failed to open audio directory '%s': %s", audio_dir_path, strerror(errno));
@@ -381,7 +379,7 @@ static fileinfo getfileinfo(database db, s8 fn) {
             len++;
 
         data_split[i] = news8(len);
-        u8copy(data_split[i].s, d.s, data_split[i].len);
+        memcpy(data_split[i].s, d.s, data_split[i].len);
 
         d.s += data_split[i].len + 1;
         d.len -= data_split[i].len + 1;
@@ -399,7 +397,7 @@ static void play_word(s8 word, s8 reading, s8 database_path) {
     _drop_(frees8) s8 normread = normalize_reading(reading);
 
     database db = opendb((char *)database_path.s, true);
-    s8 *files = getfiles(db, word);
+    _drop_(frees8buffer) s8 *files = getfiles(db, word);
 
     if (!files) {
         msg("Nothing found.");
@@ -438,7 +436,6 @@ static void play_word(s8 word, s8 reading, s8 database_path) {
         }
     }
 
-    frees8buffer(&files);
     closedb(db);
 }
 

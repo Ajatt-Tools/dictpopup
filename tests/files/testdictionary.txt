@@ -1,0 +1,5 @@
+The test dictionary includes entries from the following dictionaries:
+- 大辞林　第四版　画像無し
+- 使い方の分かる 類語例解辞典
+- 旺文社国語辞典 第十一版 画像無し
+- Jitendex
