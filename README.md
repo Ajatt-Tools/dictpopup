@@ -45,16 +45,16 @@ First make sure, that you have all necessary dependencies installed. On a Debian
 
 ```
 sudo apt-get install liblmdb-dev libmecab-dev libgtk-3-dev libx11-dev \
-     libcurl4-openssl-dev libnotify-dev libzip-dev
+     libcurl4-openssl-dev libnotify-dev libzip-dev zipcmp zipmerge ziptool
 ```
 
 Then install with:
 
 ```bash
-git clone "https://github.com/btrkeks/dictpopup.git"
+git clone "https://github.com/Ajatt-Tools/dictpopup.git"
 cd dictpopup
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -j 2
-sudo cmake --build build --target install
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+sudo cmake --build build --target install -j 2
 ```
 
 ### Windows

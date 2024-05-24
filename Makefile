@@ -17,7 +17,8 @@ DEBUG_CFLAGS = -DDEBUG \
 	     -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
 	     -O0 -ggdb
 RELEASE_CFLAGS = -Ofast -flto -march=native
-NOTIF_FLAGS := -DNOTIFICATIONS $(shell pkg-config --cflags libnotify) $(shell pkg-config --libs libnotify)
+NOTIF_CFLAGS := -DNOTIFICATIONS $(shell pkg-config --cflags libnotify) $(shell pkg-config --libs libnotify)
+NOTIF_LIBS := $(shell pkg-config --libs libnotify)
 LDLIBS +=-lcurl -lmecab $(shell pkg-config --libs gtk+-3.0) -llmdb -lzip
 
 O_HAVEX11 := 1  # X11 integration
@@ -46,7 +47,7 @@ debug: $(bins)
 debug: CFLAGS+=$(DEBUG_CFLAGS)
 
 dictpopup: $(SRC) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_FLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRC) $(LDLIBS) $(NOTIF_LIBS)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE) $(SDIR)/dictpopup_create.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS)
@@ -72,8 +73,8 @@ install: all
 	chmod 755 ${DESTDIR}${PREFIX}/bin/dictpopup
 	chmod 755 ${DESTDIR}${PREFIX}/bin/dictpopup-create
 
-	gzip < man/dictpopup.1 > ${DESTDIR}${MANPREFIX}/man1/dictpopup.1.gz
-	gzip < man/dictpopup-create.1 > ${DESTDIR}${MANPREFIX}/man1/dictpopup-create.1.gz
+	gzip < man1/dictpopup.1 > ${DESTDIR}${MANPREFIX}/man1/dictpopup.1.gz
+	gzip < man1/dictpopup-create.1 > ${DESTDIR}${MANPREFIX}/man1/dictpopup-create.1.gz
 	
 	mkdir -p $(CONFIG_DIR)
 	cp -f config.ini $(CONFIG_DIR)
@@ -88,17 +89,14 @@ uninstall:
 clean:
 	rm -f dictpopup dictpopup-create cli deinflector
 
-tests: $(SRC) $(SRC_H)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/tests.c $(SRC) $(LDLIBS) -lcheck
 
-check test: tests
-	./tests
+ALL_C_SOURCES := $(wildcard src/*.c)
+ALL_H_SOURCES := $(wildcard include/*.h)
 
-
-c_analyse_targets := $(SRC:%=%-analyse)
+c_analyse_targets := $(ALL_C_SOURCES:%=%-analyse)
 c_analyse_targets := $(filter-out src/pdjson.c-analyse, $(c_analyse_targets))
 
-h_analyse_targets := $(SRC_H:%=%-analyse)
+h_analyse_targets := $(ALL_H_SOURCES:%=%-analyse)
 
 analyse: CFLAGS+=$(DEBUG_CFLAGS)
 analyse: $(c_analyse_targets) $(h_analyse_targets)
@@ -135,11 +133,11 @@ $(h_analyse_targets): %-analyse:
 		--enable=all --suppress=missingIncludeSystem \
 		--suppress=unusedFunction --suppress=unmatchedSuppression \
 		--suppress=unreadVariable --suppress=constParameterCallback \
-		--suppress=constVariablePointer \
+		--suppress=constVariablePointer --suppress=constParameterPointer \
 		--max-ctu-depth=32 --error-exitcode=1
 	# clang-analyzer-unix.Malloc does not understand _drop_()
 	clang-tidy $< --quiet -checks=-clang-analyzer-unix.Malloc -- -std=gnu99 -I$(IDIR) $(shell pkg-config --cflags gtk+-3.0)
 	clang-format --dry-run --Werror $<	
 
 
-.PHONY: all clean install uninstall tests debug analyze
+.PHONY: all clean install uninstall debug analyse
