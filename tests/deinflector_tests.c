@@ -160,6 +160,13 @@ Ensure(Deinflector, deinflects_shita) {
     DEINFLECT("目する", "目した");
 }
 
+Ensure(Deinflector, deinflects_nagara) {
+    DEINFLECT("走る", "走りながら");
+    DEINFLECT("攪拌する", "攪拌しながら");
+    DEINFLECT("食べる", "食べながら");
+    DEINFLECT("書く", "書きながら");
+}
+
 Ensure(Deinflector, does_not_contain) {
     _drop_(frees8buffer) s8 *deinfs = deinflect(S("白ける"));
     bool contains = buffer_contains(deinfs, S("白い"));
@@ -194,6 +201,7 @@ TestSuite *deinflector_tests(void) {
     add_test_with_context(suite, Deinflector, deinflects_tai);
     add_test_with_context(suite, Deinflector, deinflects_tagaru);
     add_test_with_context(suite, Deinflector, deinflects_shita);
+    add_test_with_context(suite, Deinflector, deinflects_nagara);
     add_test_with_context(suite, Deinflector, does_not_contain);
     add_test_with_context(suite, Deinflector, deinflects_null);
     add_test_with_context(suite, Deinflector, deinflects_small);

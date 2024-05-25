@@ -425,6 +425,10 @@ static void check_iadjective(s8 word) {
     IF_ENDSWITH_REPLACE(ADJ_I, "ければ", "い");
 }
 
+static void check_nagara(s8 word) {
+    IF_ENDSWITH_CONVERT_ITOU("ながら");
+}
+
 static void deinflect_one_iter(s8 word, wtype type) {
 
     if (type == UNKNOWN || type == VERB) {
@@ -438,6 +442,7 @@ static void deinflect_one_iter(s8 word, wtype type) {
         check_conditional(word);
         check_concurrent(word);
         check_imperative(word);
+        check_nagara(word);
     }
 
     if (type == UNKNOWN || type == ADJ_I) {
