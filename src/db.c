@@ -13,6 +13,7 @@ struct database_s {
     MDB_dbi dbi3;
     MDB_txn *txn;
     stringbuilder_s lastdatastr;
+    stringbuilder_s datastr;
     u32 last_id;
     bool readonly;
 };
@@ -54,6 +55,7 @@ database_t *db_open(char *dbpath, bool readonly) {
         // word+reading -> frequency
         C(mdb_dbi_open(db->txn, "db3", MDB_CREATE, &db->dbi3));
 
+        db->datastr = sb_init(200);
         db->lastdatastr = sb_init(200);
     }
 
@@ -65,6 +67,9 @@ void db_close(database_t *db) {
         mdb_txn_abort(db->txn);
     } else {
         C(mdb_txn_commit(db->txn));
+
+        sb_free(&db->datastr);
+        sb_free(&db->lastdatastr);
 
         const char *dbpath = NULL;
         mdb_env_get_path(db->env, &dbpath);
@@ -79,10 +84,15 @@ void db_close(database_t *db) {
     free(db);
 }
 
-// TODO: This might be a little inefficient..
-static s8 dictent_to_datastr(dictentry de) {
+static void dictent_to_datastr(stringbuilder_s sb[static 1], dictentry de) {
     s8 sep = S("\0");
-    return concat(de.dictname, sep, de.kanji, sep, de.reading, sep, de.definition);
+    sb_set(sb, de.dictname);
+    sb_append(sb, sep);
+    sb_append(sb, de.kanji);
+    sb_append(sb, sep);
+    sb_append(sb, de.reading);
+    sb_append(sb, sep);
+    sb_append(sb, de.definition);
 }
 
 void db_put_dictent(database_t *db, s8 headword, dictentry de) {
@@ -91,15 +101,17 @@ void db_put_dictent(database_t *db, s8 headword, dictentry de) {
     MDB_val key_mdb = {.mv_data = headword.s, .mv_size = headword.len};
     MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
 
-    _drop_(frees8) s8 datastr = dictent_to_datastr(de);
+    dictent_to_datastr(&db->datastr, de);
 
-    if (!s8equals(datastr, sb_gets8(db->lastdatastr))) {
+    if (!s8equals(sb_gets8(db->datastr), sb_gets8(db->lastdatastr))) {
+        s8 datastr = sb_gets8(db->datastr);
         db->last_id++; // Note: The above id struct updates too
         MDB_val val_mdb = {.mv_data = datastr.s, .mv_size = datastr.len};
-
         C(mdb_put(db->txn, db->dbi2, &id_mdb, &val_mdb, MDB_NOOVERWRITE | MDB_APPEND));
 
-        sb_set(&db->lastdatastr, datastr);
+        stringbuilder_s tmp = db->lastdatastr;
+        db->lastdatastr = db->datastr;
+        db->datastr = tmp;
     }
 
     // Add key with corresponding id
