@@ -291,12 +291,10 @@ static void copy_default_config(char *cfgfile) {
  * The caller takes ownership of the data.
  */
 static s8 get_config_filepath(void) {
-#if defined(__linux__)
-    char *env = getenv("DICTPOPUP_CONFIG");
+    char *env = getenv("DICTPOPUP_CONFIG_DIR");
     if (env && *env)
         return buildpath(fromcstr_(env), S("config.ini"));
     else
-#endif
         return buildpath(fromcstr_((char *)g_get_user_config_dir()), S("dictpopup"),
                          S("config.ini"));
 }
