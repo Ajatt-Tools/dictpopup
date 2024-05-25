@@ -15,11 +15,6 @@ typedef struct {
 
 void ankicard_free(ankicard *ac);
 
-/*
- * Print the contents of an ankicard
- */
-void ac_print_ankicard(ankicard ac);
-
 typedef struct {
     union {
         char *string;

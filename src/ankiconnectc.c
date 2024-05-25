@@ -1,5 +1,4 @@
 #include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
 #include <curl/curl.h>
@@ -52,9 +51,6 @@ static char *json_escape_str(const char *str) {
             case '\t':
                 sb_append(&sb, S("&#9")); // html tab
                 break;
-            case '\v':
-                sb_append(&sb, S("\\v"));
-                break;
             case '"':
                 sb_append(&sb, S("\\\""));
                 break;
@@ -94,12 +90,12 @@ static char **json_escape_str_array(int n, const char **array) {
 
 /* ------ Callback functions ------ */
 static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata) {
+    assert(userdata);
     retval_s *ret = userdata;
-    assert(ret);
+    s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
 
-    *ret =
-        (retval_s){.data.boolean = (strncmp(ptr, "{\"result\": [], \"error\": null}", nmemb) != 0),
-                   .ok = true};
+    *ret = (retval_s){.data.boolean = startswith(resp, S("{\"result\": [], \"error\": null}")),
+                      .ok = true};
 
     return nmemb;
 }
@@ -107,11 +103,12 @@ static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata
 static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *userdata) {
     assert(userdata);
     retval_s *ret = userdata;
+    s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
 
-    if (strstr(ptr, "\"error\": null"))
+    if (endswith(resp, S("\"error\": null}")))
         *ret = (retval_s){.ok = true};
     else {
-        char *err = (char *)s8dup((s8){.s = (u8 *)ptr, .len = nmemb}).s;
+        char *err = (char *)s8dup(resp).s;
         *ret = (retval_s){.data.string = err, .ok = false};
         // TODO: This is a memory leak
     }
@@ -119,28 +116,6 @@ static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *user
     return nmemb;
 }
 /* ------- End Callback functions ----------- */
-
-void ac_print_ankicard(ankicard ac) {
-    puts("Ankicard:");
-    printf("deck: %s\n", ac.deck);
-    printf("notetype: %s\n", ac.notetype);
-    printf("Number of fields: %zu\n", ac.num_fields);
-    printf("Fieldnames: [");
-    for (size_t i = 0; i < ac.num_fields; i++) {
-        if (i)
-            putchar(',');
-        printf("%s", ac.fieldnames[i]);
-    }
-    puts("]");
-    printf("Contents: \n");
-    for (size_t i = 0; i < ac.num_fields; i++)
-        printf("%zu: %s\n", i, ac.fieldentries[i]);
-    if (ac.tags) {
-        for (char **tagptr = ac.tags; *tagptr; tagptr++)
-            printf("%s", *tagptr);
-    } else
-        puts("Tags: none");
-}
 
 void ankicard_free(ankicard *ac) {
     free(ac->deck);
@@ -272,6 +247,8 @@ static char *check_card(ankicard const ac) {
 }
 
 static s8 form_addNote_req(ankicard ac) {
+    _drop_(ankicard_free) ankicard ac_je = ankicard_dup_json_esc(ac);
+
     stringbuilder_s sb = sb_init(1 << 9);
 
     sb_append(&sb, S("{"
@@ -280,21 +257,21 @@ static s8 form_addNote_req(ankicard ac) {
                      "\"params\": {"
                      "\"note\": {"
                      "\"deckName\": \""));
-    sb_append(&sb, fromcstr_(ac.deck));
+    sb_append(&sb, fromcstr_(ac_je.deck));
     sb_append(&sb, S("\","
                      "\"modelName\": \""));
-    sb_append(&sb, fromcstr_(ac.notetype));
+    sb_append(&sb, fromcstr_(ac_je.notetype));
     sb_append(&sb, S("\","
                      "\"fields\": {"));
 
-    assert(ac.fieldnames && ac.fieldentries);
-    for (size_t i = 0; i < ac.num_fields; i++) {
+    assert(ac_je.fieldnames && ac_je.fieldentries);
+    for (size_t i = 0; i < ac_je.num_fields; i++) {
         if (i)
             sb_append(&sb, S(","));
         sb_append(&sb, S("\""));
-        sb_append(&sb, fromcstr_(ac.fieldnames[i]));
+        sb_append(&sb, fromcstr_(ac_je.fieldnames[i]));
         sb_append(&sb, S("\" : \""));
-        sb_append(&sb, fromcstr_(ac.fieldentries[i] ? ac.fieldentries[i] : ""));
+        sb_append(&sb, fromcstr_(ac_je.fieldentries[i] ? ac_je.fieldentries[i] : ""));
         sb_append(&sb, S("\""));
     }
 
@@ -304,12 +281,12 @@ static s8 form_addNote_req(ankicard ac) {
                      "},"
                      "\"tags\": ["));
 
-    if (ac.tags) {
-        for (size_t i = 0; ac.tags[i]; i++) {
+    if (ac_je.tags) {
+        for (size_t i = 0; ac_je.tags[i]; i++) {
             if (i)
                 sb_append(&sb, S(","));
             sb_append(&sb, S("\""));
-            sb_append(&sb, fromcstr_(ac.tags[i]));
+            sb_append(&sb, fromcstr_(ac_je.tags[i]));
             sb_append(&sb, S("\""));
         }
     }
@@ -326,7 +303,6 @@ retval_s ac_addNote(ankicard const ac) {
     if (check_card(ac))
         return (retval_s){.data.string = check_card(ac), .ok = false};
 
-    _drop_(ankicard_free) ankicard ac_je = ankicard_dup_json_esc(ac);
-    _drop_(frees8) s8 req = form_addNote_req(ac_je);
+    _drop_(frees8) s8 req = form_addNote_req(ac);
     return sendRequest(req, check_add_response);
 }
