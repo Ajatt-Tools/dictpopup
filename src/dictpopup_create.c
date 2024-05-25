@@ -33,6 +33,8 @@ typedef struct {
 
 DEFINE_DROP_FUNC_PTR(json_stream, json_close)
 DEFINE_DROP_FUNC(struct zip_file *, zip_fclose)
+DEFINE_DROP_FUNC(FILE *, fclose)
+DEFINE_DROP_FUNC(DIR *, closedir)
 
 volatile sig_atomic_t sigint_received = 0;
 

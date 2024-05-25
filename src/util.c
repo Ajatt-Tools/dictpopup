@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h> // mkdir
 
 #include "util.h"
 
@@ -16,39 +15,15 @@ const u8 utf8_chr_len_data[] = {
     /* 1111 */ 4, /* maybe, but also could be invalid */
 };
 
-#define likely(x) __builtin_expect(!!(x), 1)
-#define expect(x)                                                                                  \
-    do {                                                                                           \
-        if (!likely(x)) {                                                                          \
-            fprintf(stderr, "FATAL: !(%s) at %s:%s:%d\n", #x, __FILE__, __func__, __LINE__);       \
-            abort();                                                                               \
-        }                                                                                          \
-    } while (0)
-
-void *xmalloc(size_t nbytes) {
-    void *p = malloc(nbytes);
-    if (!p) {
-        perror("malloc");
-        abort();
-    }
-    return p;
-}
-
 void *xcalloc(size_t num, size_t nbytes) {
     void *p = calloc(num, nbytes);
-    if (!p) {
-        perror("calloc");
-        abort();
-    }
+    expect(p);
     return p;
 }
 
 void *xrealloc(void *ptr, size_t nbytes) {
     void *p = realloc(ptr, nbytes);
-    if (!p) {
-        perror("realloc");
-        abort();
-    }
+    expect(p);
     return p;
 }
 
@@ -77,6 +52,7 @@ s8 s8copy(s8 dst, s8 src) {
 }
 
 s8 news8(size len) {
+    assert(len >= 0);
     return (s8){.s = new (u8, len + 1), // Include NULL terminator
                 .len = len};
 }
@@ -304,11 +280,7 @@ void sb_append(stringbuilder_s *b, s8 str) {
     if (b->cap < b->len + str.len) {
         while (b->cap < b->len + str.len) {
             b->cap *= 2;
-
-            if (b->cap < 0) {
-                fputs("Integer Overflow in sb_append()", stderr);
-                abort();
-            }
+            expect(b->cap > 0); // Integer overflow check
         }
 
         b->data = xrealloc(b->data, b->cap);

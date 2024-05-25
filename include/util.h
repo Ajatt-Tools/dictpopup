@@ -25,12 +25,19 @@ typedef __PTRDIFF_TYPE__ size;
     (__builtin_choose_expr(!__builtin_types_compatible_p(typeof(x), typeof(&*(x))),                \
                            sizeof(x) / sizeof((x)[0]), (void)0 /* decayed, compile error */))
 
+#define expect(x)                                                                                  \
+    do {                                                                                           \
+        if (!__builtin_expect(!!(x), 1)) {                                                         \
+            fprintf(stderr, "FATAL: !(%s) at %s:%s:%d\n", #x, __FILE__, __func__, __LINE__);       \
+            abort();                                                                               \
+        }                                                                                          \
+    } while (0)
+
 /**
  * Memory allocation wrapper which abort on failure
  */
-void *xmalloc(size_t size);
-void *xcalloc(size_t nmemb, size_t size);
-void *xrealloc(void *ptr, size_t size);
+__attribute__((malloc (free), returns_nonnull)) void *xcalloc(size_t nmemb, size_t size);
+__attribute__((malloc (free), returns_nonnull)) void *xrealloc(void *ptr, size_t size);
 // clang-format off
 #define new(type, num) xcalloc(num, sizeof(type))
 // clang-format on
@@ -192,8 +199,6 @@ static inline void drop_close(int *fd) {
 }
 
 DEFINE_DROP_FUNC_VOID(free)
-DEFINE_DROP_FUNC(FILE *, fclose)
-DEFINE_DROP_FUNC(DIR *, closedir)
 DEFINE_DROP_FUNC_PTR(s8, frees8)
 DEFINE_DROP_FUNC(s8 *, frees8buffer)
 
