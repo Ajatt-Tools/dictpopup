@@ -4,6 +4,8 @@
 #include "messages.h"
 #include "util.h"
 
+DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
+
 struct database_s {
     MDB_env *env;
     MDB_dbi dbi1;
@@ -15,14 +17,11 @@ struct database_s {
     bool readonly;
 };
 
-#define C(call)                                                                                    \
-    do {                                                                                           \
-        int _rc = (call);                                                                          \
-        die_on(_rc != MDB_SUCCESS, "Database error: %s", mdb_strerror(_rc));                       \
-    } while (0)
+static int rc = 0;
+#define C(call) die_on((rc = (call)) != MDB_SUCCESS, "Database error: %s", mdb_strerror(rc));
 
 database_t *db_open(char *dbpath, bool readonly) {
-    dbg("Using database path: '%s'", dbpath);
+    dbg("Opening database in directory: '%s'", dbpath);
 
     database_t *db = new (database_t, 1);
     db->readonly = readonly;
@@ -45,7 +44,6 @@ database_t *db_open(char *dbpath, bool readonly) {
         unsigned int mapsize = 2097152000; // 2Gb
         C(mdb_env_set_mapsize(db->env, mapsize));
 
-        dbg("Opening db in path: %s", dbpath);
         C(mdb_env_open(db->env, dbpath, 0, 0664));
         C(mdb_txn_begin(db->env, NULL, 0, &db->txn));
 
@@ -108,25 +106,22 @@ void db_put_dictent(database_t *db, s8 headword, dictentry de) {
     mdb_put(db->txn, db->dbi1, &key_mdb, &id_mdb, MDB_NODUPDATA);
 }
 
-static u32 *get_ids(const database_t *db, s8 word, size_t *num) {
+static u32 *getids(const database_t *db, s8 word, size_t *num) {
     MDB_val key_mdb = (MDB_val){.mv_data = word.s, .mv_size = (size_t)word.len};
     MDB_val val_mdb = {0};
 
-    MDB_cursor *cursor;
+    _drop_(mdb_cursor_close) MDB_cursor *cursor;
     C(mdb_cursor_open(db->txn, db->dbi1, &cursor));
 
-    int rc;
-    if ((rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET)) == MDB_NOTFOUND) {
-        mdb_cursor_close(cursor);
+    int rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET);
+    if (rc == MDB_NOTFOUND)
         return NULL;
-    }
     C(rc);
     // This reads up to a page, i.e. max 1024 entries, which should be enough
     C(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE));
 
-    mdb_cursor_close(cursor);
-
     *num = val_mdb.mv_size / sizeof(u32);
+    expect(*num * sizeof(u32) == val_mdb.mv_size); // divides cleanly
     u32 *ret = new (u32, *num);
     memcpy(ret, val_mdb.mv_data, val_mdb.mv_size); // ensures proper alignment
     return ret;
@@ -145,16 +140,16 @@ void db_put_freq(const database_t *db, frequency_entry fe) {
 static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
     _drop_(frees8) s8 key = concat(word, S("\0"), reading);
     MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
-    MDB_val val_m = {0};
 
-    int rc;
-    if ((rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m)) == MDB_NOTFOUND)
+    MDB_val val_m = {0};
+    int rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m);
+    if (rc == MDB_NOTFOUND)
         return 0;
     C(rc);
 
     u32 freq;
-    assert(sizeof(freq) == val_m.mv_size);
-    memcpy(&freq, val_m.mv_data, sizeof(freq)); // ensures proper alignment
+    expect(sizeof(freq) == val_m.mv_size);
+    memcpy(&freq, val_m.mv_data, val_m.mv_size); // ensures proper alignment
     return freq;
 }
 
@@ -162,20 +157,20 @@ static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
  * Returns: dictentry with newly allocated strings parsed from @data
  */
 static dictentry data_to_dictent(const database_t *db, s8 data) {
-    s8 data_split[4] = {0};
+    assert(data.s);
 
-    s8 d = data;
+    s8 data_split[4] = {0};
     for (size_t i = 0; i < arrlen(data_split); i++) {
-        assert(d.len > 0);
+        expect(data.len >= 0);
 
         size len = 0;
-        while (len < d.len && d.s[len] != '\0')
+        while (len < data.len && data.s[len] != '\0')
             len++;
         data_split[i] = news8(len);
-        memcpy(data_split[i].s, d.s, data_split[i].len);
+        memcpy(data_split[i].s, data.s, data_split[i].len);
 
-        d.s += data_split[i].len + 1;
-        d.len -= data_split[i].len + 1;
+        data.s += data_split[i].len + 1;
+        data.len -= data_split[i].len + 1;
     }
 
     dictentry ret = {0};
@@ -200,19 +195,17 @@ static s8 getdata(const database_t *db, u32 id) {
 }
 
 void db_get_dictents(const database_t *db, s8 headword, dictentry *dict[static 1]) {
-    assert(headword.len);
     dbg("Looking up: %.*s", (int)headword.len, (char *)headword.s);
 
     size_t n_ids = 0;
-    u32 *ids = get_ids(db, headword, &n_ids);
+    _drop_(free) u32 *ids = getids(db, headword, &n_ids);
     if (ids) {
         for (size_t i = 0; i < n_ids; i++) {
-            const s8 de_data = getdata(db, ids[i]);
+            s8 de_data = getdata(db, ids[i]);
             dictentry de = data_to_dictent(db, de_data);
             dictionary_add(dict, de);
         }
     }
-    free(ids);
 }
 
 i32 db_check_exists(s8 dbpath) {
