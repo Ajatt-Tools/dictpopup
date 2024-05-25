@@ -12,7 +12,7 @@ CPPFLAGS += -D_POSIX_C_SOURCE=200809L -I$(IDIR)
 CFLAGS := -Werror $(shell pkg-config --cflags gtk+-3.0) $(CFLAGS)
 DEBUG_CFLAGS = -DDEBUG \
 	     -Wall -Wextra -Wpedantic -Wstrict-prototypes -Wdouble-promotion -Wshadow \
-	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
+	     -Wno-unused-parameter -Wno-sign-conversion -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
 	     -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
 	     -O0 -ggdb

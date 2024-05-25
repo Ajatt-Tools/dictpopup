@@ -15,7 +15,7 @@
 /**
  * Check whether debug mode is enabled and cache the result.
  */
-static bool debug_mode_enabled(void) {
+__attribute__((unused)) static bool debug_mode_enabled(void) {
     static int debug_enabled = -1;
     if (debug_enabled == -1) {
         const char *dbg_env = getenv("DP_DEBUG");
