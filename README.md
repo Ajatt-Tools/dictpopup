@@ -120,11 +120,11 @@ It displays an orange dot if there exist corresponding cards, but which are all 
 
 ## Keybindings
 
-- Next entry: `n`, `s`
-- Previous entry: `p`, `a`
-- Create an Anki card: `Ctrl+s`
-- Play audio: `r`
-- Exit: `q`, `Esc`
+- Next entry: <kbd>n</kbd>, <kbd>s</kbd>
+- Previous entry: <kbd>p</kbd>, <kbd>a</kbd>
+- Create an Anki card: <kbd>Ctrl</kbd>+ <kbd>s</kbd>
+- Play audio: <kbd>r</kbd>
+- Exit: <kbd>q</kbd>, <kbd>Esc</kbd>
 
 ## Contact
 
