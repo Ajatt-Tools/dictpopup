@@ -49,6 +49,19 @@ static bool buffer_contains(s8 *buffer, s8 word) {
         }                                                                                          \
     } while (0)
 
+
+Ensure(Deinflector, deinflects_kuru_kanji) {
+    DEINFLECT("来る", "来ない", "来ます", "来ません", "来た", "来なかった", "来ました",
+        "来て", "来なくて", "来られない", "来られる", "来られない", "来させる", "来させない",
+        "来させられる", "来させられない", "来い");
+}
+
+Ensure(Deinflector, deinflects_kuru_hira) {
+    DEINFLECT("来る", "こない", "きます", "きません", "きた", "こなかった", "きました",
+        "きて", "こなくて", "こられる", "こられない", "こられない", "こさせる", "こさせない",
+        "こさせられる", "こさせられない", "こい");
+}
+
 Ensure(Deinflector, deinflects_ichidan) {
     DEINFLECT("信じる", "信じない", "信じます", "信じません", "信じた", "信じなかった",
               "信じました", "信じませんでした", "信じて", "信じなくて", "信じられる",
@@ -186,6 +199,8 @@ Ensure(Deinflector, deinflects_small) {
 TestSuite *deinflector_tests(void) {
     TestSuite *suite = create_test_suite();
     add_test_with_context(suite, Deinflector, converts_kata_to_hira);
+    add_test_with_context(suite, Deinflector, deinflects_kuru_kanji);
+    add_test_with_context(suite, Deinflector, deinflects_kuru_hira);
     add_test_with_context(suite, Deinflector, deinflects_ichidan);
     add_test_with_context(suite, Deinflector, deinflects_godan_ru);
     add_test_with_context(suite, Deinflector, deinflects_godan_mu);

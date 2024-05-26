@@ -59,7 +59,7 @@ wtype *wtypes = NULL;
 #define IF_EQUALS_ADD(type, str, wordtoadd)                                                        \
     do {                                                                                           \
         if (s8equals(word, S(str))) {                                                              \
-            add_deinflection(s8dup(S(str)), type);                                                 \
+            add_deinflection(s8dup(S(wordtoadd)), type);                                                 \
         }                                                                                          \
     } while (0)
 
@@ -292,9 +292,9 @@ static void check_past(s8 word) {
     /* exceptions */
     IF_ENDSWITH_REPLACE(VERB, "した", "する");
     IF_EQUALS_ADD(VERB, "きた", "来る");
-    IF_EQUALS_ADD(VERB, "来た", "来る");
-    IF_EQUALS_ADD(VERB, "いった", "行く");
+    IF_ENDSWITH_REPLACE(VERB, "来た", "来る");
     IF_ENDSWITH_REPLACE(VERB, "行った", "行く");
+    IF_EQUALS_ADD(VERB, "いった", "行く");
     /* ----------- */
 
     IF_ENDSWITH_REPLACE(VERB, "した", "す");
@@ -306,6 +306,9 @@ static void check_past(s8 word) {
 }
 
 static void check_masu(s8 word) {
+    IF_ENDSWITH_REPLACE(VERB, "来ます", "来る");
+    IF_EQUALS_ADD(VERB, "きます", "来る");
+
     IF_ENDSWITH_CONVERT_ITOU("ます");
     IF_ENDSWITH_CONVERT_ITOU("ません");
     IF_ENDSWITH_CONVERT_ITOU("ませんでした");
@@ -322,6 +325,9 @@ static void check_shimau(s8 word) {
 }
 
 static void check_passive_causative(s8 word) {
+    IF_ENDSWITH_REPLACE(VERB, "来させる", "来る");
+    IF_EQUALS_ADD(VERB, "こさせる", "来る");
+
     IF_ICHIDAN_REPLACE("られる", "る");
     IF_ICHIDAN_REPLACE("させる", "る");
     IF_ENDSWITH_CONVERT_ATOU("れる");
@@ -348,6 +354,9 @@ static void check_volitional(s8 word) {
 }
 
 static void check_negation(s8 word) {
+    IF_ENDSWITH_REPLACE(VERB, "来ない", "来る");
+    IF_ENDSWITH_REPLACE(VERB, "こない", "来る");
+
     IF_EQUALS_ADD(VERB, "ない", "有る");
     IF_ENDSWITH_CONVERT_ATOU("ない");
     IF_ENDSWITH_CONVERT_ATOU("ん");
@@ -394,6 +403,9 @@ static void check_concurrent(s8 word) {
 }
 
 static void check_imperative(s8 word) {
+    IF_ENDSWITH_REPLACE(VERB, "来い", "来る");
+    IF_EQUALS_ADD(VERB, "こい", "来る");
+
     IF_ICHIDAN_REPLACE("ろ", "る");
     IF_ENDSWITH_REPLACE(VERB, "れ", "る");
     IF_ENDSWITH_REPLACE(VERB, "せ", "す");
