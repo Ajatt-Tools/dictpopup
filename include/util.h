@@ -2,7 +2,6 @@
 #define DP_UTIL_H
 
 #include "buf.h"    // growable buffer implementation
-#include <dirent.h> // DIR
 #include <stdio.h>  // FILE
 #include <unistd.h> // close()
 
@@ -168,6 +167,15 @@ size dictlen(dictentry *dict);
 void _nonnull_ dictionary_free(dictentry **dict);
 dictentry dictentry_at_index(dictentry *dict, size index);
 /* --------------------- End dictentry ------------------------ */
+
+typedef struct {
+    s8 word;
+    s8 reading;
+    u32 frequency;
+} freqentry;
+
+freqentry freqentry_dup(freqentry fe);
+void freqentry_free(freqentry *fe);
 
 size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...);
 

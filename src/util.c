@@ -58,6 +58,11 @@ s8 news8(size len) {
 }
 
 s8 s8dup(s8 src) {
+#ifdef UNIT_TEST
+    if (!src.s)
+        return (s8){0};
+#endif
+
     s8 r = news8(src.len);
     s8copy(r, src);
     return r;

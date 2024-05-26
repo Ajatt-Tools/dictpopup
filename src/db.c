@@ -139,7 +139,7 @@ static u32 *getids(const database_t *db, s8 word, size_t *num) {
     return ret;
 }
 
-void db_put_freq(const database_t *db, frequency_entry fe) {
+void db_put_freq(const database_t *db, freqentry fe) {
     die_on(db->readonly, "Cannot put frequency into db in readonly mode.");
 
     s8 key = concat(fe.word, S("\0"), fe.reading);
