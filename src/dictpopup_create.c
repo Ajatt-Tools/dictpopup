@@ -48,7 +48,7 @@ static const char json_typename[][16] = {
 
 enum tag_type { TAG_UNKNOWN, TAG_DIV, TAG_SPAN, TAG_UL, TAG_OL, TAG_LI, TAG_RUBY_RT };
 
-static void frequency_entry_free(frequency_entry *fe) {
+static void frequency_entry_free(freqentry *fe) {
     frees8(&(fe->word));
     frees8(&(fe->reading));
 }
@@ -337,8 +337,8 @@ static void add_dictionary(database_t *db, s8 buffer, s8 dictname) {
     }
 }
 
-static frequency_entry parse_frequency_entry(json_stream *s) {
-    frequency_entry fe = {0};
+static freqentry parse_frequency_entry(json_stream *s) {
+    freqentry fe = {0};
 
     /* first entry */
     enum json_type type = json_next(s);
@@ -354,7 +354,7 @@ static frequency_entry parse_frequency_entry(json_stream *s) {
 
         json_skip_until(s, JSON_ARRAY_END);
         frees8(&fe.word);
-        return (frequency_entry){0};
+        return (freqentry){0};
     }
     /* ----------- */
 
@@ -388,7 +388,7 @@ static frequency_entry parse_frequency_entry(json_stream *s) {
 
         json_skip_until(s, JSON_ARRAY_END);
         frees8(&fe.word);
-        return (frequency_entry){0};
+        return (freqentry){0};
     }
     /* ----------- */
 
@@ -412,7 +412,7 @@ static void add_frequency(database_t *db, s8 buffer) {
             err("%s", json_get_error(&s));
             break;
         } else if (type == JSON_ARRAY) {
-            frequency_entry fe = parse_frequency_entry(&s);
+            freqentry fe = parse_frequency_entry(&s);
             db_put_freq(db, fe);
             frequency_entry_free(&fe);
         } else
