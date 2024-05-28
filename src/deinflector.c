@@ -59,7 +59,7 @@ wtype *wtypes = NULL;
 #define IF_EQUALS_ADD(type, str, wordtoadd)                                                        \
     do {                                                                                           \
         if (s8equals(word, S(str))) {                                                              \
-            add_deinflection(s8dup(S(wordtoadd)), type);                                                 \
+            add_deinflection(s8dup(S(wordtoadd)), type);                                           \
         }                                                                                          \
     } while (0)
 
