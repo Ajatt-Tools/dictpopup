@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h> // getopt
 
+#include <ctype.h>
 #include <dirent.h> // opendir
 #include <zip.h>
 
@@ -489,8 +490,10 @@ static void add_from_zip(database_t *db, char *filename) {
 /*
  * Dialog which asks the user for confirmation (Yes/No)
  */
-static bool askyn(const char *msg) {
-    return true;
+static bool askyn(const char *prompt) {
+    printf("%s [y/n] ", prompt);
+    char resp = tolower(getchar());
+    return resp == 'y';
 }
 
 static void sigint_handler(int s) {
