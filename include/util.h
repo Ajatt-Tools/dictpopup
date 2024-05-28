@@ -35,8 +35,8 @@ typedef __PTRDIFF_TYPE__ size;
 /**
  * Memory allocation wrapper which abort on failure
  */
-__attribute__((malloc (free), returns_nonnull)) void *xcalloc(size_t nmemb, size_t size);
-__attribute__((malloc (free), returns_nonnull)) void *xrealloc(void *ptr, size_t size);
+__attribute__((malloc, returns_nonnull)) void *xcalloc(size_t nmemb, size_t size);
+__attribute__((malloc, returns_nonnull)) void *xrealloc(void *ptr, size_t size);
 // clang-format off
 #define new(type, num) xcalloc(num, sizeof(type))
 // clang-format on
