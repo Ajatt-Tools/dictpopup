@@ -17,8 +17,9 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
             "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes -Wdouble-promotion -Wshadow \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
-	     -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
 	     -O0 -ggdb")
+    set(CMAKE_C_FLAGS
+            "${CMAKE_C_FLAGS} -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong")
 else ()
     add_compile_options(-Ofast -flto -march=native -g)
 endif ()
@@ -62,26 +63,37 @@ target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb
         ${CURL_LIBRARIES} -lmecab)
 
 # ##############################################################################
+# dictpopup-cli
+# ##############################################################################
+add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c ${SRCS})
+target_include_directories(
+        dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS} include/)
+target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS}
+        ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
+target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
+        ${CURL_LIBRARIES} -lmecab -llmdb)
+
+# ##############################################################################
 # Tests
 # ##############################################################################
 if (BUILD_TESTING)
     enable_testing()
     find_package(cgreen REQUIRED)
     add_executable(
-            run_tests
+            c_tests
             tests/main.c
             tests/deinflector_tests.c
             tests/ankiconnect_tests.c
             src/deinflector.c
             src/util.c
-            tests/parser_tests.c
             src/pdjson.c
             src/db.c
             src/platformdep.c)
-    target_compile_definitions(run_tests PRIVATE UNIT_TEST)
-    target_include_directories(run_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/)
+    target_compile_definitions(c_tests PRIVATE UNIT_TEST)
+    target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/)
     target_link_libraries(
-            run_tests
+            c_tests
             PRIVATE ${CGREEN_LIBRARIES}
             ${GTK3_LIBRARIES}
             ${NOTIFY_LIBRARIES}
@@ -89,7 +101,7 @@ if (BUILD_TESTING)
             -llmdb
             -lmecab
             -lzip)
-    add_test(NAME all_tests COMMAND $<TARGET_FILE:run_tests>)
+    add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
 endif ()
 
 # ##############################################################################

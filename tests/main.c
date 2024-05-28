@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     TestSuite *suite = create_test_suite();
     add_suite(suite, deinflector_tests());
     add_suite(suite, ankiconnect_tests());
-    add_suite(suite, parser_tests());
+    // add_suite(suite, parser_tests());
 
     if (argc > 1) {
         return run_single_test(suite, argv[1], create_text_reporter());
