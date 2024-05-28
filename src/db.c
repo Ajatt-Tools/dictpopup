@@ -125,7 +125,7 @@ static u32 *getids(const database_t *db, s8 word, size_t *num) {
     _drop_(mdb_cursor_close) MDB_cursor *cursor;
     C(mdb_cursor_open(db->txn, db->dbi1, &cursor));
 
-    int rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET);
+    rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET);
     if (rc == MDB_NOTFOUND)
         return NULL;
     C(rc);
@@ -154,7 +154,7 @@ static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
     MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
 
     MDB_val val_m = {0};
-    int rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m);
+    rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m);
     if (rc == MDB_NOTFOUND)
         return 0;
     C(rc);
