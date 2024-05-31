@@ -335,6 +335,16 @@ void sb_free(stringbuilder_s *sb) {
 }
 /* --------------- End stringbuilder --------------- */
 
+freqentry freqentry_dup(freqentry fe) {
+    return (freqentry){
+        .word = s8dup(fe.word), .reading = s8dup(fe.reading), .frequency = fe.frequency};
+}
+
+void freqentry_free(freqentry *fe) {
+    frees8(&fe->word);
+    frees8(&fe->reading);
+}
+
 /**
  * Performs safe, bounded string formatting into a buffer. On error or
  * truncation, expect() aborts.
