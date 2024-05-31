@@ -2,15 +2,12 @@
 #define DP_DB_H
 
 #include <stdbool.h>
-
-#include <lmdb.h>
-
 #include "util.h"
 
 // An opaque struct
 typedef struct database_s database_t;
 
-database_t *_nonnull_ db_open(char *dbpath, bool readonly);
+__attribute__((returns_nonnull)) database_t *_nonnull_ db_open(char *dbpath, bool readonly);
 void _nonnull_ db_close(database_t *db);
 
 void _nonnull_ db_put_dictent(database_t *db, dictentry de);
