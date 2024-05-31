@@ -95,10 +95,21 @@ static void dictent_to_datastr(stringbuilder_s sb[static 1], dictentry de) {
     sb_append(sb, de.definition);
 }
 
-void db_put_dictent(database_t *db, s8 headword, dictentry de) {
+void db_put_dictent(database_t *db, dictentry de) {
     die_on(db->readonly, "Cannot put dictentry into db in readonly mode.");
+    if (!de.definition.len) {
+        dbg("Entry with kanji: %s and reading: %s has no definition. Skipping..",
+            (char *)de.kanji.s, (char *)de.reading.s);
+        return;
+    }
+    if (!de.kanji.len && !de.reading.len) {
+        dbg("Entry with definition: %s has no kanji and reading. Skipping..",
+            (char *)de.definition.s);
+        return;
+    }
 
-    MDB_val key_mdb = {.mv_data = headword.s, .mv_size = headword.len};
+    MDB_val kanji_mdb = {.mv_data = de.kanji.s, .mv_size = de.kanji.len};
+    MDB_val reading_mdb = {.mv_data = de.reading.s, .mv_size = de.reading.len};
     MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
 
     dictent_to_datastr(&db->datastr, de);
@@ -115,7 +126,8 @@ void db_put_dictent(database_t *db, s8 headword, dictentry de) {
     }
 
     // Add key with corresponding id
-    mdb_put(db->txn, db->dbi1, &key_mdb, &id_mdb, MDB_NODUPDATA);
+    mdb_put(db->txn, db->dbi1, &kanji_mdb, &id_mdb, MDB_NODUPDATA);
+    mdb_put(db->txn, db->dbi1, &reading_mdb, &id_mdb, MDB_NODUPDATA);
 }
 
 static u32 *getids(const database_t *db, s8 word, size_t *num) {

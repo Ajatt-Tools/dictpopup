@@ -54,24 +54,26 @@ target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
-add_executable(dictpopup-create src/dictpopup_create.c ${SRCS})
+add_executable(dictpopup-create src/dictpopup_create.c ${SRCS}
+        src/yomichan_parser.c
+        src/yomichan_parser.c)
 target_include_directories(
         dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-create PRIVATE ${GTK3_LIBRARY_DIRS}
         ${LIBZIP_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
 target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb
-        ${CURL_LIBRARIES} -lmecab)
+        ${CURL_LIBRARIES} -lmecab -lyyjson)
 
 # ##############################################################################
-# dictpopup-cli
+# cli
 # ##############################################################################
-add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c ${SRCS})
+add_executable(cli EXCLUDE_FROM_ALL src/frontends/cli.c ${SRCS})
 target_include_directories(
-        dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
+        cli PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
         ${CURL_INCLUDE_DIRS} include/)
-target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS}
+target_link_directories(cli PRIVATE ${GTK3_LIBRARY_DIRS}
         ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
-target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
+target_link_libraries(cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
         ${CURL_LIBRARIES} -lmecab -llmdb)
 
 # ##############################################################################
@@ -87,6 +89,7 @@ if (BUILD_TESTING)
             tests/ankiconnect_tests.c
             src/deinflector.c
             src/util.c
+            tests/yomichan_parser_tests.c
             src/pdjson.c
             src/db.c
             src/platformdep.c)
@@ -100,8 +103,11 @@ if (BUILD_TESTING)
             ${CURL_LIBRARIES}
             -llmdb
             -lmecab
-            -lzip)
+            -lzip
+            -lyyjson)
     add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
+
+    #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 endif ()
 
 # ##############################################################################

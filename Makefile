@@ -19,7 +19,7 @@ DEBUG_CFLAGS = -DDEBUG \
 RELEASE_CFLAGS = -Ofast -flto -march=native
 NOTIF_CFLAGS := -DNOTIFICATIONS $(shell pkg-config --cflags libnotify) $(shell pkg-config --libs libnotify)
 NOTIF_LIBS := $(shell pkg-config --libs libnotify)
-LDLIBS +=-lcurl -lmecab $(shell pkg-config --libs gtk+-3.0) -llmdb -lzip
+LDLIBS +=-lcurl -lmecab $(shell pkg-config --libs gtk+-3.0) -llmdb -lzip -lyyjson
 
 O_HAVEX11 := 1  # X11 integration
 ifeq ($(strip $(O_HAVEX11)),1)
@@ -33,7 +33,7 @@ FILES_H = ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h data
 SRC = $(addprefix $(SDIR)/,$(FILES))
 SRC_H = $(addprefix $(IDIR)/,$(FILES_H))
 
-FILES_CREATE = db.c pdjson.c util.c platformdep.c
+FILES_CREATE = db.c pdjson.c util.c platformdep.c yomichan_parser.c
 FILES_H_CREATE = db.h pdjson.h util.h buf.h platformdep.h
 SRC_CREATE = $(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
 SRC_H_CREATE = $(addprefix $(IDIR)/,$(FILES_H_CREATE))
@@ -128,12 +128,12 @@ $(h_analyse_targets): %-analyse:
 %-shared-analyse: %
 	# cppcheck is a bit dim about unused functions/variables, leave that to
 	# clang/GCC
-	cppcheck $< -I$(IDIR) --library=gtk.cfg --library=gnu.cfg \
-		--std=c99 --quiet --inline-suppr --force \
-		--enable=all --suppress=missingIncludeSystem \
-		--suppress=unusedFunction --suppress=unmatchedSuppression \
+	cppcheck $< -I$(IDIR) --library=gtk.cfg --library=libcurl.cfg \
+		--std=c99 --quiet --inline-suppr --force --enable=all \
+		--suppress=missingIncludeSystem --suppress=unmatchedSuppression \
 		--suppress=unreadVariable --suppress=constParameterCallback \
 		--suppress=constVariablePointer --suppress=constParameterPointer \
+		--suppress=unusedFunction \
 		--max-ctu-depth=32 --error-exitcode=1
 	# clang-analyzer-unix.Malloc does not understand _drop_()
 	clang-tidy $< --quiet -checks=-clang-analyzer-unix.Malloc -- -std=gnu99 -I$(IDIR) $(shell pkg-config --cflags gtk+-3.0)
