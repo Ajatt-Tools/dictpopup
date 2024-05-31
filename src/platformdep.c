@@ -126,6 +126,6 @@ void createdir(char *dirpath) {
     die_on(ret != 0, "Creating directory '%s': %s", dirpath, strerror(errno));
 }
 
-const char *get_user_data_dir() {
+const char *get_user_data_dir(void) {
     return g_get_user_data_dir();
 }
