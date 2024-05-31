@@ -168,6 +168,7 @@ void _nonnull_ dictionary_free(dictentry **dict);
 dictentry dictentry_at_index(dictentry *dict, size index);
 /* --------------------- End dictentry ------------------------ */
 
+/* --------------------- Start freqentry ----------------- */
 typedef struct {
     s8 word;
     s8 reading;
@@ -176,6 +177,7 @@ typedef struct {
 
 freqentry freqentry_dup(freqentry fe);
 void freqentry_free(freqentry *fe);
+/* --------------------- End freqentry ------------------------ */
 
 size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...);
 

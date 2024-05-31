@@ -1,6 +1,5 @@
-#include <string.h>
 #include <lmdb.h>
-
+#include <string.h>
 
 #include "db.h"
 #include "messages.h"

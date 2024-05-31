@@ -1,8 +1,8 @@
 #ifndef DP_DB_H
 #define DP_DB_H
 
-#include <stdbool.h>
 #include "util.h"
+#include <stdbool.h>
 
 // An opaque struct
 typedef struct database_s database_t;
