@@ -9,7 +9,6 @@ pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 pkg_check_modules(NOTIFY REQUIRED libnotify)
 find_package(LibZip REQUIRED)
 find_package(CURL REQUIRED)
-find_package(yyjson REQUIRED)
 
 set(CMAKE_C_COMPILER gcc)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -34,13 +33,13 @@ set(SRCS
         src/dictpopup.c
         src/platformdep.c
         src/settings.c
-        src/util.c
-        src/pdjson.c)
+        src/util.c)
 
 set(JPPRON_SRCS
         src/jppron/jppron.c
         src/jppron/database.c
-        src/jppron/ajt_audio_index_parser.c)
+        src/jppron/ajt_audio_index_parser.c
+	src/yyjson.c)
 
 # ##############################################################################
 # dictpopup
@@ -53,20 +52,20 @@ target_include_directories(
 target_link_directories(dictpopup PRIVATE ${GTK3_LIBRARY_DIRS}
         ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
 target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
-        ${CURL_LIBRARIES} -lmecab -llmdb -lyyjson)
+        ${CURL_LIBRARIES} -lmecab -llmdb)
 
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
 add_executable(dictpopup-create src/dictpopup_create.c ${SRCS}
-        src/yomichan_parser.c
+	src/yyjson.c
         src/yomichan_parser.c)
 target_include_directories(
         dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-create PRIVATE ${GTK3_LIBRARY_DIRS}
         ${LIBZIP_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
 target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb
-        ${CURL_LIBRARIES} -lmecab -lyyjson)
+        ${CURL_LIBRARIES} -lmecab)
 
 # ##############################################################################
 # cli
@@ -94,7 +93,6 @@ if (BUILD_TESTING)
             src/deinflector.c
             src/util.c
             tests/yomichan_parser_tests.c
-            src/pdjson.c
             src/db.c
             src/platformdep.c
             tests/ajt_audio_index_parser_tests.c)
@@ -108,8 +106,7 @@ if (BUILD_TESTING)
             ${CURL_LIBRARIES}
             -llmdb
             -lmecab
-            -lzip
-            -lyyjson)
+            -lzip)
     add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
 
     #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)

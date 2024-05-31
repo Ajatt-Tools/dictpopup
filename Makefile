@@ -94,9 +94,10 @@ ALL_C_SOURCES := $(wildcard src/*.c)
 ALL_H_SOURCES := $(wildcard include/*.h)
 
 c_analyse_targets := $(ALL_C_SOURCES:%=%-analyse)
-c_analyse_targets := $(filter-out src/pdjson.c-analyse, $(c_analyse_targets))
+c_analyse_targets := $(filter-out src/yyjson.c-analyse, $(c_analyse_targets))
 
 h_analyse_targets := $(ALL_H_SOURCES:%=%-analyse)
+h_analyse_targets := $(filter-out include/yyjson.h-analyse, $(h_analyse_targets))
 
 analyse: CFLAGS+=$(DEBUG_CFLAGS)
 analyse: $(c_analyse_targets) $(h_analyse_targets)
@@ -133,7 +134,7 @@ $(h_analyse_targets): %-analyse:
 		--suppress=missingIncludeSystem --suppress=unmatchedSuppression \
 		--suppress=unreadVariable --suppress=constParameterCallback \
 		--suppress=constVariablePointer --suppress=constParameterPointer \
-		--suppress=unusedFunction \
+		--suppress=unusedFunction --suppress=*:include/yyjson.h \
 		--max-ctu-depth=32 --error-exitcode=1
 	# clang-analyzer-unix.Malloc does not understand _drop_()
 	clang-tidy $< --quiet -checks=-clang-analyzer-unix.Malloc -- -std=gnu99 -I$(IDIR) $(shell pkg-config --cflags gtk+-3.0)
