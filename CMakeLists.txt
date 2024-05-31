@@ -9,6 +9,7 @@ pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 pkg_check_modules(NOTIFY REQUIRED libnotify)
 find_package(LibZip REQUIRED)
 find_package(CURL REQUIRED)
+find_package(yyjson REQUIRED)
 
 set(CMAKE_C_COMPILER gcc)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -28,20 +29,23 @@ add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER}
         ${LIBZIP_DEFINITIONS} ${CURL_DEFINITIONS})
 set(SRCS
         src/ankiconnectc.c
-        src/database.c
         src/db.c
         src/deinflector.c
         src/dictpopup.c
-        src/jppron.c
         src/platformdep.c
         src/settings.c
         src/util.c
         src/pdjson.c)
 
+set(JPPRON_SRCS
+        src/jppron/jppron.c
+        src/jppron/database.c
+        src/jppron/ajt_audio_index_parser.c)
+
 # ##############################################################################
 # dictpopup
 # ##############################################################################
-add_executable(dictpopup src/frontends/gtk3popup.c ${SRCS})
+add_executable(dictpopup src/frontends/gtk3popup.c ${SRCS} ${JPPRON_SRCS})
 target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS)
 target_include_directories(
         dictpopup PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
@@ -49,7 +53,7 @@ target_include_directories(
 target_link_directories(dictpopup PRIVATE ${GTK3_LIBRARY_DIRS}
         ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
 target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
-        ${CURL_LIBRARIES} -lmecab -llmdb)
+        ${CURL_LIBRARIES} -lmecab -llmdb -lyyjson)
 
 # ##############################################################################
 # dictpopup-create
@@ -92,9 +96,10 @@ if (BUILD_TESTING)
             tests/yomichan_parser_tests.c
             src/pdjson.c
             src/db.c
-            src/platformdep.c)
+            src/platformdep.c
+            tests/ajt_audio_index_parser_tests.c)
     target_compile_definitions(c_tests PRIVATE UNIT_TEST)
-    target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/)
+    target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/ src/jppron)
     target_link_libraries(
             c_tests
             PRIVATE ${CGREEN_LIBRARIES}

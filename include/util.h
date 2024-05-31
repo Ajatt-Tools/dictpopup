@@ -24,7 +24,7 @@ typedef __PTRDIFF_TYPE__ size;
     (__builtin_choose_expr(!__builtin_types_compatible_p(typeof(x), typeof(&*(x))),                \
                            sizeof(x) / sizeof((x)[0]), (void)0 /* decayed, compile error */))
 
-#define expect(x)                                                                                  \
+#define assume(x)                                                                                  \
     do {                                                                                           \
         if (!__builtin_expect(!!(x), 1)) {                                                         \
             fprintf(stderr, "FATAL: !(%s) at %s:%s:%d\n", #x, __FILE__, __func__, __LINE__);       \

@@ -17,13 +17,13 @@ const u8 utf8_chr_len_data[] = {
 
 void *xcalloc(size_t num, size_t nbytes) {
     void *p = calloc(num, nbytes);
-    expect(p);
+    assume(p);
     return p;
 }
 
 void *xrealloc(void *ptr, size_t nbytes) {
     void *p = realloc(ptr, nbytes);
-    expect(p);
+    assume(p);
     return p;
 }
 
@@ -285,7 +285,7 @@ void sb_append(stringbuilder_s *b, s8 str) {
     if (b->cap < b->len + str.len) {
         while (b->cap < b->len + str.len) {
             b->cap *= 2;
-            expect(b->cap > 0); // Integer overflow check
+            assume(b->cap > 0); // Integer overflow check
         }
 
         b->data = xrealloc(b->data, b->cap);
@@ -354,7 +354,7 @@ size_t snprintf_safe(char *buf, size_t len, const char *fmt, ...) {
     va_start(args, fmt);
     int needed = vsnprintf(buf, len, fmt, args);
     va_end(args);
-    expect(needed >= 0 && (size_t)needed < len);
+    assume(needed >= 0 && (size_t)needed < len);
     return (size_t)needed;
 }
 

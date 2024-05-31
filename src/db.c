@@ -145,7 +145,7 @@ static u32 *getids(const database_t *db, s8 word, size_t *num) {
     C(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE));
 
     *num = val_mdb.mv_size / sizeof(u32);
-    expect(*num * sizeof(u32) == val_mdb.mv_size); // divides cleanly
+    assume(*num * sizeof(u32) == val_mdb.mv_size); // divides cleanly
     u32 *ret = new (u32, *num);
     memcpy(ret, val_mdb.mv_data, val_mdb.mv_size); // ensures proper alignment
     return ret;
@@ -172,7 +172,7 @@ static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
     C(rc);
 
     u32 freq;
-    expect(sizeof(freq) == val_m.mv_size);
+    assume(sizeof(freq) == val_m.mv_size);
     memcpy(&freq, val_m.mv_data, val_m.mv_size); // ensures proper alignment
     return freq;
 }
@@ -185,7 +185,7 @@ static dictentry data_to_dictent(const database_t *db, s8 data) {
 
     s8 data_split[4] = {0};
     for (size_t i = 0; i < arrlen(data_split); i++) {
-        expect(data.len >= 0);
+        assume(data.len >= 0);
 
         size len = 0;
         while (len < data.len && data.s[len] != '\0')
