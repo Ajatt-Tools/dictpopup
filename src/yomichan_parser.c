@@ -221,11 +221,11 @@ static dictentry parse_dictionary_entry(yyjson_val *arr) {
     de.definition = parse_definition(val);
 
     // seventh
-    val = unsafe_yyjson_get_next(val);
+    unsafe_yyjson_get_next(val);
     // Skip
 
     // eighth
-    val = unsafe_yyjson_get_next(val);
+    unsafe_yyjson_get_next(val);
     // Skip
 
     return de;
