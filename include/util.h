@@ -9,7 +9,7 @@ typedef unsigned char u8;
 typedef signed int b32;
 typedef signed int i32;
 typedef unsigned int u32;
-typedef __PTRDIFF_TYPE__ size;
+typedef __PTRDIFF_TYPE__ isize;
 
 #define assert(c)                                                                                  \
     while (!(c))                                                                                   \
@@ -55,16 +55,16 @@ __attribute__((malloc, returns_nonnull)) void *xrealloc(void *ptr, size_t size);
 
 typedef struct {
     u8 *s;
-    size len;
+    isize len;
 } s8;
 
 /*
  * Allocates a new s8 with length @len
  * The containing string is null-terminated
  */
-s8 news8(size len);
+s8 news8(isize len);
 
-i32 u8compare(u8 *a, u8 *b, size n);
+i32 u8compare(u8 *a, u8 *b, isize n);
 /*
  * Copies @src into @dst returning the remaining portion of @dst
  */
@@ -83,10 +83,10 @@ s8 fromcstr_(char *z);
  */
 i32 s8equals(s8 a, s8 b);
 
-s8 cuthead(s8 s, size off);
-s8 takehead(s8 s, size len);
-s8 cuttail(s8 s, size len);
-s8 taketail(s8 s, size len);
+s8 cuthead(s8 s, isize off);
+s8 takehead(s8 s, isize len);
+s8 cuttail(s8 s, isize len);
+s8 taketail(s8 s, isize len);
 b32 startswith(s8 s, s8 prefix);
 b32 endswith(s8 s, s8 suffix);
 
@@ -136,8 +136,8 @@ s8 _nonnull_ buildpath_(s8 *pathcomps);
 /* --------------------------- string builder -----------------------_ */
 typedef struct {
     u8 *data;
-    size len;
-    size cap;
+    isize len;
+    isize cap;
 } stringbuilder_s;
 
 stringbuilder_s sb_init(size_t init_cap);
@@ -163,9 +163,9 @@ dictentry dictentry_dup(dictentry de);
 void _nonnull_ dictentry_free(dictentry *de);
 void dictentry_print(dictentry de);
 void _nonnull_ dictionary_add(dictentry **dict, dictentry de);
-size dictlen(dictentry *dict);
+isize dictlen(dictentry *dict);
 void _nonnull_ dictionary_free(dictentry **dict);
-dictentry dictentry_at_index(dictentry *dict, size index);
+dictentry dictentry_at_index(dictentry *dict, isize index);
 /* --------------------- End dictentry ------------------------ */
 
 /* --------------------- Start freqentry ----------------- */

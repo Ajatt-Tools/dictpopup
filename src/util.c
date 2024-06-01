@@ -28,7 +28,7 @@ void *xrealloc(void *ptr, size_t nbytes) {
 }
 
 /* --------------- Start s8 utils -------------- */
-i32 u8compare(u8 *restrict a, u8 *restrict b, size n) {
+i32 u8compare(u8 *restrict a, u8 *restrict b, isize n) {
     for (; n; n--) {
         i32 d = *a++ - *b++;
         if (d)
@@ -51,7 +51,7 @@ s8 s8copy(s8 dst, s8 src) {
     return dst;
 }
 
-s8 news8(size len) {
+s8 news8(isize len) {
     assert(len >= 0);
     return (s8){.s = new (u8, len + 1), // Include NULL terminator
                 .len = len};
@@ -79,7 +79,7 @@ i32 s8equals(s8 a, s8 b) {
     return a.len == b.len && !u8compare(a.s, b.s, a.len);
 }
 
-s8 cuthead(s8 s, size off) {
+s8 cuthead(s8 s, isize off) {
     assert(off >= 0);
     assert(off <= s.len);
     s.s += off;
@@ -87,21 +87,21 @@ s8 cuthead(s8 s, size off) {
     return s;
 }
 
-s8 takehead(s8 s, size len) {
+s8 takehead(s8 s, isize len) {
     assert(len >= 0);
     assert(len <= s.len);
     s.len = len;
     return s;
 }
 
-s8 cuttail(s8 s, size len) {
+s8 cuttail(s8 s, isize len) {
     assert(len >= 0);
     assert(len <= s.len);
     s.len -= len;
     return s;
 }
 
-s8 taketail(s8 s, size len) {
+s8 taketail(s8 s, isize len) {
     return cuthead(s, s.len - len);
 }
 
@@ -123,7 +123,7 @@ s8 s8striputf8chr(s8 s) {
 }
 
 s8 unescape(s8 str) {
-    size s = 0, e = 0;
+    isize s = 0, e = 0;
     while (e < str.len) {
         if (str.s[e] == '\\' && e + 1 < str.len) {
             switch (str.s[e + 1]) {
@@ -155,7 +155,7 @@ s8 unescape(s8 str) {
 }
 
 s8 concat_(s8 *strings) {
-    size len = 0;
+    isize len = 0;
     for (s8 *s = strings; !s8equals(*s, S8_STOPPER); s++)
         len += s->len;
 
@@ -173,7 +173,7 @@ s8 buildpath_(s8 *pathcomps) {
 #else
     s8 sep = S("/");
 #endif
-    size pathlen = 0;
+    isize pathlen = 0;
     bool first = true;
     for (s8 *pc = pathcomps; !s8equals(*pc, S8_STOPPER); pc++) {
         if (!first)
@@ -251,7 +251,7 @@ void dictionary_add(dictentry **dict, dictentry de) {
     buf_push(*dict, de);
 }
 
-size dictlen(dictentry *dict) {
+isize dictlen(dictentry *dict) {
     return buf_size(dict);
 }
 
@@ -268,7 +268,7 @@ void dictionary_free(dictentry **dict) {
     buf_free(*dict);
 }
 
-dictentry dictentry_at_index(dictentry *dict, size index) {
+dictentry dictentry_at_index(dictentry *dict, isize index) {
     assert(index >= 0 && (size_t)index < buf_size(dict));
     return dict[index];
 }

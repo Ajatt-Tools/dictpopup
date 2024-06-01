@@ -188,7 +188,7 @@ static dictentry data_to_dictent(const database_t *db, s8 data) {
     for (size_t i = 0; i < arrlen(data_split); i++) {
         assume(data.len >= 0);
 
-        size len = 0;
+        isize len = 0;
         while (len < data.len && data.s[len] != '\0')
             len++;
         data_split[i] = news8(len);

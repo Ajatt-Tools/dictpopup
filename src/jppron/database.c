@@ -109,7 +109,7 @@ static fileinfo convert_data_to_fileinfo(s8 data) {
     for (long unsigned int i = 0; i < arrlen(data_split) && data.len > 0; i++) {
         assert(data.len > 0);
 
-        size len = 0;
+        isize len = 0;
         while (len < data.len && data.s[len] != '\0')
             len++;
 

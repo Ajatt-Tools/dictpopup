@@ -26,7 +26,7 @@ static gboolean dict_data_ready = FALSE;
 
 static dictentry *dict = NULL;
 static dictentry curent = {0};
-static size curent_num = 0;
+static isize curent_num = 0;
 
 static GtkWidget *window = NULL;
 static GtkWidget *dict_tw;
