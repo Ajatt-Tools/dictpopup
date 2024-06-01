@@ -3,6 +3,8 @@
 
 #include "ajt_audio_index_parser.c"
 
+#define AUDIO_INDICES_DIR "../tests/files/audio_indices"
+
 TestSuite *ajt_audio_index_parser_tests(void);
 
 Describe(AudioIndexParser);
@@ -25,15 +27,15 @@ static void foreach_file(void *userdata, s8 fullpath, fileinfo fi) {
 }
 
 Ensure(AudioIndexParser, correctly_parses_nhk2016_entry) {
-    s8 curdir = S("../tests/files/testentries/audio_index_1");
-    char *fn = "../tests/files/testentries/audio_index_1";
+    s8 curdir = S(AUDIO_INDICES_DIR);
+    char *fn = AUDIO_INDICES_DIR "/audio_index_1";
 
     expect(foreach_headword,
         when(headword.s, is_equal_to_string("静か")),
-        when(fullpath.s, is_equal_to_string("../tests/files/testentries/audio_index_1/media/20171018162916.ogg"))
+        when(fullpath.s, is_equal_to_string(AUDIO_INDICES_DIR "/media/20171018162916.ogg"))
         );
     expect(foreach_file,
-        when(fullpath.s, is_equal_to_string("../tests/files/testentries/audio_index_1/media/20171018162916.ogg")),
+        when(fullpath.s, is_equal_to_string(AUDIO_INDICES_DIR "/media/20171018162916.ogg")),
         when(fi.origin.s, is_equal_to_string("NHK日本語発音アクセント新辞典")),
         when(fi.hira_reading.s, is_equal_to_string("しずか")),
         when(fi.pitch_number.s, is_equal_to_string("1")),

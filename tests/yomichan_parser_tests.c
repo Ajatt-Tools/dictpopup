@@ -1,9 +1,10 @@
 #include <cgreen/cgreen.h>
+#include <cgreen/mocks.h>
 #include <glib.h>
 
 #include "yomichan_parser.c"
 
-#include <cgreen/mocks.h>
+#define DICTENTRIES_DIR "../tests/files/dictionary_entries"
 
 TestSuite *yomichan_parser_tests(void);
 
@@ -24,11 +25,11 @@ static _nonnull_ void foreach_dictentry(void *userdata, dictentry de) {
 #define CHECK_NR(n)                                                                                \
     do {                                                                                           \
         s8 toparse = {0};                                                                          \
-        g_file_get_contents("../tests/files/testentries/" #n "_entry", (char **)&toparse.s,        \
+        g_file_get_contents(DICTENTRIES_DIR "/" #n "_entry", (char **)&toparse.s,        \
                             (gsize *)&toparse.len, NULL);                                          \
                                                                                                    \
         s8 expected = {0};                                                                         \
-        g_file_get_contents("../tests/files/testentries/" #n "_expected", (char **)&expected.s,    \
+        g_file_get_contents(DICTENTRIES_DIR "/" #n "_expected", (char **)&expected.s,    \
                             (gsize *)&expected.len, NULL);                                         \
         g_strchomp((char *)expected.s);                                                            \
                                                                                                    \
