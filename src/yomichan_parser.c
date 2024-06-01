@@ -1,10 +1,10 @@
 #include "yomichan_parser.h"
 
-#include <yyjson.h>
 #include <zip.h>
 
 #include "messages.h"
 #include "util.h"
+#include "yyjson.h"
 
 DEFINE_DROP_FUNC(struct zip_file *, zip_fclose)
 DEFINE_DROP_FUNC(yyjson_doc *, yyjson_doc_free)

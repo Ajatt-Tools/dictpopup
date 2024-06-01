@@ -5,7 +5,7 @@
 #include <libgen.h>
 #include <messages.h>
 #include <util.h>
-#include <yyjson.h>
+#include "yyjson.h"
 
 typedef struct {
     s8 root_path;
@@ -111,7 +111,7 @@ void parse_audio_index_from_file(s8 curdir, const char *index_filepath,
 
     yyjson_read_err error;
     _drop_(yyjson_doc_free) yyjson_doc *doc = yyjson_read_fp(index_fp, 0, NULL, &error);
-    err_ret_on(!doc, "index.json read error: %s code: %u at position: %ld\n", error.msg, error.code,
+    err_ret_on(!doc, "index.json read error: %s code: %u at position: %zu\n", error.msg, error.code,
                error.pos);
 
     yyjson_val *rootobj = yyjson_doc_get_root(doc);
@@ -136,7 +136,6 @@ void parse_audio_index_from_file(s8 curdir, const char *index_filepath,
         }
         else if (s8equals(s8key, S("files"))) {
             err_ret_on(!seen_meta, "Index in '%s' orders \"files\" before \"meta\". This is not supported yet.", index_filepath);
-            __attribute__((unused)) const char * type = yyjson_get_type_desc(objval);
             parse_files(objval, im, foreach_file, userdata_f);
         }
     }

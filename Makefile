@@ -19,7 +19,7 @@ DEBUG_CFLAGS = -DDEBUG \
 RELEASE_CFLAGS = -Ofast -flto -march=native
 NOTIF_CFLAGS := -DNOTIFICATIONS $(shell pkg-config --cflags libnotify) $(shell pkg-config --libs libnotify)
 NOTIF_LIBS := $(shell pkg-config --libs libnotify)
-LDLIBS +=-lcurl -lmecab $(shell pkg-config --libs gtk+-3.0) -llmdb -lzip -lyyjson
+LDLIBS +=-lcurl -lmecab $(shell pkg-config --libs gtk+-3.0) -llmdb -lzip
 
 O_HAVEX11 := 1  # X11 integration
 ifeq ($(strip $(O_HAVEX11)),1)
@@ -27,14 +27,23 @@ ifeq ($(strip $(O_HAVEX11)),1)
 	LDLIBS += -lXfixes -lX11
 endif
 
-
-FILES = dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
-FILES_H = ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
-SRC = $(addprefix $(SDIR)/,$(FILES))
 SRC_H = $(addprefix $(IDIR)/,$(FILES_H))
 
-FILES_CREATE = db.c pdjson.c util.c platformdep.c yomichan_parser.c
-FILES_H_CREATE = db.h pdjson.h util.h buf.h platformdep.h
+SRCS = src/ankiconnectc.c \
+       src/db.c \
+       src/deinflector.c \
+       src/dictpopup.c \
+       src/platformdep.c \
+       src/settings.c \
+       src/util.c
+
+SRCS_JPPRON = src/jppron/jppron.c \
+	      src/jppron/database.c \
+	      src/jppron/ajt_audio_index_parser.c \
+	      src/yyjson.c
+
+FILES_CREATE = db.c util.c platformdep.c yomichan_parser.c yyjson.c
+FILES_H_CREATE = db.h util.h buf.h platformdep.h yyjson.h
 SRC_CREATE = $(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
 SRC_H_CREATE = $(addprefix $(IDIR)/,$(FILES_H_CREATE))
 
@@ -46,14 +55,14 @@ all: CFLAGS+=$(RELEASE_CFLAGS)
 debug: $(bins)
 debug: CFLAGS+=$(DEBUG_CFLAGS)
 
-dictpopup: $(SRC) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRC) $(LDLIBS) $(NOTIF_LIBS)
+dictpopup: $(SRCS) $(SRCS_JPPRON) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRCS) $(SRCS_JPPRON) $(LDLIBS) $(NOTIF_LIBS)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE) $(SDIR)/dictpopup_create.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS)
 
 cli: $(SRC) $(SRC_H) $(SDIR)/frontends/cli.c
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/frontends/cli.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/frontends/cli.c $(SRCS) $(LDLIBS)
 
 deinflector: $(SRC) $(SRC_H) $(SDIR)/deinflector.c
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/util.c $(LDLIBS)

@@ -95,6 +95,7 @@ if (BUILD_TESTING)
             tests/yomichan_parser_tests.c
             src/db.c
             src/platformdep.c
+            src/yyjson.c
             tests/ajt_audio_index_parser_tests.c)
     target_compile_definitions(c_tests PRIVATE UNIT_TEST)
     target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/ src/jppron)
