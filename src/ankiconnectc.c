@@ -177,8 +177,9 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
 }
 
 bool ac_check_connection(void) {
-    //TODO
-    return 0;
+    s8 req = S("{\"action\": \"version\", \"version\": 6}");
+    retval_s ret = sendRequest(req, NULL);
+    return ret.ok;
 }
 
 static s8 form_search_req(bool include_suspended, bool include_new, char *deck, char *field,
