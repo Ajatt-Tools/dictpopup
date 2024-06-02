@@ -61,7 +61,7 @@ static s8 create_furigana(s8 kanji, s8 reading) {
 static void fill_entries(possible_entries_s pe[static 1], dictentry const de) {
     if (cfg.anki.copySentence) {
         msg("Please select the context.");
-        pe->copiedsent = get_sentence();
+        pe->copiedsent = get_next_clipboard();
         if (cfg.anki.nukeWhitespaceSentence)
             nuke_whitespace(&pe->copiedsent);
 

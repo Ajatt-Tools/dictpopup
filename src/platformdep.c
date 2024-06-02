@@ -44,7 +44,7 @@ s8 get_selection(void) {
 }
 
 /* -- Sentence -- */
-static s8 get_clipboard(void) {
+s8 get_clipboard(void) {
     gtk_init(NULL, NULL);
     GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     return fromcstr_(gtk_clipboard_wait_for_text(clipboard));
@@ -65,7 +65,7 @@ static void wait_cb_change(void) {
  * Wait until clipboard changes and return new clipboard contents.
  * Can return NULL.
  */
-s8 get_sentence(void) {
+s8 get_next_clipboard(void) {
     wait_cb_change();
     return get_clipboard();
 }

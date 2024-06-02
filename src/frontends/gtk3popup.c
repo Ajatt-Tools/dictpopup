@@ -187,30 +187,74 @@ static void close_window(void) {
     gtk_widget_destroy(window);
 }
 
-static void add_anki(GtkWidget *widget, gpointer user_data) {
+static bool check_can_add_to_anki(void) {
     if (!ac_check_connection()) {
         err("Cannot connect to Anki. Is Anki running?");
-        return;
+        return false;
     }
     g_mutex_lock(&vars_mutex);
     if (!dict_data_ready) {
         err("Cannot create AnkiCard when still loading.");
-        return;
+        return false;
     }
     g_mutex_unlock(&vars_mutex);
+    return true;
+}
 
-    window_ret_s *r = user_data;
-    r->create_ac = true;
-    r->de = dictentry_dup(curent);
+static void add_anki_from_clipboard(GtkWidget *widget, gpointer data) {
+    if (!check_can_add_to_anki())
+        return;
+
+    window_ret_s *ret = data;
+    ret->create_ac = true;
+    ret->de = dictentry_dup(curent);
+
+    s8 clip = get_clipboard();
+    frees8(&ret->de.definition);
+    ret->de.definition = clip;
+
+    close_window();
+}
+
+static void prepare_add_to_anki(window_ret_s *ret) {
+
+    ret->create_ac = true;
+    ret->de = dictentry_dup(curent);
 
     // Use text selection instead if existing
     GtkTextIter start, end;
     if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end)) {
-        frees8(&r->de.definition);
-        r->de.definition = fromcstr_(gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE));
+        frees8(&ret->de.definition);
+        ret->de.definition =
+            fromcstr_(gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE));
     }
+}
 
-    close_window();
+static void show_add_anki_button_menu(GtkWidget *button, window_ret_s *ret) {
+    GtkWidget *menu = gtk_menu_new();
+
+    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add from clipboard");
+    g_signal_connect(menu_item, "activate", G_CALLBACK(add_anki_from_clipboard), ret);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+
+    gtk_widget_show_all(menu);
+    gtk_menu_popup_at_widget(GTK_MENU(menu), button, GDK_GRAVITY_SOUTH, GDK_GRAVITY_WEST, NULL);
+}
+
+static gboolean anki_button_pressed(GtkWidget *widget, GdkEventButton *event, gpointer data) {
+    if (event->type == GDK_BUTTON_PRESS) {
+        if (event->button == GDK_BUTTON_SECONDARY) {
+            show_add_anki_button_menu(widget, (window_ret_s *)data);
+            return TRUE;
+        } else if (event->button == GDK_BUTTON_PRIMARY) {
+            if (check_can_add_to_anki()) {
+                prepare_add_to_anki((window_ret_s *)data);
+                close_window();
+            }
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 static gboolean key_press_on_win(GtkWidget *win, GdkEventKey *event, gpointer user_data) {
@@ -221,7 +265,10 @@ static gboolean key_press_on_win(GtkWidget *win, GdkEventKey *event, gpointer us
             return TRUE;
         case GDK_KEY_s:
             if (event->state & GDK_CONTROL_MASK) {
-                add_anki(win, user_data);
+                if (check_can_add_to_anki()) {
+                    prepare_add_to_anki((window_ret_s *)user_data);
+                    close_window();
+                }
                 return TRUE;
             } // else fallthrough
         case GDK_KEY_n:
@@ -258,7 +305,7 @@ static void move_win_to_mouse_ptr(void) {
 static void search_in_anki_browser(void) {
     char *errormsg = NULL;
     ac_gui_search(cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s, &errormsg);
-    if(errormsg) {
+    if (errormsg) {
         err("%s", errormsg);
         free(errormsg);
     }
@@ -298,9 +345,10 @@ static void activate(GtkApplication *app, gpointer user_data) {
     g_signal_connect(btn_l, "clicked", G_CALLBACK(change_de), GINT_TO_POINTER(-1));
     gtk_box_pack_start(GTK_BOX(top_bar), btn_l, FALSE, FALSE, 0);
 
+    // Add to anki button
     if (cfg.anki.enabled) {
         GtkWidget *btn_add_anki = gtk_button_new_from_icon_name("list-add-symbolic", 2);
-        g_signal_connect(btn_add_anki, "clicked", G_CALLBACK(add_anki), ret);
+        g_signal_connect(btn_add_anki, "button-press-event", G_CALLBACK(anki_button_pressed), ret);
         gtk_box_pack_start(GTK_BOX(top_bar), btn_add_anki, FALSE, FALSE, 0);
     }
 
@@ -411,6 +459,7 @@ int main(int argc, char *argv[]) {
     if (ret.create_ac)
         create_ankicard(d, ret.de);
 
+    dictentry_free(&ret.de);
     dictionary_free(&dict);
     dictpopup_free(&d);
 }
