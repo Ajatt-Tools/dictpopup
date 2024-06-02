@@ -113,10 +113,10 @@ static size_t search_checker(char *ptr, size_t size, size_t nmemb, void *userdat
     *ret = (retval_s){.data.boolean = !s8equals(resp, S("{\"result\": [], \"error\": null}")),
                       .ok = true};
 
-    return nmemb;
+    return size * nmemb;
 }
 
-static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *userdata) {
+static size_t check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata) {
     assert(userdata);
     retval_s *ret = userdata;
     s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
@@ -128,7 +128,7 @@ static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *user
         *ret = (retval_s){.data.string = err, .ok = false};
     }
 
-    return nmemb;
+    return size * nmemb;
 }
 /* ------- End Callback functions ----------- */
 
