@@ -27,11 +27,6 @@ enum tag_type { TAG_UNKNOWN, TAG_DIV, TAG_SPAN, TAG_UL, TAG_OL, TAG_LI, TAG_RUBY
 static void append_definition(yyjson_val *val, stringbuilder_s sb[static 1], s8 liststyle,
                               i32 listdepth, bool first);
 
-static void frequency_entry_free(freqentry *fe) {
-    frees8(&(fe->word));
-    frees8(&(fe->reading));
-}
-
 static s8 yyjson_get_s8(yyjson_val *val) {
     return (s8){.s = (u8 *)yyjson_get_str(val), .len = yyjson_get_len(val)};
 }
