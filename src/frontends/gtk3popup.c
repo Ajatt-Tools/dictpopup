@@ -53,7 +53,7 @@ static void anki_check_exists(void) {
         ac_check_exists(cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s, &errormsg);
 
     if (errormsg) {
-        err(errormsg);
+        err("%s", errormsg);
         free(errormsg);
         return;
     }
@@ -259,7 +259,7 @@ static void search_in_anki_browser(void) {
     char *errormsg = NULL;
     ac_gui_search(cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s, &errormsg);
     if(errormsg) {
-        err(errormsg);
+        err("%s", errormsg);
         free(errormsg);
     }
 }
