@@ -99,7 +99,13 @@ static char **json_escape_str_array(int n, const char **array) {
 }
 
 /* ------ Callback functions ------ */
-static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata) {
+static size_t noop_write_function(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    (void)ptr; // Suppress unused parameter warning
+    (void)userdata;
+    return size * nmemb;
+}
+
+static size_t search_checker(char *ptr, size_t size, size_t nmemb, void *userdata) {
     assert(userdata);
     retval_s *ret = userdata;
     s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
@@ -163,6 +169,8 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     if (response_checker) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_checker);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
+    } else {
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, noop_write_function);
     }
 
     CURLcode res = curl_easy_perform(curl);
