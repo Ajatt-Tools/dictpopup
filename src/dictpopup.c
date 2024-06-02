@@ -158,16 +158,20 @@ void create_ankicard(dictpopup_t d, dictentry de) {
     for (size_t i = 0; i < cfg.anki.numFields; i++)
         fieldentries[i] = (char *)map_entry(p, cfg.anki.fieldMapping[i]).s;
 
-    retval_s ac_resp = ac_addNote((ankicard){.deck = cfg.anki.deck,
-                                             .notetype = cfg.anki.notetype,
-                                             .num_fields = cfg.anki.numFields,
-                                             .fieldnames = cfg.anki.fieldnames,
-                                             .fieldentries = fieldentries});
+    char *error = NULL;
+    ankicard ac = {.deck = cfg.anki.deck,
+                   .notetype = cfg.anki.notetype,
+                   .num_fields = cfg.anki.numFields,
+                   .fieldnames = cfg.anki.fieldnames,
+                   .fieldentries = fieldentries};
+    ac_addNote(ac, &error);
 
-    if (ac_resp.ok)
-        msg("Successfully added card.");
+    if (error) {
+        err("Error adding card: %s", error);
+        free(error);
+    }
     else
-        err("Error adding card: %s", ac_resp.data.string);
+        msg("Successfully added card.");
 }
 
 static s8 convert_to_utf8(char *str) {

@@ -13,6 +13,16 @@
 
 typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
 
+typedef struct {
+    union {
+        char *string;
+        char **stringv;
+        _Bool boolean;
+    } data;
+    _Bool ok; // Signalizes if there was an error on not. The error msg is
+    // stored in data.string
+} retval_s;
+
 static int get_array_len(const char *array[static 1]) {
     int n = 0;
     while (*array++)
@@ -94,7 +104,7 @@ static size_t search_checker(char *ptr, size_t len, size_t nmemb, void *userdata
     retval_s *ret = userdata;
     s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
 
-    *ret = (retval_s){.data.boolean = startswith(resp, S("{\"result\": [], \"error\": null}")),
+    *ret = (retval_s){.data.boolean = !s8equals(resp, S("{\"result\": [], \"error\": null}")),
                       .ok = true};
 
     return nmemb;
@@ -110,7 +120,6 @@ static size_t check_add_response(char *ptr, size_t len, size_t nmemb, void *user
     else {
         char *err = (char *)s8dup(resp).s;
         *ret = (retval_s){.data.string = err, .ok = false};
-        // TODO: This is a memory leak
     }
 
     return nmemb;
@@ -137,7 +146,7 @@ static const char *get_api_url(void) {
 static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     CURL *curl = curl_easy_init();
     if (!curl)
-        return (retval_s){.data.string = "Error initializing cURL", .ok = false};
+        return (retval_s){.data.string = strdup("Error initializing cURL"), .ok = false};
 
     struct curl_slist *headers = NULL;
     headers = curl_slist_append(headers, "Accept: application/json");
@@ -158,7 +167,7 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
-        ret = (retval_s){.data.string = "Could not connect to AnkiConnect. Is Anki running?",
+        ret = (retval_s){.data.string = strdup("Could not connect to AnkiConnect. Is Anki running?"),
                          .ok = false};
     }
 
@@ -167,25 +176,64 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     return ret;
 }
 
-static s8 form_search_req(bool include_suspended, char *deck, char *field, char *entry) {
+bool ac_check_connection(void) {
+    //TODO
+    return 0;
+}
+
+static s8 form_search_req(bool include_suspended, bool include_new, char *deck, char *field,
+                          char *entry) {
     return concat(S("{ \"action\": \"findCards\", \"version\": 6, \"params\": "
                     "{ \"query\" : \"\\\""),
                   fromcstr_(deck ? "deck:" : ""), fromcstr_(deck ? deck : ""), S("\\\" \\\""),
-                  fromcstr_(field), S(":"), fromcstr_(entry), S("\\\" "),
-                  include_suspended ? S("") : S("-is:suspended"), S("\" } }"));
+                  fromcstr_(field), S(":"), fromcstr_(entry), S("\\\""),
+                  include_suspended ? S("") : S(" -is:suspended"),
+                  include_new ? S("") : S(" -is:new"),
+                  S("\" } }"));
 }
 
-/*
- * @entry: The entry to search for
- * @field: The field where @entry should be searched in.
- * @deck: The deck to search in. Can be null.
- *
- * Returns: Error msg on error, null otherwise
- */
-retval_s ac_search(bool include_suspended, char *deck, char *field, char *entry) {
+static int ac_check_exists_with(bool include_suspended, bool include_new, char *deck, char *field,
+                                 char *str, char **error) {
+    _drop_(frees8) s8 req = form_search_req(include_suspended, include_new, deck, field, str);
+    retval_s r = sendRequest(req, search_checker);
+    if (!r.ok) {
+        *error = r.data.string;
+        return -1;
+    }
 
-    _drop_(frees8) s8 req = form_search_req(include_suspended, deck, field, entry);
-    return sendRequest(req, search_checker);
+    return r.data.boolean ? 1 : 0;
+}
+
+/**
+ * @deck: The deck to search in. Can be null.
+ * @field: The field where @entry should be searched in.
+ * @str: The string to search for
+ *
+ * Returns: 1 if cards with @str as @field exist, which are not suspended and not nerw
+ *          2 if there are new cards with @str as @field (and maybe also suspended cards)
+ *          3 if there are only suspended cards with @str as @field
+ *          -1 on error
+ */
+int ac_check_exists(char *deck, char *field, char *str, char **error) {
+    int rc = ac_check_exists_with(false, false, deck, field, str, error);
+    if (rc == -1)
+        return -1;
+    if (rc == 1)
+        return 1;
+
+    rc = ac_check_exists_with(false, true, deck, field, str, error);
+    if (rc == -1)
+        return -1;
+    if (rc == 1)
+        return 2;
+
+    rc = ac_check_exists_with(true, true, deck, field, str, error);
+    if (rc == -1)
+        return -1;
+    if (rc == 1)
+        return 3;
+
+    return 0;
 }
 
 static s8 form_gui_search_req(const char *deck, const char *field, const char *entry) {
@@ -195,15 +243,17 @@ static s8 form_gui_search_req(const char *deck, const char *field, const char *e
         fromcstr_((char *)field), S(":"), fromcstr_((char *)entry), S("\\\"\" } }"));
 }
 
-retval_s ac_gui_search(const char *deck, const char *field, const char *entry) {
+void ac_gui_search(const char *deck, const char *field, const char *entry, char **error) {
 
     _drop_(frees8) s8 req = form_gui_search_req(deck, field, entry);
-    return sendRequest(req, NULL);
+    retval_s r = sendRequest(req, NULL);
+    if (!r.ok)
+        *error = r.data.string;
 }
 
-retval_s ac_get_notetypes() {
+s8 *ac_get_notetypes(char **error) {
     // TODO: Implement
-    return (retval_s){0};
+    return 0;
 }
 
 static s8 form_store_file_req(char const *filename, char const *path) {
@@ -217,10 +267,12 @@ static s8 form_store_file_req(char const *filename, char const *path) {
  * Stores the file at @path in the Anki media collection under the name
  * @filename. Doesn't overwrite existing files.
  */
-retval_s ac_store_file(char const *filename, char const *path) {
+void ac_store_file(char const *filename, char const *path, char **error) {
 
     _drop_(frees8) s8 req = form_store_file_req(filename, path);
-    return sendRequest(req, NULL); // TODO: Check error response
+    retval_s r = sendRequest(req, NULL); // TODO: Check error response
+    if(!r.ok)
+        *error = r.data.string;
 }
 
 /*
@@ -299,10 +351,13 @@ static s8 form_addNote_req(ankicard ac) {
     return sb_steals8(sb);
 }
 
-retval_s ac_addNote(ankicard const ac) {
-    if (check_card(ac))
-        return (retval_s){.data.string = check_card(ac), .ok = false};
+void ac_addNote(ankicard const ac, char **error) {
+    *error = check_card(ac);
+    if (*error)
+        return;
 
     _drop_(frees8) s8 req = form_addNote_req(ac);
-    return sendRequest(req, check_add_response);
+    retval_s r = sendRequest(req, check_add_response);
+    if(!r.ok)
+        *error = r.data.string;
 }

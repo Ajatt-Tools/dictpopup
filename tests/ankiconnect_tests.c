@@ -18,10 +18,17 @@ Ensure(AnkiConnectC, sends_correct_guiBrowse_request) {
     assert_that(received.s, is_equal_to_string((const char *)expected.s));
 }
 
-Ensure(AnkiConnectC, sends_correct_search_request) {
-    _drop_(frees8) s8 received = form_search_req(false, "Japanese", "VocabKanji", "敷衍");
+Ensure(AnkiConnectC, sends_correct_search_request_without_suspended) {
+    _drop_(frees8) s8 received = form_search_req(false, true, "Japanese", "VocabKanji", "敷衍");
     s8 expected = S(
         "{ \"action\": \"findCards\", \"version\": 6, \"params\": { \"query\" : \"\\\"deck:Japanese\\\" \\\"VocabKanji:敷衍\\\" -is:suspended\" } }");
+    assert_that(received.s, is_equal_to_string((const char *)expected.s));
+}
+
+Ensure(AnkiConnectC, sends_correct_search_request_without_new) {
+    _drop_(frees8) s8 received = form_search_req(true, false, "Japanese", "VocabKanji", "敷衍");
+    s8 expected = S(
+        "{ \"action\": \"findCards\", \"version\": 6, \"params\": { \"query\" : \"\\\"deck:Japanese\\\" \\\"VocabKanji:敷衍\\\" -is:new\" } }");
     assert_that(received.s, is_equal_to_string((const char *)expected.s));
 }
 
@@ -55,7 +62,8 @@ Ensure(AnkiConnectC, json_escapes_ankicard) {
 TestSuite *ankiconnect_tests(void) {
     TestSuite *suite = create_test_suite();
     add_test_with_context(suite, AnkiConnectC, sends_correct_guiBrowse_request);
-    add_test_with_context(suite, AnkiConnectC, sends_correct_search_request);
+    add_test_with_context(suite, AnkiConnectC, sends_correct_search_request_without_suspended);
+    add_test_with_context(suite, AnkiConnectC, sends_correct_search_request_without_new);
     add_test_with_context(suite, AnkiConnectC, json_escapes_ankicard);
     return suite;
 }

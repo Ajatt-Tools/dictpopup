@@ -8,13 +8,6 @@
 #include "util.h"
 
 #include "messages.h"
-#define CHECK_AC_RESP(retval)                                                                      \
-    do {                                                                                           \
-        if (!retval.ok) {                                                                          \
-            err("%s", ac_resp.data.string);                                                        \
-            return;                                                                                \
-        }                                                                                          \
-    } while (0)
 
 #define PRON_DEBOUNCE_MICROSEC 500000
 
@@ -48,25 +41,21 @@ typedef struct {
 static void enable_buttons(void) {
     // TODO: Implement
     // Buttons should be disabled at the beginning when still loading
+    // Though it shouldn't load ever anyway
 }
 
 static void anki_check_exists(void) {
     if (!cfg.anki.checkExisting || !cfg.anki.enabled)
         return;
 
-    // exclude suspended cards
-    retval_s ac_resp =
-        ac_search(false, cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s);
-    CHECK_AC_RESP(ac_resp);
+    char *errormsg = NULL;
+    exists_in_anki =
+        ac_check_exists(cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s, &errormsg);
 
-    exists_in_anki = ac_resp.data.boolean;
-    if (!exists_in_anki) {
-        // include suspended cards
-        ac_resp = ac_search(true, cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s);
-        CHECK_AC_RESP(ac_resp);
-
-        if (ac_resp.data.boolean)
-            exists_in_anki = 2;
+    if (errormsg) {
+        err(errormsg);
+        free(errormsg);
+        return;
     }
 
     gtk_widget_queue_draw(exists_dot);
@@ -84,12 +73,16 @@ static void play_pronunciation(void) {
         return;
     time_last_pron = time_now;
 
+    // forks don't work with gtk's main loop...
     g_thread_unref(g_thread_new("jppron", jppron_caller, &curent));
 }
 
 static void draw_dot(cairo_t *cr) {
-    assert(exists_in_anki >= 0 && exists_in_anki <= 2);
     switch (exists_in_anki) {
+        case -1:
+            // Don't draw on error
+            // TODO: Draw when Anki gets started?
+            return;
         case 0:
             cairo_set_source_rgb(cr, 1, 0, 0); // red
             break;
@@ -97,8 +90,14 @@ static void draw_dot(cairo_t *cr) {
             cairo_set_source_rgb(cr, 0, 1, 0); // green
             break;
         case 2:
+            cairo_set_source_rgb(cr, 0, 0, 1); // blue
+            break;
+        case 3:
             cairo_set_source_rgb(cr, 1, 0.5, 0); // orange
             break;
+        default:
+            dbg("Encountered unknown unkown dot color: %i", exists_in_anki);
+            return;
     }
     cairo_arc(cr, 6, 6, 6, 0, 2 * G_PI);
     cairo_fill(cr);
@@ -188,28 +187,30 @@ static void close_window(void) {
     gtk_widget_destroy(window);
 }
 
-static gboolean add_anki(GtkWidget *widget, gpointer user_data) {
-    window_ret_s *r = (window_ret_s *)user_data;
-    r->create_ac = true;
-
+static void add_anki(GtkWidget *widget, gpointer user_data) {
+    if (!ac_check_connection()) {
+        err("Cannot connect to Anki. Is Anki running?");
+        return;
+    }
     g_mutex_lock(&vars_mutex);
-    if (!dict_data_ready)
-        return FALSE;
+    if (!dict_data_ready) {
+        err("Cannot create AnkiCard when still loading.");
+        return;
+    }
     g_mutex_unlock(&vars_mutex);
 
+    window_ret_s *r = user_data;
+    r->create_ac = true;
     r->de = dictentry_dup(curent);
 
+    // Use text selection instead if existing
     GtkTextIter start, end;
-    if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start,
-                                             &end)) // Use text selection if
-                                                    // existing
-    {
+    if (gtk_text_buffer_get_selection_bounds(dict_tw_buffer, &start, &end)) {
         frees8(&r->de.definition);
         r->de.definition = fromcstr_(gtk_text_buffer_get_text(dict_tw_buffer, &start, &end, FALSE));
     }
 
     close_window();
-    return TRUE;
 }
 
 static gboolean key_press_on_win(GtkWidget *win, GdkEventKey *event, gpointer user_data) {
@@ -255,8 +256,12 @@ static void move_win_to_mouse_ptr(void) {
 }
 
 static void search_in_anki_browser(void) {
-    retval_s ac_resp = ac_gui_search(cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s);
-    CHECK_AC_RESP(ac_resp);
+    char *errormsg = NULL;
+    ac_gui_search(cfg.anki.deck, cfg.anki.searchField, (char *)curent.kanji.s, &errormsg);
+    if(errormsg) {
+        err(errormsg);
+        free(errormsg);
+    }
 }
 
 static void button_press(GtkWidget *widget, GdkEventButton *event) {
