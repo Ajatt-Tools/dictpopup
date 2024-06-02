@@ -76,7 +76,9 @@ void jdb_close(database *db) {
         _drop_(frees8) s8 lockfile = buildpath(fromcstr_((char *)dbpath), S("lock.mdb"));
         remove((char *)lockfile.s);
     }
+
     mdb_env_close(db->env);
+    free(db);
 }
 
 void jdb_add_headword_with_file(database *db, s8 headword, s8 filepath) {
