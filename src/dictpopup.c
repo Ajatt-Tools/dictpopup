@@ -169,8 +169,7 @@ void create_ankicard(dictpopup_t d, dictentry de) {
     if (error) {
         err("Error adding card: %s", error);
         free(error);
-    }
-    else
+    } else
         msg("Successfully added card.");
 }
 

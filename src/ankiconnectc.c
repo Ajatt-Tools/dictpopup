@@ -16,7 +16,6 @@ typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userda
 typedef struct {
     union {
         char *string;
-        char **stringv;
         _Bool boolean;
     } data;
     _Bool ok; // Signalizes if there was an error on not. The error msg is
@@ -38,9 +37,6 @@ static int get_array_len(const char *array[static 1]) {
 static char *json_escape_str(const char *str) {
     if (!str)
         return NULL;
-
-    /* Best would be to use something like glibs g_strescape, but
-    it appears that ankiconnect can't handle unicode escape sequences */
 
     stringbuilder_s sb = sb_init(strlen(str) + 20);
 
@@ -175,8 +171,9 @@ static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
-        ret = (retval_s){.data.string = strdup("Could not connect to AnkiConnect. Is Anki running?"),
-                         .ok = false};
+        ret =
+            (retval_s){.data.string = strdup("Could not connect to AnkiConnect. Is Anki running?"),
+                       .ok = false};
     }
 
     curl_slist_free_all(headers);
@@ -197,12 +194,11 @@ static s8 form_search_req(bool include_suspended, bool include_new, char *deck, 
                   fromcstr_(deck ? "deck:" : ""), fromcstr_(deck ? deck : ""), S("\\\" \\\""),
                   fromcstr_(field), S(":"), fromcstr_(entry), S("\\\""),
                   include_suspended ? S("") : S(" -is:suspended"),
-                  include_new ? S("") : S(" -is:new"),
-                  S("\" } }"));
+                  include_new ? S("") : S(" -is:new"), S("\" } }"));
 }
 
 static int ac_check_exists_with(bool include_suspended, bool include_new, char *deck, char *field,
-                                 char *str, char **error) {
+                                char *str, char **error) {
     _drop_(frees8) s8 req = form_search_req(include_suspended, include_new, deck, field, str);
     retval_s r = sendRequest(req, search_checker);
     if (!r.ok) {
@@ -280,7 +276,7 @@ void ac_store_file(char const *filename, char const *path, char **error) {
 
     _drop_(frees8) s8 req = form_store_file_req(filename, path);
     retval_s r = sendRequest(req, NULL); // TODO: Check error response
-    if(!r.ok)
+    if (!r.ok)
         *error = r.data.string;
 }
 
@@ -367,6 +363,6 @@ void ac_addNote(ankicard const ac, char **error) {
 
     _drop_(frees8) s8 req = form_addNote_req(ac);
     retval_s r = sendRequest(req, check_add_response);
-    if(!r.ok)
+    if (!r.ok)
         *error = r.data.string;
 }
