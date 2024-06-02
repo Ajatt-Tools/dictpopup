@@ -18,6 +18,11 @@ typedef __PTRDIFF_TYPE__ isize;
 #define _drop_(x) __attribute__((__cleanup__(drop_##x)))
 #define _nonnull_ __attribute__((nonnull))
 #define _nonnull_n_(...) __attribute__((nonnull(__VA_ARGS__)))
+#if defined(__clang__)
+    #define _deallocator_(x)
+#else
+    #define _deallocator_(x) __attribute__((malloc(x)))
+#endif
 #define _printf_(a, b) __attribute__((__format__(printf, a, b)))
 
 #define arrlen(x)                                                                                  \
@@ -35,8 +40,9 @@ typedef __PTRDIFF_TYPE__ isize;
 /**
  * Memory allocation wrapper which abort on failure
  */
-__attribute__((malloc, returns_nonnull)) void *xcalloc(size_t nmemb, size_t size);
-__attribute__((malloc, returns_nonnull)) void *xrealloc(void *ptr, size_t size);
+__attribute__((malloc, returns_nonnull))
+_deallocator_(free) void *xcalloc(size_t nmemb, size_t size);
+__attribute__((malloc, returns_nonnull)) _deallocator_(free) void *xrealloc(void *ptr, size_t size);
 // clang-format off
 #define new(type, num) xcalloc(num, sizeof(type))
 // clang-format on
