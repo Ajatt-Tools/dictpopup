@@ -61,7 +61,7 @@ static s8 create_furigana(s8 kanji, s8 reading) {
 static void fill_entries(possible_entries_s pe[static 1], dictentry const de) {
     if (cfg.anki.copySentence) {
         msg("Please select the context.");
-        pe->copiedsent = get_sentence();
+        pe->copiedsent = get_next_clipboard();
         if (cfg.anki.nukeWhitespaceSentence)
             nuke_whitespace(&pe->copiedsent);
 
@@ -158,16 +158,19 @@ void create_ankicard(dictpopup_t d, dictentry de) {
     for (size_t i = 0; i < cfg.anki.numFields; i++)
         fieldentries[i] = (char *)map_entry(p, cfg.anki.fieldMapping[i]).s;
 
-    retval_s ac_resp = ac_addNote((ankicard){.deck = cfg.anki.deck,
-                                             .notetype = cfg.anki.notetype,
-                                             .num_fields = cfg.anki.numFields,
-                                             .fieldnames = cfg.anki.fieldnames,
-                                             .fieldentries = fieldentries});
+    char *error = NULL;
+    ankicard ac = {.deck = cfg.anki.deck,
+                   .notetype = cfg.anki.notetype,
+                   .num_fields = cfg.anki.numFields,
+                   .fieldnames = cfg.anki.fieldnames,
+                   .fieldentries = fieldentries};
+    ac_addNote(ac, &error);
 
-    if (ac_resp.ok)
+    if (error) {
+        err("Error adding card: %s", error);
+        free(error);
+    } else
         msg("Successfully added card.");
-    else
-        err("Error adding card: %s", ac_resp.data.string);
 }
 
 static s8 convert_to_utf8(char *str) {

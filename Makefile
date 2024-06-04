@@ -27,14 +27,23 @@ ifeq ($(strip $(O_HAVEX11)),1)
 	LDLIBS += -lXfixes -lX11
 endif
 
-
-FILES = dictpopup.c util.c platformdep.c deinflector.c settings.c db.c ankiconnectc.c database.c jppron.c pdjson.c
-FILES_H = ankiconnectc.h db.h deinflector.h settings.h util.h platformdep.h database.h jppron.h pdjson.h
-SRC = $(addprefix $(SDIR)/,$(FILES))
 SRC_H = $(addprefix $(IDIR)/,$(FILES_H))
 
-FILES_CREATE = db.c pdjson.c util.c platformdep.c
-FILES_H_CREATE = db.h pdjson.h util.h buf.h platformdep.h
+SRCS = src/ankiconnectc.c \
+       src/db.c \
+       src/deinflector.c \
+       src/dictpopup.c \
+       src/platformdep.c \
+       src/settings.c \
+       src/util.c
+
+SRCS_JPPRON = src/jppron/jppron.c \
+	      src/jppron/database.c \
+	      src/jppron/ajt_audio_index_parser.c \
+	      src/yyjson.c
+
+FILES_CREATE = db.c util.c platformdep.c yomichan_parser.c yyjson.c
+FILES_H_CREATE = db.h util.h buf.h platformdep.h yyjson.h
 SRC_CREATE = $(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
 SRC_H_CREATE = $(addprefix $(IDIR)/,$(FILES_H_CREATE))
 
@@ -46,14 +55,14 @@ all: CFLAGS+=$(RELEASE_CFLAGS)
 debug: $(bins)
 debug: CFLAGS+=$(DEBUG_CFLAGS)
 
-dictpopup: $(SRC) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRC) $(LDLIBS) $(NOTIF_LIBS)
+dictpopup: $(SRCS) $(SRCS_JPPRON) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRCS) $(SRCS_JPPRON) $(LDLIBS) $(NOTIF_LIBS)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE) $(SDIR)/dictpopup_create.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS)
 
 cli: $(SRC) $(SRC_H) $(SDIR)/frontends/cli.c
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/frontends/cli.c $(SRC) $(LDLIBS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/frontends/cli.c $(SRCS) $(LDLIBS)
 
 deinflector: $(SRC) $(SRC_H) $(SDIR)/deinflector.c
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/util.c $(LDLIBS)
@@ -94,9 +103,10 @@ ALL_C_SOURCES := $(wildcard src/*.c)
 ALL_H_SOURCES := $(wildcard include/*.h)
 
 c_analyse_targets := $(ALL_C_SOURCES:%=%-analyse)
-c_analyse_targets := $(filter-out src/pdjson.c-analyse, $(c_analyse_targets))
+c_analyse_targets := $(filter-out src/yyjson.c-analyse, $(c_analyse_targets))
 
 h_analyse_targets := $(ALL_H_SOURCES:%=%-analyse)
+h_analyse_targets := $(filter-out include/yyjson.h-analyse, $(h_analyse_targets))
 
 analyse: CFLAGS+=$(DEBUG_CFLAGS)
 analyse: $(c_analyse_targets) $(h_analyse_targets)
@@ -128,12 +138,12 @@ $(h_analyse_targets): %-analyse:
 %-shared-analyse: %
 	# cppcheck is a bit dim about unused functions/variables, leave that to
 	# clang/GCC
-	cppcheck $< -I$(IDIR) --library=gtk.cfg --library=gnu.cfg \
-		--std=c99 --quiet --inline-suppr --force \
-		--enable=all --suppress=missingIncludeSystem \
-		--suppress=unusedFunction --suppress=unmatchedSuppression \
+	cppcheck $< -I$(IDIR) --library=gtk.cfg --library=libcurl.cfg \
+		--std=c99 --quiet --inline-suppr --force --enable=all \
+		--suppress=missingIncludeSystem --suppress=unmatchedSuppression \
 		--suppress=unreadVariable --suppress=constParameterCallback \
 		--suppress=constVariablePointer --suppress=constParameterPointer \
+		--suppress=unusedFunction --suppress=*:include/yyjson.h \
 		--max-ctu-depth=32 --error-exitcode=1
 	# clang-analyzer-unix.Malloc does not understand _drop_()
 	clang-tidy $< --quiet -checks=-clang-analyzer-unix.Malloc -- -std=gnu99 -I$(IDIR) $(shell pkg-config --cflags gtk+-3.0)

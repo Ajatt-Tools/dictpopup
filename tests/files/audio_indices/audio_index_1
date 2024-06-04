@@ -1,0 +1,20 @@
+{
+        "meta": {
+            "name": "NHK日本語発音アクセント新辞典",
+            "year": 2016,
+            "version": 2,
+            "media_dir": "media"
+        },
+        "headwords": {
+                "静か": [
+                    "20171018162916.ogg"
+                ]
+        },
+        "files": {
+            "20171018162916.ogg": {
+                "kana_reading": "シズカ",
+                "pitch_pattern": "シ＼ズカ",
+                "pitch_number": "1"
+            }
+        }
+}

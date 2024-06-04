@@ -71,7 +71,7 @@ static void add_deinflection(s8 deinf, wtype type) {
 // works inplace
 void kata2hira(s8 kata_in) {
     u8 *h = kata_in.s;
-    size i = 0;
+    isize i = 0;
 
     // Assumes valid utf-8 + null-termination
     while (i + 2 < kata_in.len) {
@@ -160,7 +160,7 @@ s8 kanji2hira(s8 input) {
  *
  * Replaces the last @suffix_len bytes of @word with @replacement.
  */
-static void add_replace_suffix(s8 word, s8 replacement, size suffix_len, wtype type) {
+static void add_replace_suffix(s8 word, s8 replacement, isize suffix_len, wtype type) {
     assert(word.len >= suffix_len);
 
     s8 cutword = cuttail(word, suffix_len);
@@ -172,7 +172,7 @@ static void add_replace_suffix(s8 word, s8 replacement, size suffix_len, wtype t
 /*
  * Same as add_replace_suffix but with prefix
  */
-static void add_replace_prefix(s8 word, s8 replacement, size prefix_len, wtype type) {
+static void add_replace_prefix(s8 word, s8 replacement, isize prefix_len, wtype type) {
     assert(word.len >= prefix_len);
 
     s8 cutword = cuthead(word, prefix_len);
@@ -184,7 +184,7 @@ static void add_replace_prefix(s8 word, s8 replacement, size prefix_len, wtype t
 // Assumes valid utf-8
 static i32 contains_katakana(s8 word) {
     u8 *h = word.s;
-    size i = 0;
+    isize i = 0;
 
     // Assumes valid utf-8 + null-termination
     while (i + 2 < word.len) {

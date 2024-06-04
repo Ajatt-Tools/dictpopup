@@ -1,6 +1,8 @@
 #ifndef ANKICONNECTC_H
 #define ANKICONNECTC_H
 
+#include "util.h"
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef struct {
@@ -15,46 +17,17 @@ typedef struct {
 
 void ankicard_free(ankicard *ac);
 
-typedef struct {
-    union {
-        char *string;
-        char **stringv;
-        _Bool boolean;
-    } data;
-    _Bool ok; // Signalizes if there was an error on not. The error msg is
-              // stored in data.string
-} retval_s;
-
-/*
- * Returns: The null terminated list of decks in data.stringv
- */
-retval_s ac_get_decks(void);
-
-/*
- * Returns: A null terminated list of notetypes in data.stringv
- */
-retval_s ac_get_notetypes(void);
-
-/*
- * Search the Anki database for the entry @entry in the field @field and deck
- * @deck.
- * @deck can be null.
- * The search result will be stored in data.boolen if there was no error.
- */
-retval_s ac_search(_Bool include_suspended, char *deck, char *field, char *entry);
-
-/*
- * Performs a search as in ac_search, but in the Anki gui.
- */
-retval_s ac_gui_search(const char *deck, const char *field, const char *entry);
+bool ac_check_connection(void);
+s8 *ac_get_decks(char **error);
+s8 *ac_get_notetypes(char **error);
+int ac_check_exists(char *deck, char *field, char *entry, char **error);
+void ac_gui_search(const char *deck, const char *field, const char *entry, char **error);
+void ac_addNote(ankicard ac, char **error);
 
 /*
  * Stores the file at @path in the Anki media collection under the name
  * @filename. Doesn't overwrite existing files.
  */
-retval_s ac_store_file(const char *filename, const char *path);
-
-/* Add ankicard to anki  */
-retval_s ac_addNote(ankicard ac);
+void ac_store_file(const char *filename, const char *path, char **error);
 
 #endif

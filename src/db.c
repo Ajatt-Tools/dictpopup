@@ -1,3 +1,4 @@
+#include <lmdb.h>
 #include <string.h>
 
 #include "db.h"
@@ -95,10 +96,21 @@ static void dictent_to_datastr(stringbuilder_s sb[static 1], dictentry de) {
     sb_append(sb, de.definition);
 }
 
-void db_put_dictent(database_t *db, s8 headword, dictentry de) {
+void db_put_dictent(database_t *db, dictentry de) {
     die_on(db->readonly, "Cannot put dictentry into db in readonly mode.");
+    if (!de.definition.len) {
+        dbg("Entry with kanji: %s and reading: %s has no definition. Skipping..",
+            (char *)de.kanji.s, (char *)de.reading.s);
+        return;
+    }
+    if (!de.kanji.len && !de.reading.len) {
+        dbg("Entry with definition: %s has no kanji and reading. Skipping..",
+            (char *)de.definition.s);
+        return;
+    }
 
-    MDB_val key_mdb = {.mv_data = headword.s, .mv_size = headword.len};
+    MDB_val kanji_mdb = {.mv_data = de.kanji.s, .mv_size = de.kanji.len};
+    MDB_val reading_mdb = {.mv_data = de.reading.s, .mv_size = de.reading.len};
     MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
 
     dictent_to_datastr(&db->datastr, de);
@@ -115,7 +127,8 @@ void db_put_dictent(database_t *db, s8 headword, dictentry de) {
     }
 
     // Add key with corresponding id
-    mdb_put(db->txn, db->dbi1, &key_mdb, &id_mdb, MDB_NODUPDATA);
+    mdb_put(db->txn, db->dbi1, &kanji_mdb, &id_mdb, MDB_NODUPDATA);
+    mdb_put(db->txn, db->dbi1, &reading_mdb, &id_mdb, MDB_NODUPDATA);
 }
 
 static u32 *getids(const database_t *db, s8 word, size_t *num) {
@@ -133,7 +146,7 @@ static u32 *getids(const database_t *db, s8 word, size_t *num) {
     C(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE));
 
     *num = val_mdb.mv_size / sizeof(u32);
-    expect(*num * sizeof(u32) == val_mdb.mv_size); // divides cleanly
+    assume(*num * sizeof(u32) == val_mdb.mv_size); // divides cleanly
     u32 *ret = new (u32, *num);
     memcpy(ret, val_mdb.mv_data, val_mdb.mv_size); // ensures proper alignment
     return ret;
@@ -160,7 +173,7 @@ static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
     C(rc);
 
     u32 freq;
-    expect(sizeof(freq) == val_m.mv_size);
+    assume(sizeof(freq) == val_m.mv_size);
     memcpy(&freq, val_m.mv_data, val_m.mv_size); // ensures proper alignment
     return freq;
 }
@@ -173,9 +186,9 @@ static dictentry data_to_dictent(const database_t *db, s8 data) {
 
     s8 data_split[4] = {0};
     for (size_t i = 0; i < arrlen(data_split); i++) {
-        expect(data.len >= 0);
+        assume(data.len >= 0);
 
-        size len = 0;
+        isize len = 0;
         while (len < data.len && data.s[len] != '\0')
             len++;
         data_split[i] = news8(len);

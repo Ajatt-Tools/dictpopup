@@ -28,20 +28,23 @@ add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER}
         ${LIBZIP_DEFINITIONS} ${CURL_DEFINITIONS})
 set(SRCS
         src/ankiconnectc.c
-        src/database.c
         src/db.c
         src/deinflector.c
         src/dictpopup.c
-        src/jppron.c
         src/platformdep.c
         src/settings.c
-        src/util.c
-        src/pdjson.c)
+        src/util.c)
+
+set(JPPRON_SRCS
+        src/jppron/jppron.c
+        src/jppron/database.c
+        src/jppron/ajt_audio_index_parser.c
+	src/yyjson.c)
 
 # ##############################################################################
 # dictpopup
 # ##############################################################################
-add_executable(dictpopup src/frontends/gtk3popup.c ${SRCS})
+add_executable(dictpopup src/frontends/gtk3popup.c ${SRCS} ${JPPRON_SRCS})
 target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS)
 target_include_directories(
         dictpopup PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
@@ -54,7 +57,9 @@ target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
-add_executable(dictpopup-create src/dictpopup_create.c ${SRCS})
+add_executable(dictpopup-create src/dictpopup_create.c ${SRCS}
+	src/yyjson.c
+        src/yomichan_parser.c)
 target_include_directories(
         dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-create PRIVATE ${GTK3_LIBRARY_DIRS}
@@ -63,15 +68,15 @@ target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb
         ${CURL_LIBRARIES} -lmecab)
 
 # ##############################################################################
-# dictpopup-cli
+# cli
 # ##############################################################################
-add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c ${SRCS})
+add_executable(cli EXCLUDE_FROM_ALL src/frontends/cli.c ${SRCS})
 target_include_directories(
-        dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
+        cli PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
         ${CURL_INCLUDE_DIRS} include/)
-target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS}
+target_link_directories(cli PRIVATE ${GTK3_LIBRARY_DIRS}
         ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
-target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
+target_link_libraries(cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
         ${CURL_LIBRARIES} -lmecab -llmdb)
 
 # ##############################################################################
@@ -87,11 +92,13 @@ if (BUILD_TESTING)
             tests/ankiconnect_tests.c
             src/deinflector.c
             src/util.c
-            src/pdjson.c
+            tests/yomichan_parser_tests.c
             src/db.c
-            src/platformdep.c)
+            src/platformdep.c
+            src/yyjson.c
+            tests/ajt_audio_index_parser_tests.c)
     target_compile_definitions(c_tests PRIVATE UNIT_TEST)
-    target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/)
+    target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/ src/jppron)
     target_link_libraries(
             c_tests
             PRIVATE ${CGREEN_LIBRARIES}
@@ -102,6 +109,8 @@ if (BUILD_TESTING)
             -lmecab
             -lzip)
     add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
+
+    #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 endif ()
 
 # ##############################################################################
