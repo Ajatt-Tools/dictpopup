@@ -234,7 +234,7 @@ static void prepare_add_to_anki(window_ret_s *ret) {
 static void show_add_anki_button_menu(GtkWidget *button, window_ret_s *ret) {
     GtkWidget *menu = gtk_menu_new();
 
-    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add from clipboard");
+    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add with clipboard content as definition");
     g_signal_connect(menu_item, "activate", G_CALLBACK(add_anki_from_clipboard), ret);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
 
