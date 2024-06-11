@@ -184,7 +184,9 @@ static s8 convert_to_utf8(char *str) {
 
 static void copy_default_database(char *dbdir) {
     // TODO: Make default loc OS independent
-    const char *default_database_location = "/usr/local/share/dictpopup/data.mdb";
+    const char *default_database_location = "/usr/share/dictpopup/data.mdb";
+    if (!check_file_exists(default_database_location))
+        default_database_location = "/usr/local/share/dictpopup/data.mdb";
     die_on(!check_file_exists(default_database_location),
            "Could not access the default database either. You need to create your own with"
            "dictpopup-create or download data.mdb from the repository.");
