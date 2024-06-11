@@ -78,19 +78,20 @@ static void play_pronunciation(void) {
 }
 
 static void draw_dot(cairo_t *cr) {
+    // The colors are the same Anki uses
     switch (exists_in_anki) {
         case -1:
             // Don't draw on error
             // TODO: Draw when Anki gets started?
             return;
         case 0:
-            cairo_set_source_rgb(cr, 1, 0, 0); // red
+            cairo_set_source_rgb(cr, 0.9490, 0.4431, 0.4431); // red
             break;
         case 1:
-            cairo_set_source_rgb(cr, 0, 1, 0); // green
+            cairo_set_source_rgb(cr, 0.1333, 0.7725, 0.3686); // green
             break;
         case 2:
-            cairo_set_source_rgb(cr, 0, 0, 1); // blue
+            cairo_set_source_rgb(cr, 0.5765, 0.7725, 0.9922); // blue
             break;
         case 3:
             cairo_set_source_rgb(cr, 1, 0.5, 0); // orange
