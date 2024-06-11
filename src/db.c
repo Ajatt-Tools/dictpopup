@@ -4,6 +4,7 @@
 #include "db.h"
 #include "messages.h"
 #include "util.h"
+#include "platformdep.h"
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
@@ -235,7 +236,7 @@ void db_get_dictents(const database_t *db, s8 headword, dictentry *dict[static 1
 
 i32 db_check_exists(s8 dbpath) {
     _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
-    return (access((char *)dbfile.s, R_OK) == 0);
+    return check_file_exists((char *)dbfile.s);
 }
 
 void db_remove(s8 dbpath) {

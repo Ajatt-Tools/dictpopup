@@ -129,3 +129,7 @@ void createdir(char *dirpath) {
 const char *get_user_data_dir(void) {
     return g_get_user_data_dir();
 }
+
+bool check_file_exists(const char *fn) {
+    return access(fn, R_OK) == 0;
+}
