@@ -3,8 +3,8 @@
 
 #include "db.h"
 #include "messages.h"
-#include "util.h"
 #include "platformdep.h"
+#include "util.h"
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
@@ -34,7 +34,7 @@ database_t *db_open(char *dbpath, bool readonly) {
 
     if (readonly) {
         die_on(!db_check_exists(fromcstr_(dbpath)),
-               "There is no database in '%s'. You must create it first with dictpopup-create.",
+               "There is no database in '%s'. You must create one first with dictpopup-create.",
                dbpath);
 
         C(mdb_env_open(db->env, dbpath, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));

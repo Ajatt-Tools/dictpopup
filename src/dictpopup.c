@@ -186,14 +186,14 @@ static void copy_default_database(char *dbdir) {
     // TODO: Make default loc OS independent
     const char *default_database_location = "/usr/local/share/dictpopup/data.mdb";
     die_on(!check_file_exists(default_database_location),
-        "Could not access the default database either. You need to create your own with"
-        "dictpopup-create or download data.mdb from the repository.");
+           "Could not access the default database either. You need to create your own with"
+           "dictpopup-create or download data.mdb from the repository.");
 
     _drop_(frees8) s8 dbpath = buildpath(fromcstr_(dbdir), S("data.mdb"));
     createdir(dbdir);
 
     GFile *source = g_file_new_for_path(default_database_location);
-    GFile *dest = g_file_new_for_path((char*)dbpath.s);
+    GFile *dest = g_file_new_for_path((char *)dbpath.s);
     g_file_copy(source, dest, G_FILE_COPY_NONE, NULL, NULL, NULL, NULL);
     g_object_unref(source);
     g_object_unref(dest);
@@ -204,7 +204,7 @@ dictpopup_t dictpopup_init(int argc, char **argv) {
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
     int nextarg = parse_cmd_line_opts(argc, argv); // Should be second to overwrite settings
 
-    if(!db_check_exists(fromcstr_(cfg.general.dbpth))) {
+    if (!db_check_exists(fromcstr_(cfg.general.dbpth))) {
         msg("No database found. We recommend creating your own database with dictpopup-create, but "
             "copying default dictionary for now..");
         copy_default_database(cfg.general.dbpth);

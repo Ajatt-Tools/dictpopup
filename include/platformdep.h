@@ -2,6 +2,7 @@
 #define PLATFORMDEP_H
 
 #include "util.h"
+#include <stdbool.h>
 
 void notify(_Bool urgent, char const *fmt, ...);
 s8 get_selection(void);
