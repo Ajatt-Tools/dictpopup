@@ -275,6 +275,10 @@ static void copy_ready_callback(GObject *source_object, GAsyncResult *res, gpoin
 static void copy_default_config(char *cfgfile) {
     // TODO: Make default loc OS independent
     const char *default_config_location = "/usr/local/share/dictpopup/config.ini";
+    if (!check_file_exists(default_config_location)) {
+        dbg("Could not access default config");
+        return;
+    }
 
     char *cfgdir = dirname(cfgfile);
     createdir(cfgdir);

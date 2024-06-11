@@ -14,7 +14,7 @@
 #include "platformdep.h"
 
 #ifdef NOTIFICATIONS
-void notify(const char *title, _Bool urgent, char const *fmt, ...) {
+void notify(_Bool urgent, char const *fmt, ...) {
     va_list argp;
     va_start(argp, fmt);
     g_autofree char *txt = g_strdup_vprintf(fmt, argp);
@@ -23,7 +23,7 @@ void notify(const char *title, _Bool urgent, char const *fmt, ...) {
         return;
 
     notify_init("dictpopup");
-    NotifyNotification *n = notify_notification_new(title, txt, NULL);
+    NotifyNotification *n = notify_notification_new("dictpopup", txt, NULL);
     notify_notification_set_urgency(n, urgent ? NOTIFY_URGENCY_CRITICAL : NOTIFY_URGENCY_NORMAL);
     notify_notification_set_timeout(n, 10000);
 
@@ -128,4 +128,8 @@ void createdir(char *dirpath) {
 
 const char *get_user_data_dir(void) {
     return g_get_user_data_dir();
+}
+
+bool check_file_exists(const char *fn) {
+    return access(fn, R_OK) == 0;
 }

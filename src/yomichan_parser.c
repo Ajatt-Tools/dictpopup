@@ -69,8 +69,8 @@ static s8 unzip_file(zip_t *archive, const char *filename) {
 /* -------------------- */
 
 static s8 parse_liststyletype(s8 lst) {
-    // TODO: This is a memory leak
-    if (startswith(lst, S("\"")) && endswith(lst, S("\"")))
+    if ((startswith(lst, S("\"")) && endswith(lst, S("\""))) ||
+        (startswith(lst, S("'")) && endswith(lst, S("'"))))
         return cuttail(cuthead(lst, 1), 1);
     else if (s8equals(lst, S("circle")))
         return S("◦");
@@ -82,12 +82,18 @@ static s8 parse_liststyletype(s8 lst) {
         return lst; // そのまま
 }
 
+static void ensure_ends_on_newline(stringbuilder_s *sb) {
+    if (sb->len != 0 && sb->data[sb->len - 1] != '\n')
+        sb_append(sb, S("\n"));
+}
+
 static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static 1], s8 liststyle,
                                       i32 listdepth) {
-    enum tag_type tag = TAG_UNKNOWN;
-
     if (!yyjson_is_obj(obj))
         err("Structured content is not an object.");
+
+    enum tag_type tag = TAG_UNKNOWN;
+    yyjson_val *content = NULL;
 
     size_t idx, max;
     yyjson_val *key, *val;
@@ -104,7 +110,8 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
                 tag = TAG_UL;
                 listdepth++;
 
-                liststyle = S("•"); // default
+                if (!liststyle.len)
+                    liststyle = S("•"); // default value
             } else if (s8equals(s8val, S("ol"))) {
                 tag = TAG_OL;
                 listdepth++;
@@ -115,9 +122,8 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
                 tag = TAG_RUBY_RT;
             } else
                 tag = TAG_UNKNOWN;
-        } else if ((tag == TAG_UL || tag == TAG_LI) && s8equals(s8key, S("style"))) {
+        } else if (s8equals(s8key, S("style"))) {
             if (yyjson_is_obj(val)) {
-
                 size_t idx2, max2;
                 yyjson_val *key2, *val2;
                 yyjson_obj_foreach(val, idx2, max2, key2, val2) {
@@ -128,25 +134,28 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
             } else
                 dbg("Could not parse style of list. Skipping..");
         } else if (s8equals(s8key, S("content"))) {
-            if (tag == TAG_RUBY_RT) {
-                continue;
-            }
-
-            if (tag == TAG_DIV || tag == TAG_LI) {
-                if (sb->len != 0 && sb->data[sb->len - 1] != '\n')
-                    sb_append(sb, S("\n"));
-            }
-
-            if (tag == TAG_LI) {
-                for (i32 i = 0; i < listdepth - 1; i++)
-                    sb_append(sb, S("\t"));
-                sb_append(sb, liststyle);
-                sb_append(sb, S(" "));
-            }
-
-            append_definition(val, sb, liststyle, listdepth, false);
+            content = val; // parse content last
         }
     }
+
+    switch (tag) {
+        case TAG_RUBY_RT:
+            // Don't display ruby (for now)
+            return;
+        case TAG_DIV:
+            ensure_ends_on_newline(sb);
+            break;
+        case TAG_LI:
+            ensure_ends_on_newline(sb);
+            for (i32 i = 0; i < listdepth - 1; i++)
+                sb_append(sb, S("\t"));
+            sb_append(sb, liststyle);
+            sb_append(sb, S(" "));
+            break;
+        default:;
+    }
+
+    append_definition(content, sb, liststyle, listdepth, false);
 }
 
 static void append_definition(yyjson_val *def, stringbuilder_s sb[static 1], s8 liststyle,

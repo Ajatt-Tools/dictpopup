@@ -19,7 +19,9 @@
 	     ],
 	    "data":{"content":"glossary"},
 	    "lang":"en",
-	    "style":{"listStyleType":"circle"},"tag":"ul"},
+	    "style":{"listStyleType":"circle"},
+	    "tag":"ul"
+	  },
 	  {
 	    "content":
 	      [

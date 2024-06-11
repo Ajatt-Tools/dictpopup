@@ -21,7 +21,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS
             "${CMAKE_C_FLAGS} -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong")
 else ()
-    add_compile_options(-Ofast -flto -march=native -g)
+    add_compile_options(-Ofast -flto -march=native -mtune=native -g)
 endif ()
 
 add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER}
@@ -117,7 +117,8 @@ endif ()
 # Install
 # ##############################################################################
 install(TARGETS dictpopup dictpopup-create DESTINATION bin)
-install(FILES config.ini DESTINATION share)
+install(FILES config.ini DESTINATION share/dictpopup)
+install(FILES data.mdb DESTINATION share/dictpopup)
 install(
         DIRECTORY man1/
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1

@@ -3,6 +3,7 @@
 
 #include "db.h"
 #include "messages.h"
+#include "platformdep.h"
 #include "util.h"
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
@@ -33,7 +34,7 @@ database_t *db_open(char *dbpath, bool readonly) {
 
     if (readonly) {
         die_on(!db_check_exists(fromcstr_(dbpath)),
-               "There is no database in '%s'. You must create it first with dictpopup-create.",
+               "There is no database in '%s'. You must create one first with dictpopup-create.",
                dbpath);
 
         C(mdb_env_open(db->env, dbpath, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
@@ -235,7 +236,7 @@ void db_get_dictents(const database_t *db, s8 headword, dictentry *dict[static 1
 
 i32 db_check_exists(s8 dbpath) {
     _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
-    return (access((char *)dbfile.s, R_OK) == 0);
+    return check_file_exists((char *)dbfile.s);
 }
 
 void db_remove(s8 dbpath) {

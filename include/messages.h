@@ -36,25 +36,13 @@ __attribute__((unused)) static bool debug_mode_enabled(void) {
 #ifdef NOTIFICATIONS
     #define msg(fmt, ...)                                                                          \
         do {                                                                                       \
-            const char *ORIGIN;                                                                    \
-            if (s8equals(S(__FILE__), S("src/jppron.c")))                                          \
-                ORIGIN = "jppron";                                                                 \
-            else                                                                                   \
-                ORIGIN = "dictpopup";                                                              \
-            notify(ORIGIN, 0, fmt, ##__VA_ARGS__);                                                 \
-            printf("(%s): ", ORIGIN);                                                              \
+            notify(0, fmt, ##__VA_ARGS__);                                                         \
             printf(fmt, ##__VA_ARGS__);                                                            \
             putchar('\n');                                                                         \
         } while (0)
 #else
     #define msg(fmt, ...)                                                                          \
         do {                                                                                       \
-            const char *ORIGIN;                                                                    \
-            if (s8equals(S(__FILE__), S("src/jppron.c")))                                          \
-                ORIGIN = "jppron";                                                                 \
-            else                                                                                   \
-                ORIGIN = "dictpopup";                                                              \
-            printf("(%s) ", ORIGIN);                                                               \
             printf(fmt, ##__VA_ARGS__);                                                            \
             putchar('\n');                                                                         \
         } while (0)
@@ -63,13 +51,7 @@ __attribute__((unused)) static bool debug_mode_enabled(void) {
 #ifdef NOTIFICATIONS
     #define err(fmt, ...)                                                                          \
         do {                                                                                       \
-            const char *ORIGIN;                                                                    \
-            if (s8equals(S(__FILE__), S("src/jppron.c")))                                          \
-                ORIGIN = "jppron";                                                                 \
-            else                                                                                   \
-                ORIGIN = "dictpopup";                                                              \
-            notify(ORIGIN, 1, fmt, ##__VA_ARGS__);                                                 \
-            fprintf(stderr, "(%s): ", ORIGIN);                                                     \
+            notify(1, fmt, ##__VA_ARGS__);                                                         \
             fprintf(stderr, "\033[0;31mERROR\033[0m: %s(%d): ", __FILE__, __LINE__);               \
             fprintf(stderr, fmt, ##__VA_ARGS__);                                                   \
             fputc('\n', stderr);                                                                   \
@@ -77,12 +59,6 @@ __attribute__((unused)) static bool debug_mode_enabled(void) {
 #else
     #define err(fmt, ...)                                                                          \
         do {                                                                                       \
-            const char *ORIGIN;                                                                    \
-            if (s8equals(S(__FILE__), S("src/jppron.c")))                                          \
-                ORIGIN = "jppron";                                                                 \
-            else                                                                                   \
-                ORIGIN = "dictpopup";                                                              \
-            fprintf(stderr, "(%s) ", ORIGIN);                                                      \
             fprintf(stderr, "\033[0;31mERROR\033[0m: %s(%d): ", __FILE__, __LINE__);               \
             fprintf(stderr, fmt, ##__VA_ARGS__);                                                   \
             fputc('\n', stderr);                                                                   \

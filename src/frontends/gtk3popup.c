@@ -78,19 +78,20 @@ static void play_pronunciation(void) {
 }
 
 static void draw_dot(cairo_t *cr) {
+    // The colors are the same Anki uses
     switch (exists_in_anki) {
         case -1:
             // Don't draw on error
             // TODO: Draw when Anki gets started?
             return;
         case 0:
-            cairo_set_source_rgb(cr, 1, 0, 0); // red
+            cairo_set_source_rgb(cr, 0.9490, 0.4431, 0.4431); // red
             break;
         case 1:
-            cairo_set_source_rgb(cr, 0, 1, 0); // green
+            cairo_set_source_rgb(cr, 0.1333, 0.7725, 0.3686); // green
             break;
         case 2:
-            cairo_set_source_rgb(cr, 0, 0, 1); // blue
+            cairo_set_source_rgb(cr, 0.5765, 0.7725, 0.9922); // blue
             break;
         case 3:
             cairo_set_source_rgb(cr, 1, 0.5, 0); // orange
@@ -233,7 +234,7 @@ static void prepare_add_to_anki(window_ret_s *ret) {
 static void show_add_anki_button_menu(GtkWidget *button, window_ret_s *ret) {
     GtkWidget *menu = gtk_menu_new();
 
-    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add from clipboard");
+    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add with clipboard content as definition");
     g_signal_connect(menu_item, "activate", G_CALLBACK(add_anki_from_clipboard), ret);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
 
