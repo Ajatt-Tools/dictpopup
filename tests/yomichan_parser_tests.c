@@ -70,8 +70,12 @@ Ensure(Parser, handles_tag_after_content2) {
     CHECK_NR(7);
 }
 
-Ensure(Parser, correctly_parses_nested_lists) {
+Ensure(Parser, correctly_formats_nested_lists) {
     CHECK_NR(8);
+}
+
+Ensure(Parser, uses_correct_list_style) {
+    CHECK_NR(10);
 }
 
 Ensure(Parser, correctly_parses_frequency_entry_with_reading) {
@@ -122,6 +126,7 @@ TestSuite *yomichan_parser_tests(void) {
     add_test_with_context(suite, Parser, correctly_extracts_dictionary_name);
     add_test_with_context(suite, Parser, handles_tag_after_content1);
     add_test_with_context(suite, Parser, handles_tag_after_content2);
-    // add_test_with_context(suite, Parser, correctly_parses_nested_lists);
+    // add_test_with_context(suite, Parser, correctly_formats_nested_lists);
+    add_test_with_context(suite, Parser, uses_correct_list_style);
     return suite;
 }

@@ -94,6 +94,7 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
 
     enum tag_type tag = TAG_UNKNOWN;
     yyjson_val *content = NULL;
+    bool listStyleType_read = false;
 
     size_t idx, max;
     yyjson_val *key, *val;
@@ -110,8 +111,8 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
                 tag = TAG_UL;
                 listdepth++;
 
-                if (!liststyle.len)
-                    liststyle = S("•"); // default value
+                if (!listStyleType_read)
+                    liststyle = S("▪"); // default value
             } else if (s8equals(s8val, S("ol"))) {
                 tag = TAG_OL;
                 listdepth++;
@@ -129,6 +130,7 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
                 yyjson_obj_foreach(val, idx2, max2, key2, val2) {
                     if (yyjson_is_str(key2) && s8equals(yyjson_get_s8(key2), S("listStyleType"))) {
                         liststyle = parse_liststyletype(yyjson_get_s8(val2));
+                        listStyleType_read = true;
                     }
                 }
             } else
