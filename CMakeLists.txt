@@ -54,6 +54,10 @@ target_link_directories(dictpopup PRIVATE ${GTK3_LIBRARY_DIRS}
 target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
         ${CURL_LIBRARIES} -lmecab -llmdb)
 
+## X11 window title support
+add_definitions(-DHAVEX11)
+target_link_libraries(dictpopup PRIVATE -lXfixes -lX11)
+
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
