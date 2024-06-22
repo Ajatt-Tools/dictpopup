@@ -55,7 +55,7 @@ target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
         ${CURL_LIBRARIES} -lmecab -llmdb)
 
 ## X11 window title support
-add_definitions(-DHAVEX11)
+target_compile_definitions(dictpopup PUBLIC HAVEX11)
 target_link_libraries(dictpopup PRIVATE -lXfixes -lX11)
 
 # ##############################################################################
