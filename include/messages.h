@@ -7,7 +7,7 @@
 #include <string.h>
 
 #ifdef NOTIFICATIONS
-    #include "platformdep.h"
+    #include "platformdep/notifications.h"
 #endif
 
 #define likely(x) __builtin_expect(!!(x), 1)

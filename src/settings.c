@@ -9,15 +9,16 @@
 #include <glib.h>
 
 #include "messages.h"
-#include "platformdep.h"
+#include "platformdep/file_operations.h"
 #include "settings.h"
-#include "util.h"
+#include "utils/util.h"
 
-settings cfg = {0};
-bool print_cfg = false;
+#include <platformdep/file_paths.h>
 
-static settings get_default_cfg(void) {
-    settings default_cfg = {
+Config cfg = {0};
+
+static Config get_default_cfg(void) {
+    Config default_cfg = {
         .general.sort = 0,
         .general.dictSortOrder = NULL,
         .general.dbpth = NULL, // Set by set_runtime_defaults()
@@ -27,6 +28,7 @@ static settings get_default_cfg(void) {
         //
         .anki.enabled = 0,
         .anki.deck = NULL, // Don't even try to guess
+        // TODO: Default fields might be better to remove or could be hard to debug for users
         .anki.notetype = "Japanese sentences",
         .anki.fieldnames =
             (char *[]){"SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes"},
@@ -52,33 +54,6 @@ static void set_runtime_defaults(void) {
         cfg.general.dbpth =
             (char *)buildpath(fromcstr_((char *)g_get_user_data_dir()), S("dictpopup")).s;
     }
-}
-
-int parse_cmd_line_opts(int argc, char **argv) {
-    int c;
-    opterr = 0;
-
-    while ((c = getopt(argc, argv, "chd:")) != -1)
-        switch (c) {
-            case 'c':
-                print_cfg = 1;
-                break;
-            case 'd':
-                if (optarg && *optarg) {
-                    dbg("Setting dbpath");
-                    free(cfg.general.dbpth);
-                    cfg.general.dbpth = strdup(optarg);
-                }
-                break;
-            case 'h':
-                puts("See 'man dictpopup' for help.");
-                exit(EXIT_SUCCESS);
-            case '?':
-                fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
-                exit(EXIT_FAILURE);
-        }
-
-    return optind;
 }
 
 #define printyn(boolean) (boolean ? "yes" : "no")
@@ -262,35 +237,21 @@ static void read_pronunciation(GKeyFile *kf) {
     read_string(kf, "Pronunciation", "FolderPath", &cfg.pron.dirPath);
 }
 
-static void copy_ready_callback(GObject *source_object, GAsyncResult *res, gpointer data) {
-    GError *error = NULL;
-    g_file_copy_finish(G_FILE(source_object), res, &error);
-
-    if (error)
-        dbg("Error copying default config file: %s", error->message);
-    else
-        dbg("Successfully copied default config file to ~/.config/dictpopup/config.ini.");
-}
-
-static void copy_default_config(char *cfgfile) {
-    // TODO: Make default loc OS independent
-    const char *default_config_location = "/usr/share/dictpopup/config.ini";
-    if (!check_file_exists(default_config_location))
-        default_config_location = "/usr/local/share/dictpopup/config.ini";
-    if (!check_file_exists(default_config_location)) {
+static void copy_default_config_to(char *filepath) {
+    const char *default_config_loc = NULL;
+    for(size_t i = 0; i < sizeof(DEFAULT_SETTINGS_LOCATIONS); i++) {
+        if(check_file_exists(DEFAULT_SETTINGS_LOCATIONS[i]))
+            default_config_loc = DEFAULT_SETTINGS_LOCATIONS[i];
+    }
+    if (!default_config_loc) {
         dbg("Could not access default config");
         return;
     }
 
-    char *cfgdir = dirname(cfgfile);
+    char *cfgdir = dirname(filepath);
     createdir(cfgdir);
 
-    GFile *source = g_file_new_for_path(default_config_location);
-    GFile *dest = g_file_new_for_path(cfgfile);
-    g_file_copy_async(source, dest, G_FILE_COPY_NONE, G_PRIORITY_LOW, NULL, NULL, NULL,
-                      copy_ready_callback, NULL);
-    g_object_unref(source);
-    g_object_unref(dest);
+    file_copy_async(default_config_loc, filepath);
 }
 
 /*
@@ -305,29 +266,30 @@ static s8 get_config_filepath(void) {
                          S("config.ini"));
 }
 
+void read_config_from_keyfile(GKeyFile_autoptr kf) {
+    read_general(kf);
+    read_anki(kf);
+    read_popup(kf);
+    read_pronunciation(kf);
+}
 void read_user_settings(int fieldmapping_max) {
     cfg = get_default_cfg(); // TODO: Put this to the end and only set missing values
 
-    g_autoptr(GError) error = NULL;
     g_autoptr(GKeyFile) kf = g_key_file_new();
     _drop_(frees8) s8 cfgfile = get_config_filepath();
     dbg("Using config file: '%.*s'", (int)cfgfile.len, (char *)cfgfile.s);
+
+    g_autoptr(GError) error = NULL;
     if (!g_key_file_load_from_file(kf, (char *)cfgfile.s, G_KEY_FILE_NONE, &error)) {
         if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
             err("Could not find a config file in: \"%s\". Copying default config.. ", cfgfile.s);
-            copy_default_config((char *)cfgfile.s); // Uses the default config from above though
+            copy_default_config_to((char *)cfgfile.s); // Uses the default config from above though
         } else
             err("Error opening \"%s\": %s. Falling back to default config.", cfgfile.s,
                 error->message);
     } else {
-        read_general(kf);
-        read_anki(kf);
-        read_popup(kf);
-        read_pronunciation(kf);
+        read_config_from_keyfile(kf);
     }
 
     set_runtime_defaults();
-
-    if (print_cfg)
-        print_settings();
 }

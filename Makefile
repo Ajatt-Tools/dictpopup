@@ -40,14 +40,30 @@ SRCS = src/ankiconnectc.c \
 SRCS_JPPRON = src/jppron/jppron.c \
 	      src/jppron/database.c \
 	      src/jppron/ajt_audio_index_parser.c \
-	      src/yyjson.c
+	      src/utils/yyjson.c
+
+SRCS_DICTPOPUP = src/frontends/gtk3popup.c \
+        src/dictpopup.c \
+        src/db.c \
+        src/ankiconnectc.c \
+        src/deinflector.c \
+        src/settings.c \
+        src/utils/util.c \
+        src/utils/utf8.c \
+        src/platformdep/audio.c \
+        src/platformdep/notifications.c \
+        src/platformdep/clipboard.c \
+        src/platformdep/file_operations.c \
+        src/platformdep/windowtitle.c \
+	${SRC_JPPRON}
+
 
 FILES_CREATE = db.c util.c platformdep.c yomichan_parser.c yyjson.c
 FILES_H_CREATE = db.h util.h buf.h platformdep.h yyjson.h
 SRC_CREATE = $(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
 SRC_H_CREATE = $(addprefix $(IDIR)/,$(FILES_H_CREATE))
 
-bins := dictpopup dictpopup-create
+bins := dictpopup
 
 all: $(bins)
 all: CFLAGS+=$(RELEASE_CFLAGS)
@@ -55,8 +71,8 @@ all: CFLAGS+=$(RELEASE_CFLAGS)
 debug: $(bins)
 debug: CFLAGS+=$(DEBUG_CFLAGS)
 
-dictpopup: $(SRCS) $(SRCS_JPPRON) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRCS) $(SRCS_JPPRON) $(LDLIBS) $(NOTIF_LIBS)
+dictpopup: $(SRCS_DICTPOPUP) $(SRCS_JPPRON) $(SRC_H)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SRCS_DICTPOPUP) $(SRCS_JPPRON) $(LDLIBS) $(NOTIF_LIBS)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE) $(SDIR)/dictpopup_create.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS)

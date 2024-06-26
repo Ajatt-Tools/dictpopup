@@ -5,15 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
-
-const u8 utf8_chr_len_data[] = {
-    /* 0XXX */ 1, 1, 1, 1, 1, 1, 1, 1,
-    /* 10XX */ 1, 1, 1, 1, /* invalid */
-    /* 110X */ 2, 2,
-    /* 1110 */ 3,
-    /* 1111 */ 4, /* maybe, but also could be invalid */
-};
+#include "utils/util.h"
 
 void *xcalloc(size_t num, size_t nbytes) {
     void *p = calloc(num, nbytes);
@@ -113,15 +105,6 @@ b32 endswith(s8 s, s8 suffix) {
     return s.len >= suffix.len && s8equals(taketail(s, suffix.len), suffix);
 }
 
-s8 s8striputf8chr(s8 s) {
-    // 0x80 = 10000000; 0xC0 = 11000000
-    assert(s.len > 0);
-    s.len--;
-    while (s.len > 0 && (s.s[s.len] & 0x80) != 0x00 && (s.s[s.len] & 0xC0) != 0xC0)
-        s.len--;
-    return s;
-}
-
 s8 unescape(s8 str) {
     isize s = 0, e = 0;
     while (e < str.len) {
@@ -207,8 +190,9 @@ static b32 whitespace(u8 c) {
         case '\r':
         case ' ':
             return 1;
+        default:
+            return 0;
     }
-    return 0;
 }
 
 void strip_trailing_whitespace(s8 *str) {
@@ -220,6 +204,30 @@ void strip_trailing_whitespace(s8 *str) {
     (str->s)[str->len] = '\0';
 }
 
+/*
+ * Caller takes ownership of the data
+ */
+s8 enclose_word_in_s8_with(s8 str, s8 word, s8 prefix, s8 suffix) {
+    if (str.len == 0 || word.len == 0 || (prefix.len == 0 && suffix.len == 0))
+        return str;
+
+    assert(str.s[str.len] == '\0');
+    stringbuilder_s sb = sb_init(str.len + 2 * (prefix.len + suffix.len));
+    char *p = (char *)str.s;
+    char *prev = p;
+    while ((p = strstr(p, (char *)word.s)) != NULL) {
+        isize len = p - prev;
+        sb_append(&sb, (s8){.s = (u8 *)prev, .len = len});
+        sb_append(&sb, prefix);
+        sb_append(&sb, word);
+        sb_append(&sb, suffix);
+        p += word.len;
+        prev = p;
+    }
+    sb_append(&sb, fromcstr_(prev));
+    return sb_steals8(sb);
+}
+
 void frees8(s8 *z) {
     free(z->s);
 }
@@ -229,50 +237,7 @@ void frees8buffer(s8 *buf) {
         free(buf_pop(buf).s);
     buf_free(buf);
 }
-
-/* -------------- Start dictentry / dictionary utils ---------------- */
-
-dictentry dictentry_dup(dictentry de) {
-    return (dictentry){.dictname = s8dup(de.dictname),
-                       .kanji = s8dup(de.kanji),
-                       .reading = s8dup(de.reading),
-                       .definition = s8dup(de.definition)};
-}
-
-void dictentry_print(dictentry de) {
-    printf("dictname: %s\n"
-           "kanji: %s\n"
-           "reading: %s\n"
-           "definition: %s\n",
-           de.dictname.s, de.kanji.s, de.reading.s, de.definition.s);
-}
-
-void dictionary_add(dictentry **dict, dictentry de) {
-    buf_push(*dict, de);
-}
-
-isize dictlen(dictentry *dict) {
-    return buf_size(dict);
-}
-
-void dictentry_free(dictentry *de) {
-    frees8(&de->dictname);
-    frees8(&de->kanji);
-    frees8(&de->reading);
-    frees8(&de->definition);
-}
-
-void dictionary_free(dictentry **dict) {
-    while (buf_size(*dict) > 0)
-        dictentry_free(&buf_pop(*dict));
-    buf_free(*dict);
-}
-
-dictentry dictentry_at_index(dictentry *dict, isize index) {
-    assert(index >= 0 && (size_t)index < buf_size(dict));
-    return dict[index];
-}
-/* -------------- End dictentry / dictionary utils ---------------- */
+/* -------------- End s8 ---------------- */
 
 /* --------------- Start stringbuilder --------------- */
 
@@ -335,6 +300,56 @@ void sb_free(stringbuilder_s *sb) {
 }
 /* --------------- End stringbuilder --------------- */
 
+/* -------------- Start dictentry / dictionary utils ---------------- */
+
+dictentry dictentry_dup(dictentry de) {
+    return (dictentry){.dictname = s8dup(de.dictname),
+                       .kanji = s8dup(de.kanji),
+                       .reading = s8dup(de.reading),
+                       .definition = s8dup(de.definition)};
+}
+
+void dictentry_print(dictentry de) {
+    printf("dictname: %s\n"
+           "kanji: %s\n"
+           "reading: %s\n"
+           "definition: %s\n",
+           de.dictname.s, de.kanji.s, de.reading.s, de.definition.s);
+}
+
+void dictionary_add(dictentry **dict, dictentry de) {
+    buf_push(*dict, de);
+}
+
+isize dictlen(dictentry *dict) {
+    return buf_size(dict);
+}
+
+void dictentry_free(dictentry de) {
+    frees8(&de.dictname);
+    frees8(&de.kanji);
+    frees8(&de.reading);
+    frees8(&de.definition);
+}
+
+void dictionary_free(dictentry **dict) {
+    while (buf_size(*dict) > 0)
+        dictentry_free(buf_pop(*dict));
+    buf_free(*dict);
+}
+
+dictentry dictentry_at_index(dictentry *dict, isize index) {
+    assert(index >= 0 && (size_t)index < buf_size(dict));
+    return dict[index];
+}
+
+dictentry *pointer_to_entry_at(dictentry *dict, isize index) {
+    assert(index >= 0 && (size_t)index < buf_size(dict));
+    return dict + index;
+}
+/* -------------- End dictentry / dictionary ---------------- */
+
+/* -------------- Start freqentry ---------------- */
 freqentry freqentry_dup(freqentry fe) {
     return (freqentry){
         .word = s8dup(fe.word), .reading = s8dup(fe.reading), .frequency = fe.frequency};
@@ -344,10 +359,11 @@ void freqentry_free(freqentry *fe) {
     frees8(&fe->word);
     frees8(&fe->reading);
 }
+/* -------------- end freqentry ---------------- */
 
 /**
  * Performs safe, bounded string formatting into a buffer. On error or
- * truncation, expect() aborts.
+ * truncation, assume() aborts.
  */
 size_t snprintf_safe(char *buf, size_t len, const char *fmt, ...) {
     va_list args;
@@ -358,7 +374,7 @@ size_t snprintf_safe(char *buf, size_t len, const char *fmt, ...) {
     return (size_t)needed;
 }
 
-static void strremove(char *str, const s8 sub) {
+void substrremove(char *str, const s8 sub) {
     assert(sub.s[sub.len] == '\0');
 
     if (sub.len > 0) {
@@ -367,14 +383,4 @@ static void strremove(char *str, const s8 sub) {
             memmove(p, p + sub.len, strlen(p + sub.len) + 1);
         }
     }
-}
-
-// TODO: Cleaner (and non-null terminated) implementation
-void nuke_whitespace(s8 *z) {
-    strremove((char *)z->s, S("\n"));
-    strremove((char *)z->s, S("\t"));
-    strremove((char *)z->s, S(" "));
-    strremove((char *)z->s, S("　"));
-
-    *z = fromcstr_((char *)z->s);
 }

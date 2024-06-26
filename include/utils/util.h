@@ -103,18 +103,6 @@ b32 endswith(s8 s, s8 suffix);
 s8 s8striputf8chr(s8 s);
 
 /*
- * Returns u8 pointer pointing to the start of the char after the first utf-8
- * character
- */
-#define skip_utf8_char(p) ((p) + utf8_chr_len(p))
-
-/*
- * Returns the length in bytes of the utf8 encoded char pointed to by @p
- */
-#define utf8_chr_len(p) utf8_chr_len_data[(p)[0] >> 4]
-extern u8 const utf8_chr_len_data[];
-
-/*
  * Turns escaped characters such as the string "\\n" into the character '\n'
  * (inplace)
  *
@@ -137,6 +125,7 @@ s8 _nonnull_ concat_(s8 *strings);
 
 #define buildpath(...) buildpath_((s8[]){__VA_ARGS__, S8_STOPPER})
 s8 _nonnull_ buildpath_(s8 *pathcomps);
+s8 enclose_word_in_s8_with(s8 str, s8 word, s8 prefix, s8 suffix);
 /* ------------------- End s8 utils ---------------- */
 
 /* --------------------------- string builder -----------------------_ */
@@ -166,12 +155,13 @@ typedef struct {
 } dictentry;
 
 dictentry dictentry_dup(dictentry de);
-void _nonnull_ dictentry_free(dictentry *de);
+void _nonnull_ dictentry_free(dictentry de);
 void dictentry_print(dictentry de);
 void _nonnull_ dictionary_add(dictentry **dict, dictentry de);
 isize dictlen(dictentry *dict);
 void _nonnull_ dictionary_free(dictentry **dict);
 dictentry dictentry_at_index(dictentry *dict, isize index);
+dictentry *pointer_to_entry_at(dictentry *dict, isize index);
 /* --------------------- End dictentry ------------------------ */
 
 /* --------------------- Start freqentry ----------------- */
@@ -187,7 +177,8 @@ void freqentry_free(freqentry *fe);
 
 size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...);
 
-void nuke_whitespace(s8 *z);
+void substrremove(char *str, const s8 sub);
+
 
 /**
  * __attribute__((cleanup)) functions

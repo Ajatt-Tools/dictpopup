@@ -2,15 +2,19 @@
 #include "util.h"
 
 int main(int argc, char **argv) {
-    dictpopup_t d = dictpopup_init(argc, argv);
-    dictentry *dict = create_dictionary(&d);
+    if (argc < 2) {
+        puts("Need to provide a lookup string.");
+        return EXIT_FAILURE;
+    }
+    dictpopup_init();
+    s8 lookup = fromcstr_(argv[1]);
+    dictentry *dict = create_dictionary(&lookup);
 
     for (isize i = 0; i < dictlen(dict); i++) {
-	if (i)
-	  putchar('\n');
+        if (i)
+            putchar('\n');
         dictentry_print(dict[i]);
     }
 
     dictionary_free(&dict);
-    dictpopup_free(&d);
 }

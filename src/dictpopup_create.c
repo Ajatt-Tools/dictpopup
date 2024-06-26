@@ -9,9 +9,10 @@
 
 #include "db.h"
 #include "messages.h"
-#include "platformdep.h"
-#include "util.h"
+#include "utils/util.h"
 #include "yomichan_parser.h"
+
+#include "platformdep/file_operations.h"
 
 typedef struct {
     s8 dbpath;

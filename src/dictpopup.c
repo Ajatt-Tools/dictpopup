@@ -10,44 +10,35 @@
 #include "deinflector.h"
 #include "dictpopup.h"
 #include "messages.h"
-#include "platformdep.h"
 #include "settings.h"
-#include "util.h"
+#include "utils/utf8.h"
+#include "utils/util.h"
 
-#include <gio/gio.h>
+#include "platformdep/file_operations.h"
+#include "platformdep/windowtitle.h"
+#include "platformdep/file_paths.h"
+#ifdef CLIPBOARD
+    #include "platformdep/clipboard.h"
+#endif
 
 // This only applies for substring search
 // 60 are 20 Japanese characters
 #define MAX_LOOKUP_LEN 60 // in bytes
 
-static s8 map_entry(possible_entries_s p, int i) {
-    // A safer way would be switching to strings, but I feel like that's
-    // not very practical to configure
-    return i == 0   ? S("")
-           : i == 1 ? p.lookup
-           : i == 2 ? p.copiedsent
-           : i == 3 ? p.boldsent
-           : i == 4 ? p.dictkanji
-           : i == 5 ? p.dictreading
-           : i == 6 ? p.dictdefinition
-           : i == 7 ? p.furigana
-           : i == 8 ? p.windowname
-           : i == 9 ? p.dictname
-                    : S("");
+s8 focused_window_title = {0};
+
+// TODO: Cleaner (and non-null terminated) implementation
+static void nuke_whitespace(s8 *z) {
+    substrremove((char *)z->s, S("\n"));
+    substrremove((char *)z->s, S("\t"));
+    substrremove((char *)z->s, S(" "));
+    substrremove((char *)z->s, S("　"));
+
+    *z = fromcstr_((char *)z->s);
 }
 
-static s8 add_bold_tags(s8 sent, s8 word) {
-    _drop_(frees8) s8 bdword = concat(S("<b>"), word, S("</b>"));
-
-    assert(word.s[word.len] == '\0');
-
-    GString *bdsent = g_string_new_len((gchar *)sent.s, (gssize)sent.len);
-    g_string_replace(bdsent, (char *)word.s, (char *)bdword.s, 0);
-
-    s8 ret = {0};
-    ret.len = bdsent->len;
-    ret.s = (u8 *)g_string_free(bdsent, FALSE);
-    return ret;
+static s8 add_bold_tags_around_word(s8 sent, s8 word) {
+    return enclose_word_in_s8_with(sent, word, S("<b>"), S("</b>"));
 }
 
 static s8 create_furigana(s8 kanji, s8 reading) {
@@ -60,19 +51,28 @@ static s8 create_furigana(s8 kanji, s8 reading) {
                                                         // contains hiragana
 }
 
-static void fill_entries(possible_entries_s pe[static 1], dictentry const de) {
+static s8 get_sentence(void) {
+#ifdef CLIPBOARD
     if (cfg.anki.copySentence) {
         msg("Please select the context.");
-        pe->copiedsent = get_next_clipboard();
+        s8 clip = get_next_clipboard();
         if (cfg.anki.nukeWhitespaceSentence)
-            nuke_whitespace(&pe->copiedsent);
-
-        pe->boldsent = add_bold_tags(pe->copiedsent, pe->lookup);
+            nuke_whitespace(&clip);
+        return clip;
+    } else
+#endif
+    {
+        return (s8){0};
     }
+}
 
-    pe->dictdefinition = s8dup(de.definition);
-    pe->dictkanji = s8dup(de.kanji.len > 0 ? de.kanji : de.reading);
-    pe->dictreading = s8dup(de.reading);
+static void fill_entries(possible_entries_s pe[static 1], s8 lookup, dictentry const de) {
+    pe->copiedsent = get_sentence();
+    pe->boldsent = add_bold_tags_around_word(pe->copiedsent, lookup);
+
+    pe->dictdefinition = de.definition;
+    pe->dictkanji = de.kanji.len > 0 ? de.kanji : de.reading;
+    pe->dictreading = de.reading;
     pe->furigana = create_furigana(de.kanji, de.reading);
     pe->dictname = de.dictname;
 }
@@ -118,56 +118,87 @@ static int _nonnull_ dictentry_comparer(void const *voida, void const *voidb) {
     return inda < indb ? -1 : inda == indb ? 0 : 1;
 }
 
-dictentry *create_dictionary(dictpopup_t *d) {
+static void sort_dictentries(dictentry *dict) {
+    if (dict)
+        qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
+}
+
+static dictentry *lookup_first_matching_prefix(s8 *word, database_t *db) {
     dictentry *dict = NULL;
-    s8 *word = &(d->pe.lookup);
-    assert(word->len);
 
-    _drop_(db_close) database_t *db = db_open(cfg.general.dbpth, true);
-
-    dict = lookup(db, *word);
-    if (dict == NULL && cfg.general.mecab) {
-        _drop_(frees8) s8 hira = kanji2hira(*word);
-        dict = lookup(db, hira);
-    }
-    if (dict == NULL && cfg.general.substringSearch) {
-        int first_chr_len = utf8_chr_len(word->s);
-        while (dict == NULL && word->len > first_chr_len) {
-            *word = s8striputf8chr(*word);
-            word->s[word->len] = '\0';        // TODO: Remove necessity for this
-            if (word->len < MAX_LOOKUP_LEN) { // Don't waste time looking up huge strings
-                dict = lookup(db, *word);
-            }
+    int first_chr_len = utf8_chr_len(word->s);
+    while (dict == NULL && word->len > first_chr_len) {
+        *word = striputf8chr(*word);
+        word->s[word->len] = '\0';        // TODO: Remove necessity for this
+        if (word->len < MAX_LOOKUP_LEN) { // Don't waste time looking up huge strings
+            dict = lookup(db, *word);
         }
     }
-
-    if (dict == NULL) {
-        msg("No dictionary entry found");
-        exit(EXIT_FAILURE);
-    }
-
-    if (cfg.general.sort)
-        qsort(dict, dictlen(dict), sizeof(dictentry), dictentry_comparer);
 
     return dict;
 }
 
-void create_ankicard(dictpopup_t d, dictentry de) {
-    possible_entries_s p = d.pe;
-    fill_entries(&p, de);
+dictentry *create_dictionary(s8 *word) {
+    assert(word->len);
+    dictentry *dict = NULL;
 
-    _drop_(free) char **fieldentries = new (char *, cfg.anki.numFields);
-    for (size_t i = 0; i < cfg.anki.numFields; i++)
-        fieldentries[i] = (char *)map_entry(p, cfg.anki.fieldMapping[i]).s;
+    if (cfg.general.nukeWhitespaceLookup)
+        nuke_whitespace(word);
 
+    _drop_(db_close) database_t *db = db_open(cfg.general.dbpth, true);
+
+    dict = lookup(db, *word);
+
+    if (dict == NULL && cfg.general.mecab) {
+        _drop_(frees8) s8 hira = kanji2hira(*word);
+        dict = lookup(db, hira);
+    }
+
+    if (dict == NULL && cfg.general.substringSearch) {
+        dict = lookup_first_matching_prefix(word, db);
+    }
+
+    if (cfg.general.sort)
+        sort_dictentries(dict);
+
+    return dict;
+}
+
+static s8 map_entry(possible_entries_s p, int i) {
+    // A safer way would be switching to strings, but I feel like that's
+    // not very practical to configure
+    return i == 0   ? S("")
+           : i == 2 ? p.copiedsent
+           : i == 3 ? p.boldsent
+           : i == 4 ? p.dictkanji
+           : i == 5 ? p.dictreading
+           : i == 6 ? p.dictdefinition
+           : i == 7 ? p.furigana
+           : i == 8 ? p.windowname
+           : i == 9 ? p.dictname
+                    : S("");
+}
+
+static ankicard prepare_ankicard(s8 lookup, dictentry de, Config config) {
+
+    possible_entries_s p = {.windowname = focused_window_title};
+    fill_entries(&p, lookup, de);
+
+    char **fieldentries = new (char *, config.anki.numFields);
+    for (size_t i = 0; i < config.anki.numFields; i++) {
+        fieldentries[i] = (char *)map_entry(p, config.anki.fieldMapping[i]).s;
+    }
+
+    return (ankicard){.deck = config.anki.deck,
+                      .notetype = config.anki.notetype,
+                      .num_fields = config.anki.numFields,
+                      .fieldnames = config.anki.fieldnames,
+                      .fieldentries = fieldentries};
+}
+
+static void send_ankicard(ankicard ac) {
     char *error = NULL;
-    ankicard ac = {.deck = cfg.anki.deck,
-                   .notetype = cfg.anki.notetype,
-                   .num_fields = cfg.anki.numFields,
-                   .fieldnames = cfg.anki.fieldnames,
-                   .fieldentries = fieldentries};
     ac_addNote(ac, &error);
-
     if (error) {
         err("Error adding card: %s", error);
         free(error);
@@ -175,36 +206,30 @@ void create_ankicard(dictpopup_t d, dictentry de) {
         msg("Successfully added card.");
 }
 
-static s8 convert_to_utf8(char *str) {
-    g_autoptr(GError) error = NULL;
-    s8 ret = fromcstr_(g_locale_to_utf8(str, -1, NULL, NULL, &error));
-    die_on(error, "Converting to UTF-8: %s", error->message);
-    return ret;
+void create_ankicard(s8 lookup, dictentry de, Config config) {
+    ankicard ac = prepare_ankicard(lookup, de, config);
+    send_ankicard(ac);
+    free(ac.fieldentries);
 }
 
 static void copy_default_database(char *dbdir) {
-    // TODO: Make default loc OS independent
-    const char *default_database_location = "/usr/share/dictpopup/data.mdb";
-    if (!check_file_exists(default_database_location))
-        default_database_location = "/usr/local/share/dictpopup/data.mdb";
-    die_on(!check_file_exists(default_database_location),
+    const char *default_db_loc = NULL;
+    for(size_t i = 0; i < sizeof(DEFAULT_DATABASE_LOCATIONS); i++) {
+        if(check_file_exists(DEFAULT_DATABASE_LOCATIONS[i]))
+            default_db_loc = DEFAULT_DATABASE_LOCATIONS[i];
+    }
+    die_on(!default_db_loc,
            "Could not access the default database either. You need to create your own with"
            "dictpopup-create or download data.mdb from the repository.");
 
-    _drop_(frees8) s8 dbpath = buildpath(fromcstr_(dbdir), S("data.mdb"));
     createdir(dbdir);
-
-    GFile *source = g_file_new_for_path(default_database_location);
-    GFile *dest = g_file_new_for_path((char *)dbpath.s);
-    g_file_copy(source, dest, G_FILE_COPY_NONE, NULL, NULL, NULL, NULL);
-    g_object_unref(source);
-    g_object_unref(dest);
+    _drop_(frees8) s8 dbpath = buildpath(fromcstr_(dbdir), S("data.mdb"));
+    file_copy_sync(default_db_loc, (char *)dbpath.s);
 }
 
-dictpopup_t dictpopup_init(int argc, char **argv) {
+void dictpopup_init(void) {
     setlocale(LC_ALL, "");
     read_user_settings(POSSIBLE_ENTRIES_S_NMEMB);
-    int nextarg = parse_cmd_line_opts(argc, argv); // Should be second to overwrite settings
 
     if (!db_check_exists(fromcstr_(cfg.general.dbpth))) {
         msg("No database found. We recommend creating your own database with dictpopup-create, but "
@@ -212,22 +237,5 @@ dictpopup_t dictpopup_init(int argc, char **argv) {
         copy_default_database(cfg.general.dbpth);
     }
 
-    possible_entries_s p = {0};
-
-    p.windowname = get_windowname();
-    p.lookup = argc - nextarg > 0 ? convert_to_utf8(argv[nextarg]) : get_selection();
-
-    die_on(!p.lookup.len, "No selection and no argument provided. Exiting..");
-    die_on(!g_utf8_validate((char *)p.lookup.s, p.lookup.len, NULL),
-           "Lookup is not a valid UTF-8 string");
-
-    if (cfg.general.nukeWhitespaceLookup)
-        nuke_whitespace(&p.lookup);
-
-    return (dictpopup_t){p};
-}
-
-void dictpopup_free(dictpopup_t *data) {
-    frees8(&data->pe.windowname);
-    frees8(&data->pe.lookup);
+    focused_window_title = get_windowname();
 }

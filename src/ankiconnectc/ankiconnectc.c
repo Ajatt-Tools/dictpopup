@@ -1,26 +1,15 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include <curl/curl.h>
 #include <glib.h>
-
 #include "ankiconnectc.h"
 
-#include <util.h>
+#include "messages.h"
 
-#define AC_API_URL_EVAR "ANKICONNECT_API_URL"
-#define DEFAULT_AC_API_URL "http://localhost:8765"
-
-typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
-
-typedef struct {
-    union {
-        char *string;
-        _Bool boolean;
-    } data;
-    _Bool ok; // Signalizes if there was an error on not. The error msg is
-    // stored in data.string
-} retval_s;
+#ifndef UNIT_TEST
+#include "send_request.c"
+#endif
+#include "ankiconnectc/send_request.h"
 
 static int get_array_len(const char *array[static 1]) {
     int n = 0;
@@ -95,12 +84,6 @@ static char **json_escape_str_array(int n, const char **array) {
 }
 
 /* ------ Callback functions ------ */
-static size_t noop_write_function(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    (void)ptr; // Suppress unused parameter warning
-    (void)userdata;
-    return size * nmemb;
-}
-
 static size_t search_checker(char *ptr, size_t size, size_t nmemb, void *userdata) {
     assert(userdata);
     retval_s *ret = userdata;
@@ -140,51 +123,16 @@ void ankicard_free(ankicard *ac) {
 
 DEFINE_DROP_FUNC_PTR(ankicard, ankicard_free)
 
-static const char *get_api_url(void) {
-    const char *env = getenv(AC_API_URL_EVAR); // Warning: String can change
-    return env && *env ? env : DEFAULT_AC_API_URL;
-}
-
-static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
-    CURL *curl = curl_easy_init();
-    if (!curl)
-        return (retval_s){.data.string = strdup("Error initializing cURL"), .ok = false};
-
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Accept: application/json");
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-
-    curl_easy_setopt(curl, CURLOPT_URL, get_api_url());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, request.len);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.s);
-
-    retval_s ret = {.ok = true}; // Maybe add a generic checker instead of
-                                 // defaulting to true
-    if (response_checker) {
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_checker);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ret);
-    } else {
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, noop_write_function);
-    }
-
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        ret =
-            (retval_s){.data.string = strdup("Could not connect to AnkiConnect. Is Anki running?"),
-                       .ok = false};
-    }
-
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    return ret;
-}
-
 bool ac_check_connection(void) {
     s8 req = S("{\"action\": \"version\", \"version\": 6}");
     retval_s ret = sendRequest(req, NULL);
-    return ret.ok;
+
+    // TODO: Switch to error parameter
+    if (!ret.ok) {
+        free(ret.data.string);
+        return false;
+    }
+    return true;
 }
 
 static s8 form_search_req(bool include_suspended, bool include_new, char *deck, char *field,
@@ -214,25 +162,30 @@ static int ac_check_exists_with(bool include_suspended, bool include_new, char *
  * @field: The field where @entry should be searched in.
  * @str: The string to search for
  *
- * Returns: 1 if cards with @str as @field exist, which are not suspended and not nerw
+ * Returns: 1 if cards with @str as @field exist, which are not suspended and not new
  *          2 if there are new cards with @str as @field (and maybe also suspended cards)
  *          3 if there are only suspended cards with @str as @field
- *          -1 on error
+ *         -1 on error
  */
-int ac_check_exists(char *deck, char *field, char *str, char **error) {
-    int rc = ac_check_exists_with(false, false, deck, field, str, error);
+int ac_check_exists(char *deck, char *field, char *lookup, char **error) {
+    if (!lookup) {
+        *error = strdup("Lookup string called with NULL value in ac_check_exists!");
+        return -1;
+    }
+
+    int rc = ac_check_exists_with(false, false, deck, field, lookup, error);
     if (rc == -1)
         return -1;
     if (rc == 1)
         return 1;
 
-    rc = ac_check_exists_with(false, true, deck, field, str, error);
+    rc = ac_check_exists_with(false, true, deck, field, lookup, error);
     if (rc == -1)
         return -1;
     if (rc == 1)
         return 2;
 
-    rc = ac_check_exists_with(true, true, deck, field, str, error);
+    rc = ac_check_exists_with(true, true, deck, field, lookup, error);
     if (rc == -1)
         return -1;
     if (rc == 1)
@@ -252,7 +205,8 @@ void ac_gui_search(const char *deck, const char *field, const char *entry, char 
 
     _drop_(frees8) s8 req = form_gui_search_req(deck, field, entry);
     retval_s r = sendRequest(req, NULL);
-    if (!r.ok)
+
+    if (!r.ok && error)
         *error = r.data.string;
 }
 
@@ -292,15 +246,6 @@ static ankicard ankicard_dup_json_esc(const ankicard ac) {
                       .fieldentries =
                           json_escape_str_array(num_fields, (const char **)ac.fieldentries),
                       .tags = ac.tags ? json_escape_str_array(-1, (const char **)ac.tags) : NULL};
-}
-
-static char *check_card(ankicard const ac) {
-    return !ac.deck           ? "No deck specified."
-           : !ac.notetype     ? "No notetype specified."
-           : !ac.num_fields   ? "Number of fields is 0"
-           : !ac.fieldnames   ? "No fieldnames provided."
-           : !ac.fieldentries ? "No fieldentries provided."
-                              : NULL;
 }
 
 static s8 form_addNote_req(ankicard ac) {
@@ -356,9 +301,17 @@ static s8 form_addNote_req(ankicard ac) {
     return sb_steals8(sb);
 }
 
+static char *check_card(ankicard const ac) {
+    return !ac.deck           ? "No deck specified."
+           : !ac.notetype     ? "No notetype specified."
+           : !ac.num_fields   ? "Number of fields is 0"
+           : !ac.fieldnames   ? "No fieldnames provided."
+           : !ac.fieldentries ? "No fieldentries provided."
+                              : NULL;
+}
+
 void ac_addNote(ankicard const ac, char **error) {
-    *error = check_card(ac);
-    if (*error)
+    if((*error = check_card(ac)))
         return;
 
     _drop_(frees8) s8 req = form_addNote_req(ac);

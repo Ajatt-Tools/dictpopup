@@ -14,38 +14,44 @@ set(CMAKE_C_COMPILER gcc)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDEBUG)
     set(CMAKE_C_FLAGS
-            "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes -Wdouble-promotion -Wshadow \
+            "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes -Wshadow \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
 	     -O0 -ggdb")
+    #-Wdouble-promotion
     set(CMAKE_C_FLAGS
             "${CMAKE_C_FLAGS} -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong")
 else ()
-    add_compile_options(-Ofast -flto -march=native -mtune=native -g)
+    add_compile_options(-O3 -flto -march=native -mtune=native -g -fno-omit-frame-pointer)
 endif ()
 
 add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER}
         ${LIBZIP_DEFINITIONS} ${CURL_DEFINITIONS})
-set(SRCS
-        src/ankiconnectc.c
-        src/db.c
-        src/deinflector.c
-        src/dictpopup.c
-        src/platformdep.c
-        src/settings.c
-        src/util.c)
 
 set(JPPRON_SRCS
         src/jppron/jppron.c
         src/jppron/database.c
         src/jppron/ajt_audio_index_parser.c
-	src/yyjson.c)
+        src/utils/yyjson.c)
 
 # ##############################################################################
 # dictpopup
 # ##############################################################################
-add_executable(dictpopup src/frontends/gtk3popup.c ${SRCS} ${JPPRON_SRCS})
-target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS)
+add_executable(dictpopup ${JPPRON_SRCS}
+        src/frontends/gtk3popup.c
+        src/dictpopup.c
+        src/db.c
+        src/ankiconnectc/ankiconnectc.c
+        src/deinflector.c
+        src/settings.c
+        src/utils/util.c
+        src/utils/utf8.c
+        src/platformdep/audio.c
+        src/platformdep/notifications.c
+        src/platformdep/clipboard.c
+        src/platformdep/file_operations.c
+        src/platformdep/windowtitle.c)
+target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD)
 target_include_directories(
         dictpopup PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
         ${CURL_INCLUDE_DIRS} include/)
@@ -61,9 +67,13 @@ target_link_libraries(dictpopup PRIVATE -lXfixes -lX11)
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
-add_executable(dictpopup-create src/dictpopup_create.c ${SRCS}
-	src/yyjson.c
-        src/yomichan_parser.c)
+add_executable(dictpopup-create
+        src/dictpopup_create.c
+        src/utils/util.c
+        src/utils/yyjson.c
+        src/db.c
+        src/yomichan_parser.c
+        src/platformdep/file_operations.c)
 target_include_directories(
         dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-create PRIVATE ${GTK3_LIBRARY_DIRS}
@@ -78,8 +88,23 @@ add_executable(cli EXCLUDE_FROM_ALL src/frontends/cli.c ${SRCS})
 target_include_directories(
         cli PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
         ${CURL_INCLUDE_DIRS} include/)
+add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
+        src/dictpopup.c
+        src/deinflector.c
+        src/ankiconnectc/ankiconnectc.c
+        src/utils/util.c
+        src/db.c
+        src/settings.c
+        src/platformdep/file_operations.c
+        src/platformdep/clipboard.c
+        src/platformdep/windowtitle.c
+        )
+target_include_directories(
+        dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} include/)
+target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS}
 target_link_directories(cli PRIVATE ${GTK3_LIBRARY_DIRS}
         ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
+target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
 target_link_libraries(cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
         ${CURL_LIBRARIES} -lmecab -llmdb)
 
@@ -95,12 +120,13 @@ if (BUILD_TESTING)
             tests/deinflector_tests.c
             tests/ankiconnect_tests.c
             src/deinflector.c
-            src/util.c
+            src/utils/util.c
             tests/yomichan_parser_tests.c
-            src/db.c
-            src/platformdep.c
-            src/yyjson.c
-            tests/ajt_audio_index_parser_tests.c)
+            src/utils/yyjson.c
+            tests/jppron_tests/ajt_audio_index_parser_tests.c
+            tests/utils_tests/enclose_word_in_string_tests.c
+            tests/dictpopup_tests.c
+            src/utils/utf8.c)
     target_compile_definitions(c_tests PRIVATE UNIT_TEST)
     target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/ src/jppron)
     target_link_libraries(
@@ -134,7 +160,7 @@ install(
 # ##############################################################################
 set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "butterkeks")
-set(CPACK_PACKAGE_VERSION 0.1.5)
+set(CPACK_PACKAGE_VERSION 0.2.1)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
         "curl,libgtk-3-0,libzip4,mecab,libnotify4,liblmdb-dev")
 set(CPACK_PACKAGE_CONTACT "butterkeks@fedora.email")

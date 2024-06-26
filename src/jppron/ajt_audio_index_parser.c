@@ -1,11 +1,10 @@
-#include "ajt_audio_index_parser.h"
+#include "jppron/ajt_audio_index_parser.h"
 
 #include <deinflector.h>
 #include <errno.h>
-#include <libgen.h>
 #include <messages.h>
-#include <util.h>
-#include "yyjson.h"
+#include "utils/util.h"
+#include "utils/yyjson.h"
 
 typedef struct {
     s8 root_path;
@@ -65,9 +64,9 @@ static void parse_headwords(yyjson_val *headwordobj, index_meta im, void (*forea
     }
 }
 
-static fileinfo extract_fileinfo(yyjson_val * fileinfoobj) {
+static fileinfo_s extract_fileinfo(yyjson_val * fileinfoobj) {
 
-    fileinfo fi = {0};
+    fileinfo_s fi = {0};
     size_t objidx, objmax;
     yyjson_val *objkey, *objval;
     yyjson_obj_foreach(fileinfoobj, objidx, objmax, objkey, objval) {
@@ -87,7 +86,7 @@ static fileinfo extract_fileinfo(yyjson_val * fileinfoobj) {
     return fi;
 }
 
-static void parse_files(yyjson_val * filesobj, index_meta im, void(*foreach_file)(void *, s8, fileinfo), void * userdata_f){
+static void parse_files(yyjson_val * filesobj, index_meta im, void(*foreach_file)(void *, s8, fileinfo_s), void * userdata_f){
     err_ret_on(!yyjson_is_obj(filesobj), "Value of \"files\" is not an object.");
 
     size_t objidx, objmax;
@@ -96,7 +95,7 @@ static void parse_files(yyjson_val * filesobj, index_meta im, void(*foreach_file
         err_ret_on(!yyjson_is_obj(objval), "Value of key: '%s' is not an object.", yyjson_get_str(objkey));
         s8 fn = yyjson_get_s8(objkey);
 
-        fileinfo fi = extract_fileinfo(objval);
+        fileinfo_s fi = extract_fileinfo(objval);
         fi.origin = im.name;
         _drop_(frees8) s8 fullpath = buildpath(im.root_path, im.media_dir, fn);
         foreach_file(userdata_f, fullpath, fi);
@@ -105,7 +104,7 @@ static void parse_files(yyjson_val * filesobj, index_meta im, void(*foreach_file
 
 void parse_audio_index_from_file(s8 curdir, const char *index_filepath,
                                  void (*foreach_headword)(void *, s8, s8), void *userdata_hw,
-                                 void (*foreach_file)(void *, s8, fileinfo), void *userdata_f) {
+                                 void (*foreach_file)(void *, s8, fileinfo_s), void *userdata_f) {
     _drop_(fclose) FILE *index_fp = fopen(index_filepath, "r");
     err_ret_on(!index_fp, "Failed to open the index '%s': %s", index_filepath, strerror(errno));
 

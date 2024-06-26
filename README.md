@@ -114,8 +114,9 @@ instead: `dictpopup WORD`.
 If something is not working as expected, you can add `DP_DEBUG=1` before the command or add the command line option `-c`
 to print the config on stdout.
 
-The "+" sign adds the currently shown definition to Anki after prompting you to copy a sentence.
+The "+" sign adds the currently shown definition to Anki after prompting you to copy a sentence (if enabled).
 If there is text selected in the popup window, it will be used instead as a definition.
+Furthermore, by right-clicking the + sign, you can also use the current clipboard content as the definition instead.
 
 The green/red dot indicates whether the word is already present in your Anki collection.
 It displays an orange dot if there exist corresponding cards, but which are all suspended.

@@ -1,9 +1,8 @@
 #ifndef ANKICONNECTC_H
 #define ANKICONNECTC_H
 
-#include "util.h"
+#include "utils/util.h"
 #include <stdbool.h>
-#include <stddef.h>
 
 typedef struct {
     char *deck;

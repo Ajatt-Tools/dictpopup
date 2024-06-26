@@ -7,11 +7,11 @@
 #include <lmdb.h>
 #include <string.h>
 
-#include "database.h"
+#include "jppron/database.h"
 
 #include "messages.h"
-#include "util.h"
-#include "ajt_audio_index_parser.h"
+#include "utils/util.h"
+#include "jppron/ajt_audio_index_parser.h"
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
@@ -102,11 +102,11 @@ void jdb_add_headword_with_file(database *db, s8 headword, s8 filepath) {
         sb_set(&db->lastval, headword);
 }
 
-static s8 fileinfo_to_data(fileinfo fi) {
+static s8 fileinfo_to_data(fileinfo_s fi) {
     return concat(fi.origin, fi.hira_reading, fi.pitch_number, fi.pitch_pattern);
 }
 
-static fileinfo convert_data_to_fileinfo(s8 data) {
+static fileinfo_s convert_data_to_fileinfo(s8 data) {
     s8 data_split[4] = {0};
     for (long unsigned int i = 0; i < arrlen(data_split) && data.len > 0; i++) {
         assert(data.len > 0);
@@ -122,13 +122,13 @@ static fileinfo convert_data_to_fileinfo(s8 data) {
         data.len -= data_split[i].len + 1;
     }
 
-    return (fileinfo){.origin = data_split[0],
+    return (fileinfo_s){.origin = data_split[0],
                       .hira_reading = data_split[1],
                       .pitch_number = data_split[2],
                       .pitch_pattern = data_split[3]};
 }
 
-void jdb_add_file_with_fileinfo(database *db, s8 filepath, fileinfo fi) {
+void jdb_add_file_with_fileinfo(database *db, s8 filepath, fileinfo_s fi) {
     int rc;
 
     _drop_(frees8) s8 data = fileinfo_to_data(fi);
@@ -156,7 +156,7 @@ static s8 get_fileinfo_data(database *db, s8 fullpath) {
     return ret;
 }
 
-fileinfo jdb_get_fileinfo(database *db, s8 fullpath) {
+fileinfo_s jdb_get_fileinfo(database *db, s8 fullpath) {
     _drop_(frees8) s8 data = get_fileinfo_data(db, fullpath);
     return convert_data_to_fileinfo(data);
 }
@@ -190,4 +190,9 @@ s8 *jdb_get_files(database *db, s8 word) {
 i32 jdb_check_exists(s8 dbpath) {
     _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
     return (access((char *)dbfile.s, R_OK) == 0);
+}
+
+void jdb_remove(s8 dbpath) {
+    _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
+    remove((char *)dbfile.s);
 }

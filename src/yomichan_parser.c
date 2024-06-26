@@ -3,8 +3,8 @@
 #include <zip.h>
 
 #include "messages.h"
-#include "util.h"
-#include "yyjson.h"
+#include "utils/util.h"
+#include "utils/yyjson.h"
 
 DEFINE_DROP_FUNC(struct zip_file *, zip_fclose)
 DEFINE_DROP_FUNC(yyjson_doc *, yyjson_doc_free)
@@ -22,9 +22,21 @@ DEFINE_DROP_FUNC(yyjson_doc *, yyjson_doc_free)
         }                                                                                          \
     } while (0)
 
-enum tag_type { TAG_UNKNOWN, TAG_DIV, TAG_SPAN, TAG_UL, TAG_OL, TAG_LI, TAG_RUBY_RT };
+enum tag_t {
+    TAG_UNKNOWN,
+    TAG_DIV,
+    TAG_SPAN,
+    TAG_UL,
+    TAG_OL,
+    TAG_LI,
+    TAG_RUBY_RT,
+    TAG_TABLE,
+    TAG_TR,
+    TAG_TH,
+    TAG_TD
+};
 
-static void append_definition(yyjson_val *val, stringbuilder_s sb[static 1], s8 liststyle,
+static void append_definition(yyjson_val *def, stringbuilder_s sb[static 1], s8 liststyle,
                               i32 listdepth, bool first);
 
 static s8 yyjson_get_s8(yyjson_val *val) {
@@ -87,42 +99,38 @@ static void ensure_ends_on_newline(stringbuilder_s *sb) {
         sb_append(sb, S("\n"));
 }
 
+static i32 parse_tag_name(s8 s8val) {
+    return s8equals(s8val, S("div"))     ? TAG_DIV
+           : s8equals(s8val, S("ul"))    ? TAG_UL
+           : s8equals(s8val, S("ol"))    ? TAG_OL
+           : s8equals(s8val, S("li"))    ? TAG_LI
+           : s8equals(s8val, S("rt"))    ? TAG_RUBY_RT
+           : s8equals(s8val, S("table")) ? TAG_TABLE
+           : s8equals(s8val, S("tr"))    ? TAG_TR
+           : s8equals(s8val, S("th"))    ? TAG_TH
+           : s8equals(s8val, S("td"))    ? TAG_TD
+                                         : TAG_UNKNOWN;
+}
+
 static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static 1], s8 liststyle,
                                       i32 listdepth) {
-    if (!yyjson_is_obj(obj))
+    if (!yyjson_is_obj(obj)) {
         err("Structured content is not an object.");
+        return;
+    }
 
-    enum tag_type tag = TAG_UNKNOWN;
+    enum tag_t tag = TAG_UNKNOWN;
     yyjson_val *content = NULL;
     bool listStyleType_read = false;
 
     size_t idx, max;
     yyjson_val *key, *val;
     yyjson_obj_foreach(obj, idx, max, key, val) {
-
         assert(yyjson_is_str(key));
         s8 s8key = yyjson_get_s8(key);
-        s8 s8val = yyjson_get_s8(val);
 
         if (s8equals(s8key, S("tag"))) {
-            if (s8equals(s8val, S("div")))
-                tag = TAG_DIV;
-            else if (s8equals(s8val, S("ul"))) {
-                tag = TAG_UL;
-                listdepth++;
-
-                if (!listStyleType_read)
-                    liststyle = S("▪"); // default value
-            } else if (s8equals(s8val, S("ol"))) {
-                tag = TAG_OL;
-                listdepth++;
-            } else if (s8equals(s8val, S("li"))) {
-                tag = TAG_LI;
-                // TODO: Default numbers for tag ol
-            } else if (s8equals(s8val, S("rt"))) {
-                tag = TAG_RUBY_RT;
-            } else
-                tag = TAG_UNKNOWN;
+            tag = parse_tag_name(yyjson_get_s8(val));
         } else if (s8equals(s8key, S("style"))) {
             if (yyjson_is_obj(val)) {
                 size_t idx2, max2;
@@ -136,7 +144,7 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
             } else
                 dbg("Could not parse style of list. Skipping..");
         } else if (s8equals(s8key, S("content"))) {
-            content = val; // parse content last
+            content = val; // parse content at the end
         }
     }
 
@@ -144,6 +152,15 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
         case TAG_RUBY_RT:
             // Don't display ruby (for now)
             return;
+        case TAG_OL:
+            listdepth++;
+            // TODO: Default numbers
+            break;
+        case TAG_UL:
+            listdepth++;
+            if (!listStyleType_read)
+                liststyle = S("▪"); // default value
+            break;
         case TAG_DIV:
             ensure_ends_on_newline(sb);
             break;
@@ -154,10 +171,14 @@ static void append_structured_content(yyjson_val *obj, stringbuilder_s sb[static
             sb_append(sb, liststyle);
             sb_append(sb, S(" "));
             break;
+        case TAG_TR:
+            ensure_ends_on_newline(sb);
         default:;
     }
 
-    append_definition(content, sb, liststyle, listdepth, false);
+    if (content) {
+        append_definition(content, sb, liststyle, listdepth, false);
+    }
 }
 
 static void append_definition(yyjson_val *def, stringbuilder_s sb[static 1], s8 liststyle,
@@ -197,9 +218,12 @@ static s8 parse_definition(yyjson_val *val) {
 static dictentry parse_dictionary_entry(yyjson_val *arr) {
     if (!yyjson_is_arr(arr)) {
         err("Invalid dictionary format: Entry is not an array.");
+        return (dictentry){0};
     }
-    if (yyjson_arr_size(arr) != 8)
+    if (yyjson_arr_size(arr) != 8) {
         err("Invalid dictionary format: Faulty array size.");
+        return (dictentry){0};
+    }
 
     dictentry de = {0};
     // first

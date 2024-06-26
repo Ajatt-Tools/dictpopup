@@ -1,21 +1,14 @@
 ## dictpopup
-- Fix formating for JMDict (tags come after content)
-  - Just put content into separate variable and then concatenate at end
-- Fix formatting for Jitendex (Prettier lists)
 - Write a "Yomichan search"-like window application
-- Include a small default dictionary (.mdb file)
+- Check if sentence is mapped to some field and only prompt for it in that case
 
 Mid priority
-- Right click on '+' button -> popup menu with: "add from clipboard", ...
-- Right click on audio button -> popup menu with "copy file to clipboard", ...
 - Implement the reading label as a text view to allow for editing -> initiate new search on Enter press
 - Group terms by reading, allow for switching between different readings
 - Implement a small window to manually enter a search string instead of selecting
 - Kanjify the word in the copied sentence according to the dictionary entry
 - Remove trailing spaces from user settings
-- Need some check when looking up a hiragana conversion to prevent things like 賢人会 -> 県人会
-- Don't show circle indicator if Anki is not running / on error
-- Show a blue circle if existing cards are all new
+- Need some check when looking up a hiragana conversion from mecab to prevent things like 賢人会 -> 県人会
 - Search for audio of inflected selected word (e.g. 下がらない) (optionally)
 - Switch to using GSettings
 - Write a gui config tool
@@ -23,8 +16,16 @@ Mid priority
   - Choose dictionary sort order
   - build database
   - change general config
+- Allow specifying the order for pronunciations
 
 Low priority
+- Better list and table formatting
+  - Text only is not enough for that. Would need to surround 
+    text with markers and then parse and format at run time
+- Right click on audio button -> popup menu with "copy file to clipboard", ...
+- Improve "Anki not running" behaviour
+  - The circle is currently not shown but still clickable
+  - Either ping for Anki or add a reload button
 - Support pictures
 - Fix "Error obtaining window name" on recursive lookup
   - The problem is, that dictpopup creates a "child window" (?) with id one more which does not have a name
@@ -63,6 +64,7 @@ freq:
 - いじらしい not present in all
 
 Possible ideas:
+- Allow adding audio files indexed by filename (for forvo)
 - Add some way to lookup example sentences
   - Maybe something like a menu button which opens a popup menu with: "settings", "lookup massif example sentences", ...
 - Implement a dbus service mode

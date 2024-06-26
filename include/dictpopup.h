@@ -1,25 +1,25 @@
 #ifndef DP_DICTPOPUP_H
 #define DP_DICTPOPUP_H
 
-#include "util.h"
+#include "utils/util.h"
 
-// Opaque type
-typedef struct dictpopup_s dictpopup_t;
+#include <settings.h>
 
-dictpopup_t dictpopup_init(int argc, char **argv);
-void dictpopup_free(dictpopup_t *d);
+/*
+ * Should only be called once and as early as possible
+ */
+void dictpopup_init(void);
 
 /*
  * Looks up @lookup in the database and returns all corresponding dictentries in
  * a buffer (see include/buf.h)
  */
-dictentry *_nonnull_ create_dictionary(dictpopup_t *d);
+dictentry *_nonnull_ create_dictionary(s8 *word);
 
-void create_ankicard(dictpopup_t d, dictentry de);
+void create_ankicard(s8 lookup, dictentry de, Config config);
 
 #define POSSIBLE_ENTRIES_S_NMEMB 9
 typedef struct possible_entries_s {
-    s8 lookup;
     s8 copiedsent;
     s8 boldsent;
     s8 dictkanji;

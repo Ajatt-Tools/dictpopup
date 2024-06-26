@@ -8,7 +8,8 @@
 
 #include "deinflector.h"
 #include "messages.h"
-#include "util.h"
+#include "utils/util.h"
+#include "utils/utf8.h"
 
 typedef enum { UNKNOWN, VERB, ADJ_I } wtype;
 

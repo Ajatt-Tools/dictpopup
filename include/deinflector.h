@@ -1,4 +1,4 @@
-#include "util.h"
+#include "utils/util.h"
 
 /*
  * @word: The japanese word to be deinflected

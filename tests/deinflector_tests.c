@@ -1,5 +1,5 @@
 #include "deinflector.h"
-#include "util.h"
+#include "utils/util.h"
 #include <cgreen/cgreen.h>
 
 TestSuite *deinflector_tests(void);
