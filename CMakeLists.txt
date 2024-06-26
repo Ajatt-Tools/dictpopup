@@ -82,12 +82,32 @@ target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb
         ${CURL_LIBRARIES} -lmecab)
 
 # ##############################################################################
+# dictpopup-window
+# ##############################################################################
+pkg_check_modules(GTK4 REQUIRED gtk4)
+add_executable(dictpopup-win EXCLUDE_FROM_ALL
+        src/frontends/gtk4window.c
+        src/dictpopup.c
+        src/db.c
+        src/deinflector.c
+        src/ankiconnectc/ankiconnectc.c
+        src/settings.c
+        src/utils/util.c
+        src/platformdep/windowtitle.c
+        src/platformdep/file_operations.c
+        src/platformdep/notifications.c)
+target_compile_definitions(dictpopup-win PUBLIC NOTIFICATIONS)
+target_include_directories(
+        dictpopup-win PRIVATE ${GTK4_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS} include/)
+target_link_directories(dictpopup-win PRIVATE ${GTK4_LIBRARY_DIRS}
+        ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
+target_link_libraries(dictpopup-win PRIVATE ${GTK4_LIBRARIES} ${NOTIFY_LIBRARIES}
+        ${CURL_LIBRARIES} -lmecab -llmdb)
+
+# ##############################################################################
 # cli
 # ##############################################################################
-add_executable(cli EXCLUDE_FROM_ALL src/frontends/cli.c ${SRCS})
-target_include_directories(
-        cli PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
-        ${CURL_INCLUDE_DIRS} include/)
 add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
         src/dictpopup.c
         src/deinflector.c
