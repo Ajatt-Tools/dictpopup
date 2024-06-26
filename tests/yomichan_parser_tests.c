@@ -25,16 +25,15 @@ static _nonnull_ void foreach_dictentry(void *userdata, dictentry de) {
 #define CHECK_NR(n)                                                                                \
     do {                                                                                           \
         s8 toparse = {0};                                                                          \
-        g_file_get_contents(DICTENTRIES_DIR "/" #n "_entry", (char **)&toparse.s,        \
+        g_file_get_contents(DICTENTRIES_DIR "/" #n "_entry", (char **)&toparse.s,                  \
                             (gsize *)&toparse.len, NULL);                                          \
                                                                                                    \
         s8 expected = {0};                                                                         \
-        g_file_get_contents(DICTENTRIES_DIR "/" #n "_expected", (char **)&expected.s,    \
+        g_file_get_contents(DICTENTRIES_DIR "/" #n "_expected", (char **)&expected.s,              \
                             (gsize *)&expected.len, NULL);                                         \
         g_strchomp((char *)expected.s);                                                            \
                                                                                                    \
-        expect(foreach_dictentry,                                             \
-               when(de.definition.s, is_equal_to_string((char *)expected.s)),                      \
+        expect(foreach_dictentry, when(de.definition.s, is_equal_to_string((char *)expected.s)),   \
                when(de.dictname.s, is_equal_to_string("Test")));                                   \
         parse_yomichan_dictentries_from_buffer(toparse, S("Test"), &foreach_dictentry, NULL);      \
                                                                                                    \
@@ -74,6 +73,10 @@ Ensure(Parser, correctly_formats_nested_lists) {
     CHECK_NR(8);
 }
 
+Ensure(Parser, formats_tables_correctly) {
+    CHECK_NR(9);
+}
+
 Ensure(Parser, uses_correct_list_style) {
     CHECK_NR(10);
 }
@@ -82,8 +85,7 @@ Ensure(Parser, correctly_parses_frequency_entry_with_reading) {
     const s8 toparse = S("[[\"糞\", \"freq\", {\"reading\": \"くそ\", \"frequency\": 9788}]]");
 
     freqentry expected = {.word = S("糞"), .reading = S("くそ"), .frequency = 9788};
-    expect(foreach_freqentry,
-           when(fe.word.s, is_equal_to_string((char *)expected.word.s)),
+    expect(foreach_freqentry, when(fe.word.s, is_equal_to_string((char *)expected.word.s)),
            when(fe.reading.s, is_equal_to_string((char *)expected.reading.s)),
            when(fe.frequency, is_equal_to(expected.frequency)));
     parse_yomichan_freqentries_from_buffer(toparse, &foreach_freqentry, NULL);
@@ -94,8 +96,7 @@ Ensure(Parser, correctly_parses_frequency_entry_without_reading) {
 
     freqentry expected = {.word = S("私たち"), .reading = (s8){0}, .frequency = 581};
 
-    expect(foreach_freqentry,
-           when(fe.word.s, is_equal_to_string((char *)expected.word.s)),
+    expect(foreach_freqentry, when(fe.word.s, is_equal_to_string((char *)expected.word.s)),
            when(fe.reading.s, is_equal_to_string((char *)expected.reading.s)),
            when(fe.frequency, is_equal_to(expected.frequency)));
     parse_yomichan_freqentries_from_buffer(toparse, &foreach_freqentry, NULL);
@@ -126,6 +127,7 @@ TestSuite *yomichan_parser_tests(void) {
     add_test_with_context(suite, Parser, correctly_extracts_dictionary_name);
     add_test_with_context(suite, Parser, handles_tag_after_content1);
     add_test_with_context(suite, Parser, handles_tag_after_content2);
+    add_test_with_context(suite, Parser, formats_tables_correctly);
     // add_test_with_context(suite, Parser, correctly_formats_nested_lists);
     add_test_with_context(suite, Parser, uses_correct_list_style);
     return suite;
