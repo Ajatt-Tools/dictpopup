@@ -329,7 +329,7 @@ static void check_passive_causative(s8 word) {
     IF_ENDSWITH_REPLACE(VERB, "来させる", "来る");
     IF_EQUALS_ADD(VERB, "こさせる", "来る");
 
-    IF_ICHIDAN_REPLACE("られる", "る");
+    // IF_ICHIDAN_REPLACE("られる", "る"); // Covered by れる case
     IF_ICHIDAN_REPLACE("させる", "る");
     IF_ENDSWITH_CONVERT_ATOU("れる");
     IF_ENDSWITH_CONVERT_ATOU("せる");
