@@ -191,9 +191,13 @@ Ensure(Deinflector, deinflects_null) {
     assert_that(deinfs, is_null);
 }
 
-Ensure(Deinflector, deinflects_small) {
+Ensure(Deinflector, deinflects_small_string) {
     s8 *deinfs = deinflect(fromcstr_("a"));
     assert_that(deinfs, is_null);
+}
+
+Ensure(Deinflector, deinflects_adj_sugiru) {
+    DEINFLECT("色濃い", "色濃すぎる");
 }
 
 TestSuite *deinflector_tests(void) {
@@ -219,6 +223,7 @@ TestSuite *deinflector_tests(void) {
     add_test_with_context(suite, Deinflector, deinflects_nagara);
     add_test_with_context(suite, Deinflector, does_not_contain);
     add_test_with_context(suite, Deinflector, deinflects_null);
-    add_test_with_context(suite, Deinflector, deinflects_small);
+    add_test_with_context(suite, Deinflector, deinflects_small_string);
+    add_test_with_context(suite, Deinflector, deinflects_adj_sugiru);
     return suite;
 }

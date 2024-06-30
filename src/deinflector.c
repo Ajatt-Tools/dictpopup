@@ -430,6 +430,7 @@ static void check_iadjective(s8 word) {
     IF_ENDSWITH_REPLACE(ADJ_I, "げ", "い");
     IF_ENDSWITH_REPLACE(ADJ_I, "く", "い");
     IF_ENDSWITH_REPLACE(ADJ_I, "かろう", "い");
+    IF_ENDSWITH_REPLACE(ADJ_I, "すぎる", "い");
 
     /* negation */
     IF_ENDSWITH_REPLACE(ADJ_I, "くない", "い");
