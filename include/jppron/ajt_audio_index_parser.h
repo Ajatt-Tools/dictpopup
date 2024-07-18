@@ -1,8 +1,7 @@
 #ifndef AUDIO_INDEX_PARSER_H
 #define AUDIO_INDEX_PARSER_H
 
-#include <stddef.h>
-#include "utils/util.h"
+#include "utils/str.h"
 
 typedef struct {
     s8 origin;

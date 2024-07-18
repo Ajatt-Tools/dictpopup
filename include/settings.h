@@ -5,8 +5,8 @@
 
 typedef struct {
     struct {
-        char *dbpth;
-        bool sort;
+        char *dbDir;
+        bool sortDictEntries;
         char **dictSortOrder;
         bool nukeWhitespaceLookup;
         bool mecab;

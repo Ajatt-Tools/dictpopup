@@ -1,9 +1,9 @@
- #include <stdio.h>
+#include <stdio.h>
 
 #include <gtk/gtk.h>
 
 #include "platformdep/file_operations.h"
-#include "messages.h"
+#include "utils/messages.h"
 
 void createdir(char *dirpath) {
     int ret = g_mkdir_with_parents(dirpath, 0777);
@@ -22,7 +22,7 @@ void rem(char *filepath) {
     remove(filepath);
 }
 
-void file_copy_sync(const char* source_path, const char* dest_path) {
+void file_copy_sync(const char *source_path, const char *dest_path) {
     g_autoptr(GFile) source = g_file_new_for_path(source_path);
     g_autoptr(GFile) dest = g_file_new_for_path(dest_path);
 
@@ -40,7 +40,7 @@ static void copy_ready_cb(GObject *source_object, GAsyncResult *res, gpointer da
         dbg("Error copying file: %s", error->message);
 }
 
-void file_copy_async(const char* source_path, const char* dest_path) {
+void file_copy_async(const char *source_path, const char *dest_path) {
     g_autoptr(GFile) source = g_file_new_for_path(source_path);
     g_autoptr(GFile) dest = g_file_new_for_path(dest_path);
     g_file_copy_async(source, dest, G_FILE_COPY_NONE, G_PRIORITY_LOW, NULL, NULL, NULL,

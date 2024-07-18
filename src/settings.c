@@ -2,26 +2,25 @@
 #include <libgen.h> // dirname()
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h> // getopt
 
 #include <gio/gio.h>
 #include <glib.h>
 
-#include "messages.h"
 #include "platformdep/file_operations.h"
 #include "settings.h"
+#include "utils/messages.h"
 #include "utils/util.h"
 
 #include <platformdep/file_paths.h>
+#include <utils/str.h>
 
 Config cfg = {0};
 
 static Config get_default_cfg(void) {
     Config default_cfg = {
-        .general.sort = 0,
+        .general.sortDictEntries = 0,
         .general.dictSortOrder = NULL,
-        .general.dbpth = NULL, // Set by set_runtime_defaults()
+        .general.dbDir = NULL, // Set by set_runtime_defaults()
         .general.nukeWhitespaceLookup = 1,
         .general.mecab = 0,
         .general.substringSearch = 1,
@@ -50,8 +49,8 @@ static Config get_default_cfg(void) {
 }
 
 static void set_runtime_defaults(void) {
-    if (!cfg.general.dbpth) {
-        cfg.general.dbpth =
+    if (!cfg.general.dbDir) {
+        cfg.general.dbDir =
             (char *)buildpath(fromcstr_((char *)g_get_user_data_dir()), S("dictpopup")).s;
     }
 }
@@ -76,8 +75,8 @@ void print_settings(void) {
     // TODO: Finish implementing
     puts("Settings:");
     puts("[General]");
-    printf("Database path: '%s'\n", cfg.general.dbpth);
-    printf("Sort: %s\n", printyn(cfg.general.sort));
+    printf("Database path: '%s'\n", cfg.general.dbDir);
+    printf("Sort: %s\n", printyn(cfg.general.sortDictEntries));
     printf("Dictionary sort order: ");
     print_array(cfg.general.dictSortOrder);
     printf("Remove whitespace from lookup: %s\n", printyn(cfg.general.nukeWhitespaceLookup));
@@ -179,7 +178,8 @@ static void read_uint_list(GKeyFile *kf, const char *group, const char *key, u32
 
     for (gsize i = 0; i < *length; i++) {
         if (val[i] < 0) {
-            err("Received a negative value at index '%li' in key: '%s' and group '%s' when expecting a positive.",
+            err("Received a negative value at index '%li' in key: '%s' and group '%s' when "
+                "expecting a positive.",
                 i, key, group);
             return;
         }
@@ -189,9 +189,9 @@ static void read_uint_list(GKeyFile *kf, const char *group, const char *key, u32
 }
 
 static void read_general(GKeyFile *kf) {
-    read_string(kf, "General", "DatabasePath", &cfg.general.dbpth);
-    read_bool(kf, "General", "Sort", &cfg.general.sort);
-    if (cfg.general.sort)
+    read_string(kf, "General", "DatabasePath", &cfg.general.dbDir);
+    read_bool(kf, "General", "Sort", &cfg.general.sortDictEntries);
+    if (cfg.general.sortDictEntries)
         read_string_list(kf, "General", "DictSortOrder", &cfg.general.dictSortOrder, NULL);
     read_bool(kf, "General", "NukeWhitespaceLookup", &cfg.general.nukeWhitespaceLookup);
     read_bool(kf, "General", "MecabConversion", &cfg.general.mecab);
@@ -239,8 +239,8 @@ static void read_pronunciation(GKeyFile *kf) {
 
 static void copy_default_config_to(char *filepath) {
     const char *default_config_loc = NULL;
-    for(size_t i = 0; i < sizeof(DEFAULT_SETTINGS_LOCATIONS); i++) {
-        if(check_file_exists(DEFAULT_SETTINGS_LOCATIONS[i]))
+    for (size_t i = 0; i < arrlen(DEFAULT_SETTINGS_LOCATIONS); i++) {
+        if (check_file_exists(DEFAULT_SETTINGS_LOCATIONS[i]))
             default_config_loc = DEFAULT_SETTINGS_LOCATIONS[i];
     }
     if (!default_config_loc) {
@@ -266,12 +266,13 @@ static s8 get_config_filepath(void) {
                          S("config.ini"));
 }
 
-void read_config_from_keyfile(GKeyFile_autoptr kf) {
+static void read_config_from_keyfile(GKeyFile_autoptr kf) {
     read_general(kf);
     read_anki(kf);
     read_popup(kf);
     read_pronunciation(kf);
 }
+
 void read_user_settings(int fieldmapping_max) {
     cfg = get_default_cfg(); // TODO: Put this to the end and only set missing values
 
@@ -282,10 +283,11 @@ void read_user_settings(int fieldmapping_max) {
     g_autoptr(GError) error = NULL;
     if (!g_key_file_load_from_file(kf, (char *)cfgfile.s, G_KEY_FILE_NONE, &error)) {
         if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
-            err("Could not find a config file in: \"%s\". Copying default config.. ", cfgfile.s);
+            err("Could not find a config file in: \"%s\". Copying default config.. ",
+                (char *)cfgfile.s);
             copy_default_config_to((char *)cfgfile.s); // Uses the default config from above though
         } else
-            err("Error opening \"%s\": %s. Falling back to default config.", cfgfile.s,
+            err("Error opening \"%s\": %s. Falling back to default config.", (char *)cfgfile.s,
                 error->message);
     } else {
         read_config_from_keyfile(kf);

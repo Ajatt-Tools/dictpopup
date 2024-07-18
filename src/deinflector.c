@@ -7,9 +7,11 @@
 #include <mecab.h>
 
 #include "deinflector.h"
-#include "messages.h"
-#include "utils/util.h"
+#include "utils/messages.h"
 #include "utils/utf8.h"
+#include "utils/util.h"
+
+#include <utils/str.h>
 
 typedef enum { UNKNOWN, VERB, ADJ_I } wtype;
 
@@ -494,7 +496,7 @@ s8 *deinflect(s8 word) {
 #ifdef DEINFLECTOR_MAIN
 int main(int argc, char **argv) {
     die_on(argc < 2, "Usage: ");
-    s8 *d = deinflect(fromcstr_(argv[1]));
+    _drop_(frees8buffer) s8 *d = deinflect(fromcstr_(argv[1]));
     for (size_t i = 0; i < buf_size(d); i++) {
         printf("%.*s\n", (int)d[i].len, (char *)d[i].s);
     }

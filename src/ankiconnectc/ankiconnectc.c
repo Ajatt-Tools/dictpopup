@@ -4,7 +4,7 @@
 #include <glib.h>
 #include "ankiconnectc.h"
 
-#include "messages.h"
+#include "utils/messages.h"
 
 #ifndef UNIT_TEST
 #include "send_request.c"
@@ -37,14 +37,8 @@ static char *json_escape_str(const char *str) {
             case '\f':
                 sb_append(&sb, S("\\f"));
                 break;
-            case '\n':
-                sb_append(&sb, S("<br>"));
-                break;
             case '\r':
                 sb_append(&sb, S("\\r"));
-                break;
-            case '\t':
-                sb_append(&sb, S("&#9")); // html tab
                 break;
             case '"':
                 sb_append(&sb, S("\\\""));
@@ -52,10 +46,22 @@ static char *json_escape_str(const char *str) {
             case '\\':
                 sb_append(&sb, S("\\\\"));
                 break;
+	    // Anki escape
+            case '\t':
+                sb_append(&sb, S("&#9")); // html tab
+                break;
+            case '\n':
+                sb_append(&sb, S("<br>"));
+                break;
+            case '<':
+                sb_append(&sb, S("&lt;"));
+                break;
+            case '>':
+                sb_append(&sb, S("&gt;"));
+                break;
             default:
                 sb_append_char(&sb, *str);
         }
-
         str++;
     }
 
@@ -145,7 +151,7 @@ static s8 form_search_req(bool include_suspended, bool include_new, char *deck, 
                   include_new ? S("") : S(" -is:new"), S("\" } }"));
 }
 
-static int ac_check_exists_with(bool include_suspended, bool include_new, char *deck, char *field,
+static int check_exists_with_(bool include_suspended, bool include_new, char *deck, char *field,
                                 char *str, char **error) {
     _drop_(frees8) s8 req = form_search_req(include_suspended, include_new, deck, field, str);
     retval_s r = sendRequest(req, search_checker);
@@ -173,19 +179,19 @@ int ac_check_exists(char *deck, char *field, char *lookup, char **error) {
         return -1;
     }
 
-    int rc = ac_check_exists_with(false, false, deck, field, lookup, error);
+    int rc = check_exists_with_(false, false, deck, field, lookup, error);
     if (rc == -1)
         return -1;
     if (rc == 1)
         return 1;
 
-    rc = ac_check_exists_with(false, true, deck, field, lookup, error);
+    rc = check_exists_with_(false, true, deck, field, lookup, error);
     if (rc == -1)
         return -1;
     if (rc == 1)
         return 2;
 
-    rc = ac_check_exists_with(true, true, deck, field, lookup, error);
+    rc = check_exists_with_(true, true, deck, field, lookup, error);
     if (rc == -1)
         return -1;
     if (rc == 1)

@@ -1,5 +1,5 @@
 BinPackArguments: true
-BreakStringLiterals: false
+BreakStringLiterals: true
 ColumnLimit: 100
 IndentCaseLabels: true
 IndentPPDirectives: BeforeHash

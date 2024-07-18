@@ -3,12 +3,13 @@
     #include <X11/Xlib.h>
 #endif
 
-#include "utils/util.h"
-#include "messages.h"
 #include "platformdep/windowtitle.h"
+#include "utils/messages.h"
+
+#include <utils/str.h>
 
 s8 get_windowname(void) {
-    #ifdef HAVEX11
+#ifdef HAVEX11
     Display *dpy = XOpenDisplay(NULL);
     if (!dpy) {
         dbg("Can't open X display for retrieving the window title. Are you "
@@ -33,7 +34,7 @@ s8 get_windowname(void) {
                                &actual_type, &format, &nr_items, &bytes_after, &prop) == Success &&
             prop) {
             break;
-            }
+        }
     }
 
     XCloseDisplay(dpy);
@@ -41,8 +42,8 @@ s8 get_windowname(void) {
     s8 ret = s8dup(fromcstr_((char *)prop)); // s.t. cann be freed with free
     XFree(prop);
     return ret;
-    #else
+#else
     // Not implemented
     return (s8){0};
-    #endif
+#endif
 }

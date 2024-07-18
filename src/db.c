@@ -2,8 +2,8 @@
 #include <string.h>
 
 #include "db.h"
-#include "messages.h"
 #include "platformdep/file_operations.h"
+#include "utils/messages.h"
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
@@ -219,22 +219,24 @@ static s8 getdata(const database_t *db, u32 id) {
     return (s8){.s = data.mv_data, .len = data.mv_size};
 }
 
-void db_get_dictents(const database_t *db, s8 headword, dictentry *dict[static 1]) {
+// TODO: Refactor this
+void db_append_lookup(const database_t *db, s8 headword, dictentry *dict[static 1],
+                      bool is_deinflection) {
     dbg("Looking up: %.*s", (int)headword.len, (char *)headword.s);
 
     size_t n_ids = 0;
     _drop_(free) u32 *ids = getids(db, headword, &n_ids);
-    // u32 *ids = getids(db, headword, &n_ids);
     if (ids) {
         for (size_t i = 0; i < n_ids; i++) {
             s8 de_data = getdata(db, ids[i]);
             dictentry de = data_to_dictent(db, de_data);
+            de.is_deinflection = is_deinflection;
             dictionary_add(dict, de);
         }
     }
 }
 
-i32 db_check_exists(s8 dbpath) {
+bool db_check_exists(s8 dbpath) {
     _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
     return check_file_exists((char *)dbfile.s);
 }

@@ -9,10 +9,10 @@ typedef struct {
     fileinfo_s fileinfo;
 } pronfile_s;
 
-void _nonnull_ free_pronfile(pronfile_s *pronfile);
-void _nonnull_ free_pronfile_buffer(pronfile_s **pronfiles);
+void free_pronfile(pronfile_s pronfile[static 1]);
+void free_pronfile_buffer(pronfile_s *pronfiles);
 DEFINE_DROP_FUNC_PTR(pronfile_s, free_pronfile)
-DEFINE_DROP_FUNC_PTR(pronfile_s *, free_pronfile_buffer)
+DEFINE_DROP_FUNC(pronfile_s *, free_pronfile_buffer)
 
 void jppron(s8 word, s8 reading, char *audio_folders_path);
 /* _deallocator_(free_pronfile_buffer) */ // TODO: Check why this gives compiler errors

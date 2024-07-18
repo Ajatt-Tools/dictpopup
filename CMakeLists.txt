@@ -32,7 +32,9 @@ set(JPPRON_SRCS
         src/jppron/jppron.c
         src/jppron/database.c
         src/jppron/ajt_audio_index_parser.c
-        src/utils/yyjson.c)
+        src/utils/yyjson.c
+        src/objects/dict.c
+        include/objects/freqentry.h)
 
 # ##############################################################################
 # dictpopup
@@ -46,11 +48,13 @@ add_executable(dictpopup ${JPPRON_SRCS}
         src/settings.c
         src/utils/util.c
         src/utils/utf8.c
+        src/utils/str.c
         src/platformdep/audio.c
         src/platformdep/notifications.c
         src/platformdep/clipboard.c
         src/platformdep/file_operations.c
-        src/platformdep/windowtitle.c)
+        src/platformdep/windowtitle.c
+        src/objects/freqentry.c)
 target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD)
 target_include_directories(
         dictpopup PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
@@ -121,12 +125,8 @@ add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
         )
 target_include_directories(
         dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} include/)
-target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS}
-target_link_directories(cli PRIVATE ${GTK3_LIBRARY_DIRS}
-        ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
-target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
-target_link_libraries(cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
-        ${CURL_LIBRARIES} -lmecab -llmdb)
+target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS})
+target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES})
 
 # ##############################################################################
 # Tests
@@ -146,8 +146,9 @@ if (BUILD_TESTING)
             tests/jppron_tests/ajt_audio_index_parser_tests.c
             tests/utils_tests/enclose_word_in_string_tests.c
             tests/dictpopup_tests.c
-            src/utils/utf8.c)
-    target_compile_definitions(c_tests PRIVATE UNIT_TEST)
+            src/utils/utf8.c
+            tests/jppron_tests/jppron_tests.c)
+    target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
     target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/ src/jppron)
     target_link_libraries(
             c_tests

@@ -4,6 +4,7 @@
 #include "ajt_audio_index_parser.h"
 #include "utils/util.h"
 #include <stdbool.h>
+#include <utils/str.h>
 
 typedef struct database_s database;
 

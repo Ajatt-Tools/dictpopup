@@ -3,4 +3,4 @@
 
 void notify(_Bool urgent, char const *fmt, ...);
 
-#endif //NOTIFICATIONS_H
+#endif // NOTIFICATIONS_H

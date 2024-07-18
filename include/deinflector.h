@@ -1,5 +1,7 @@
 #include "utils/util.h"
 
+#include <utils/str.h>
+
 /*
  * @word: The japanese word to be deinflected
  *

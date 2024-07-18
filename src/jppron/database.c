@@ -9,9 +9,10 @@
 
 #include "jppron/database.h"
 
-#include "messages.h"
-#include "utils/util.h"
 #include "jppron/ajt_audio_index_parser.h"
+#include "utils/messages.h"
+#include "utils/str.h"
+#include "utils/util.h"
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
@@ -123,9 +124,9 @@ static fileinfo_s convert_data_to_fileinfo(s8 data) {
     }
 
     return (fileinfo_s){.origin = data_split[0],
-                      .hira_reading = data_split[1],
-                      .pitch_number = data_split[2],
-                      .pitch_pattern = data_split[3]};
+                        .hira_reading = data_split[1],
+                        .pitch_number = data_split[2],
+                        .pitch_pattern = data_split[3]};
 }
 
 void jdb_add_file_with_fileinfo(database *db, s8 filepath, fileinfo_s fi) {

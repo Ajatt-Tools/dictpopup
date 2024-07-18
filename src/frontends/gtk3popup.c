@@ -7,9 +7,9 @@
 #include "jppron/jppron.h"
 #include "settings.h"
 
-#include "messages.h"
 #include "platformdep/clipboard.h"
 
+#include "utils/messages.h"
 #include "utils/utf8.h"
 #include "utils/util.h"
 
@@ -165,7 +165,7 @@ static void update_win_title(dictentry current_entry) {
 
 static void update_dictnum_label(int cur_entry_index) {
     char tmp[20] = {0};
-    snprintf_safe(tmp, arrlen(tmp), "%i/%li", cur_entry_index + 1, dictlen(dict));
+    snprintf_safe(tmp, arrlen(tmp), "%i/%li", cur_entry_index + 1, dictLen(dict));
     gtk_label_set_text(GTK_LABEL(dw.lbl_dictnum), tmp);
 }
 
@@ -213,12 +213,12 @@ static void update_widgets(int cur_entry_num) {
 }
 
 static void _nonnull_ previous_dictentry(int *cur_dictentry_num) {
-    *cur_dictentry_num = (*cur_dictentry_num != 0) ? *cur_dictentry_num - 1 : dictlen(dict) - 1;
+    *cur_dictentry_num = (*cur_dictentry_num != 0) ? *cur_dictentry_num - 1 : dictLen(dict) - 1;
     update_widgets(*cur_dictentry_num);
 }
 
 static void _nonnull_ next_dictentry(int *cur_entry_num) {
-    *cur_entry_num = (*cur_entry_num < dictlen(dict) - 1) ? *cur_entry_num + 1 : 0;
+    *cur_entry_num = (*cur_entry_num < dictLen(dict) - 1) ? *cur_entry_num + 1 : 0;
     update_widgets(*cur_entry_num);
 }
 
@@ -271,7 +271,7 @@ static void add_to_anki_from_clipboard(GtkWidget *widget, gpointer user_data) {
 
     prepare_add_to_anki(lv->winargs, *lv->cur_entry_num);
 
-    s8 clip = get_clipboard();
+    s8 clip = fromcstr_(get_clipboard());
     set_anki_definition(lv->winargs, clip);
 
     close_window(lv);
@@ -345,10 +345,8 @@ static void button_press_on_dot_indicator(GtkWidget *self, GdkEventButton *event
     gint *cur_dictentry_num = user_data;
     if (event->type == GDK_BUTTON_PRESS) {
         g_mutex_lock(&dict_mutex);
-        _drop_(frees8) s8 word_dup = dictentry_at(*cur_dictentry_num).kanji;
+        search_in_anki_browser(dictentry_at(*cur_dictentry_num).kanji);
         g_mutex_unlock(&dict_mutex);
-
-        search_in_anki_browser(word_dup);
     }
 }
 
@@ -563,7 +561,7 @@ static gpointer dictionary_lookup_thread(gpointer voidin) {
     s8 *lookup = voidin;
     static bool first_invocation = true;
 
-    dictentry *local_dict = create_dictionary(lookup);
+    dictentry *local_dict = create_dictionary(lookup, cfg);
     if (local_dict == NULL) {
         msg("No dictionary entry found");
 
@@ -589,8 +587,8 @@ static int parse_cmd_line_opts(int argc, char **argv) {
                 break;
             case 'd':
                 if (optarg && *optarg) {
-                    free(cfg.general.dbpth); // 注意
-                    cfg.general.dbpth = strdup(optarg);
+                    free(cfg.general.dbDir); // 注意
+                    cfg.general.dbDir = strdup(optarg);
                 }
                 break;
             case 'h':
@@ -621,7 +619,7 @@ int main(int argc, char *argv[]) {
     int nextarg = parse_cmd_line_opts(argc, argv); // Should be second to overwrite settings
 
     _drop_(frees8) s8 lookup =
-        argc - nextarg > 0 ? convert_to_utf8(argv[nextarg]) : get_selection();
+        argc - nextarg > 0 ? convertToUtf8(argv[nextarg]) : get_selection();
     die_on(!lookup.len, "No selection and no argument provided. Exiting..");
     die_on(!g_utf8_validate((char *)lookup.s, lookup.len, NULL),
            "Lookup is not a valid UTF-8 string.");
@@ -633,4 +631,6 @@ int main(int argc, char *argv[]) {
 
     if (winargs.create_ac)
         create_ankicard(lookup, winargs.de, cfg);
+
+    dictentry_free(winargs.de);
 }

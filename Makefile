@@ -81,7 +81,7 @@ cli: $(SRC) $(SRC_H) $(SDIR)/frontends/cli.c
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/frontends/cli.c $(SRCS) $(LDLIBS)
 
 deinflector: $(SRC) $(SRC_H) $(SDIR)/deinflector.c
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/util.c $(LDLIBS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/utils/util.c $(SDIR)/utils/utf8.c $(LDLIBS)
 
 release:
 	version=$$(git describe); prefix=dictpopup-$${version#v}; \

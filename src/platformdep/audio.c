@@ -1,8 +1,8 @@
 #include <gtk/gtk.h>
 
 #include "platformdep/audio.h"
-#include "utils/util.h"
-#include "messages.h"
+#include "utils/messages.h"
+#include <utils/str.h>
 
 void play_audio(s8 filepath) {
     _drop_(frees8) s8 cmd =

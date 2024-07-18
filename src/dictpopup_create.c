@@ -8,7 +8,7 @@
 #include <time.h>
 
 #include "db.h"
-#include "messages.h"
+#include "utils/messages.h"
 #include "utils/util.h"
 #include "yomichan_parser.h"
 

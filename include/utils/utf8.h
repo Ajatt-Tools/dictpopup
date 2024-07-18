@@ -11,15 +11,16 @@
  * Returns the length in bytes of the utf8 encoded char pointed to by @p
  */
 #define utf8_chr_len(p) utf8_chr_len_data[(p)[0] >> 4]
+#include "str.h"
+#include "util.h"
 extern u8 const utf8_chr_len_data[];
 
-s8 convert_to_utf8(char *str);
+s8 convertToUtf8(char *str);
 
 /*
  * Strips last utf8 character
  * Warning: Not NULL-terminated
  */
-s8 striputf8chr(s8 s);
+void _nonnull_ stripUtf8Char(s8 s[static 1]);
 
-
-#endif //UTF8_H
+#endif // UTF8_H

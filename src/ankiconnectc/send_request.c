@@ -3,6 +3,14 @@
  */
 #include <curl/curl.h>
 #include "utils/util.h"
+#include <string.h>
+#include <stdbool.h>
+#include "ankiconnectc/send_request.h"
+
+#define AC_API_URL_EVAR "ANKICONNECT_API_URL"
+#define DEFAULT_AC_API_URL "http://localhost:8765"
+
+typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
 
 static size_t noop_write_function(char *ptr, size_t size, size_t nmemb, void *userdata) {
     (void)ptr; // Suppress unused parameter warning
