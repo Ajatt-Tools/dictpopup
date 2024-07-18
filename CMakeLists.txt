@@ -77,7 +77,10 @@ add_executable(dictpopup-create
         src/utils/yyjson.c
         src/db.c
         src/yomichan_parser.c
-        src/platformdep/file_operations.c)
+        src/platformdep/file_operations.c
+        src/utils/str.c
+        src/objects/dict.c
+        src/objects/freqentry.c)
 target_include_directories(
         dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-create PRIVATE ${GTK3_LIBRARY_DIRS}

@@ -8,7 +8,6 @@
 #include "utils/str.h"
 #include "utils/util.h"
 #include "utils/yyjson.h"
-
 #include <objects/dict.h>
 
 DEFINE_DROP_FUNC(struct zip_file *, zip_fclose)
