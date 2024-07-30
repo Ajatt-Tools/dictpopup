@@ -40,7 +40,7 @@ set(JPPRON_SRCS
 # dictpopup
 # ##############################################################################
 add_executable(dictpopup ${JPPRON_SRCS}
-        src/frontends/gtk3popup.c
+        src/frontends/gtk3popup/main.c
         src/dictpopup.c
         src/db.c
         src/ankiconnectc/ankiconnectc.c
