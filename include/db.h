@@ -12,7 +12,7 @@ __attribute__((returns_nonnull)) database_t *_nonnull_ db_open(char *dbpath, boo
 void _nonnull_ db_close(database_t *db);
 
 void _nonnull_ db_put_dictent(database_t *db, dictentry de);
-void _nonnull_ db_append_lookup(const database_t *db, s8 headword, dictentry *dict[static 1],
+void _nonnull_ db_append_lookup(const database_t *db, s8 headword, Dict dict[static 1],
                                 bool is_deinflection);
 
 void _nonnull_ db_put_freq(const database_t *db, freqentry fe);

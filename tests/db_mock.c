@@ -1,6 +1,5 @@
 
 #include "db.h"
-#include "utils/dict.h"
 #include "utils/str.h"
 
 #include <cgreen/mocks.h>
@@ -21,7 +20,8 @@ void db_put_dictent(database_t *db, dictentry de) {
     mock(db, de.definition.s, de.dictname.s, de.kanji.s, de.reading.s, de.frequency);
 }
 
-void db_add_dictents(const database_t *db, s8 headword, dictentry *dict[static 1]) {
+void _nonnull_ db_append_lookup(const database_t *db, s8 headword, Dict dict[static 1],
+                                bool is_deinflection) {
     if (s8equals(headword, S("世界"))) {
         dictionary_add(dict, (dictentry){ .kanji = S("世界") });
     }

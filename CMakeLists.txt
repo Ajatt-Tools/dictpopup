@@ -75,10 +75,10 @@ add_executable(dictpopup-create
         src/dictpopup_create.c
         src/utils/util.c
         src/utils/yyjson.c
+        src/utils/str.c
         src/db.c
         src/yomichan_parser.c
         src/platformdep/file_operations.c
-        src/utils/str.c
         src/objects/dict.c
         src/objects/freqentry.c)
 target_include_directories(
@@ -139,18 +139,21 @@ if (BUILD_TESTING)
     find_package(cgreen REQUIRED)
     add_executable(
             c_tests
+            src/deinflector.c
+            src/utils/util.c
+            src/utils/utf8.c
+            src/utils/str.c
+            src/utils/yyjson.c
+            src/objects/dict.c
             tests/main.c
             tests/deinflector_tests.c
             tests/ankiconnect_tests.c
-            src/deinflector.c
-            src/utils/util.c
             tests/yomichan_parser_tests.c
-            src/utils/yyjson.c
             tests/jppron_tests/ajt_audio_index_parser_tests.c
             tests/utils_tests/enclose_word_in_string_tests.c
             tests/dictpopup_tests.c
-            src/utils/utf8.c
-            tests/jppron_tests/jppron_tests.c)
+            tests/jppron_tests/jppron_tests.c
+    )
     target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
     target_include_directories(c_tests PRIVATE ${GTK3_INCLUDE_DIRS} ${CGREEN_INCLUDE_DIRS} include/ src/ src/jppron)
     target_link_libraries(

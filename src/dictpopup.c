@@ -137,10 +137,10 @@ static s8 add_bold_tags_around_word(s8 sent, s8 word) {
 
 static s8 create_furigana(s8 kanji, s8 reading) {
     return (!kanji.len && !reading.len) ? S("")
-           : !reading.len               ? S("") // Don't even try
-           : s8equals(kanji, reading)   ? s8dup(reading)
-                                        : concat(kanji, S("["), reading,
-                                                 S("]")); // TODO: Obviously not
+           // : !reading.len               ? S("") // Don't even try
+           : s8equals(kanji, reading) ? s8dup(reading)
+                                      : concat(kanji, S("["), reading,
+                                               S("]")); // TODO: Obviously not
     // enough if kanji
     // contains hiragana
 }

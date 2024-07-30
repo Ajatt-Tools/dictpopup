@@ -1,5 +1,5 @@
 #include <cgreen/cgreen.h>
-#include <utils/util.h>
+#include <utils/str.h>
 
 TestSuite *s8_tests(void);
 
