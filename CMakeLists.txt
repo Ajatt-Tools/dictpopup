@@ -10,6 +10,15 @@ pkg_check_modules(NOTIFY REQUIRED libnotify)
 find_package(LibZip REQUIRED)
 find_package(CURL REQUIRED)
 
+# Optional dependencies
+find_package(X11)
+if(X11_FOUND)
+    add_definitions(-DHAVE_X11)
+    set(X11_LIBRARIES ${X11_LIBRARIES} ${X11_Xfixes_LIB})
+else()
+    set(X11_LIBRARIES "")
+    message(STATUS "X11 not found, building without X11 support")
+endif()
 set(CMAKE_C_COMPILER gcc)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDEBUG)
@@ -57,12 +66,26 @@ add_executable(dictpopup ${JPPRON_SRCS}
         src/objects/freqentry.c)
 target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD)
 target_include_directories(
-        dictpopup PRIVATE ${GTK3_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
-        ${CURL_INCLUDE_DIRS} include/)
+        dictpopup PRIVATE 
+	${GTK3_INCLUDE_DIRS} 
+	${NOTIFY_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS} 
+	${X11_INCLUDE_DIR}
+	include/ 
+	lib/
+)
 target_link_directories(dictpopup PRIVATE ${GTK3_LIBRARY_DIRS}
         ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
 target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
         ${CURL_LIBRARIES} -lmecab -llmdb)
+target_link_libraries(dictpopup PRIVATE 
+  ${GTK3_LIBRARIES} 
+  ${NOTIFY_LIBRARIES}
+  ${CURL_LIBRARIES} 
+  ${X11_LIBRARIES}
+  -lmecab 
+  -llmdb
+)
 
 ## X11 window title support
 target_compile_definitions(dictpopup PUBLIC HAVEX11)
