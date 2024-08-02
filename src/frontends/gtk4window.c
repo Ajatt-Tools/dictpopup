@@ -1,7 +1,6 @@
 #include "dictpopup.h"
-#include "platformdep/notifications.h"
-#include "utils/util.h"
 #include "utils.h"
+#include "utils/util.h"
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
 
@@ -178,7 +177,7 @@ static void activate(GtkApplication *app, char *lookup_cstr) {
     gtk_box_append(GTK_BOX(main_vbox), sw);
 
     gtk_widget_set_vexpand(sw, TRUE);
-    gtk_widget_set_valign (sw, GTK_ALIGN_FILL);
+    gtk_widget_set_valign(sw, GTK_ALIGN_FILL);
 
     GtkTextIter iter;
     gtk_text_buffer_get_iter_at_offset(buffer, &iter, 0);

@@ -5,4 +5,4 @@
 
 s8 get_windowname(void);
 
-#endif //WINDOWTITLE_H
+#endif // WINDOWTITLE_H

@@ -2,6 +2,7 @@
 #define SEND_REQUEST_H
 
 #include <stddef.h>
+#include <utils/str.h>
 
 #define AC_API_URL_EVAR "ANKICONNECT_API_URL"
 #define DEFAULT_AC_API_URL "http://localhost:8765"
@@ -17,6 +18,6 @@ typedef struct {
     // stored in data.string
 } retval_s;
 
-static retval_s sendRequest(s8 request, ResponseFunc response_checker);
+retval_s sendRequest(s8 request, ResponseFunc response_checker);
 
-#endif //SEND_REQUEST_H
+#endif // SEND_REQUEST_H

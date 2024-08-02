@@ -1,14 +1,11 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include <glib.h>
 #include "ankiconnectc.h"
+#include <glib.h>
 
 #include "utils/messages.h"
 
-#ifndef UNIT_TEST
-#include "send_request.c"
-#endif
 #include "ankiconnectc/send_request.h"
 
 static int get_array_len(const char *array[static 1]) {
@@ -46,19 +43,20 @@ static char *json_escape_str(const char *str) {
             case '\\':
                 sb_append(&sb, S("\\\\"));
                 break;
-	    // Anki escape
+            // Anki escape
             case '\t':
                 sb_append(&sb, S("&#9")); // html tab
                 break;
             case '\n':
                 sb_append(&sb, S("<br>"));
                 break;
-            case '<':
-                sb_append(&sb, S("&lt;"));
-                break;
-            case '>':
-                sb_append(&sb, S("&gt;"));
-                break;
+            // TODO: I we escape '<' and '>', bold tags won't work anymore
+            // case '<':
+            // sb_append(&sb, S("&lt;"));
+            // break;
+            // case '>':
+            // sb_append(&sb, S("&gt;"));
+            // break;
             default:
                 sb_append_char(&sb, *str);
         }
@@ -152,7 +150,7 @@ static s8 form_search_req(bool include_suspended, bool include_new, char *deck, 
 }
 
 static int check_exists_with_(bool include_suspended, bool include_new, char *deck, char *field,
-                                char *str, char **error) {
+                              char *str, char **error) {
     _drop_(frees8) s8 req = form_search_req(include_suspended, include_new, deck, field, str);
     retval_s r = sendRequest(req, search_checker);
     if (!r.ok) {
@@ -317,7 +315,7 @@ static char *check_card(ankicard const ac) {
 }
 
 void ac_addNote(ankicard const ac, char **error) {
-    if((*error = check_card(ac)))
+    if ((*error = check_card(ac)))
         return;
 
     _drop_(frees8) s8 req = form_addNote_req(ac);

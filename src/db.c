@@ -85,7 +85,7 @@ void db_close(database_t *db) {
     free(db);
 }
 
-static void dictent_to_datastr(stringbuilder_s sb[static 1], dictentry de) {
+static void serialize_dictentry(stringbuilder_s sb[static 1], dictentry de) {
     s8 sep = S("\0");
     sb_set(sb, de.dictname);
     sb_append(sb, sep);
@@ -113,7 +113,7 @@ void db_put_dictent(database_t *db, dictentry de) {
     MDB_val reading_mdb = {.mv_data = de.reading.s, .mv_size = de.reading.len};
     MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
 
-    dictent_to_datastr(&db->datastr, de);
+    serialize_dictentry(&db->datastr, de);
 
     if (!s8equals(sb_gets8(db->datastr), sb_gets8(db->lastdatastr))) {
         s8 datastr = sb_gets8(db->datastr);
@@ -220,7 +220,7 @@ static s8 getdata(const database_t *db, u32 id) {
 }
 
 // TODO: Refactor this
-void db_append_lookup(const database_t *db, s8 headword, dictentry *dict[static 1],
+void db_append_lookup(const database_t *db, s8 headword, Dict dict[static 1],
                       bool is_deinflection) {
     dbg("Looking up: %.*s", (int)headword.len, (char *)headword.s);
 

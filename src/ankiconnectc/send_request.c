@@ -2,13 +2,11 @@
  * This file contains functions that are not easily tested, thus split for mocking purposes
  */
 #include <curl/curl.h>
-#include "utils/util.h"
-#include <string.h>
 #include <stdbool.h>
-#include "ankiconnectc/send_request.h"
+#include <string.h>
 
-#define AC_API_URL_EVAR "ANKICONNECT_API_URL"
-#define DEFAULT_AC_API_URL "http://localhost:8765"
+#include "ankiconnectc/send_request.h"
+#include "utils/str.h"
 
 typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userdata);
 
@@ -23,7 +21,7 @@ static const char *get_api_url(void) {
     return env && *env ? env : DEFAULT_AC_API_URL;
 }
 
-static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
+retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     CURL *curl = curl_easy_init();
     if (!curl)
         return (retval_s){.data.string = strdup("Error initializing cURL"), .ok = false};

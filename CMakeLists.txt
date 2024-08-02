@@ -5,54 +5,166 @@ include(GNUInstallDirs)
 include(CTest)
 
 find_package(PkgConfig REQUIRED)
+# ##############################################################################
+# Compile Dependencies
+# ##############################################################################
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 pkg_check_modules(NOTIFY REQUIRED libnotify)
 find_package(LibZip REQUIRED)
 find_package(CURL REQUIRED)
 
+find_program(GLIB_COMPILE_RESOURCES NAMES glib-compile-resources)
+if (NOT GLIB_COMPILE_RESOURCES)
+    message(FATAL_ERROR "glib-compile-resources binary not found")
+endif ()
+
 # Optional dependencies
 find_package(X11)
-if(X11_FOUND)
+if (X11_FOUND)
     add_definitions(-DHAVE_X11)
     set(X11_LIBRARIES ${X11_LIBRARIES} ${X11_Xfixes_LIB})
-else()
+else ()
     set(X11_LIBRARIES "")
     message(STATUS "X11 not found, building without X11 support")
-endif()
+endif ()
+
+# ##############################################################################
+# Dev Dependencies
+# ##############################################################################
+find_program(CLANG_FORMAT "clang-format")
+find_program(CPPCHECK cppcheck)
+#if (NOT CLANG_FORMAT)
+#    message(STATUS "clang-format not found, formatting target will not be available")
+#endif ()
+
+# ##############################################################################
+# General compilation
+# ##############################################################################
 set(CMAKE_C_COMPILER gcc)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDEBUG)
     set(CMAKE_C_FLAGS
-            "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes -Wshadow \
+            "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes -Wshadow -Wdouble-promotion \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
+	     -Wno-overlength-strings \
 	     -O0 -ggdb")
     #-Wdouble-promotion
     set(CMAKE_C_FLAGS
             "${CMAKE_C_FLAGS} -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong")
 else ()
-    add_compile_options(-O3 -flto -march=native -mtune=native -g -fno-omit-frame-pointer)
+    add_compile_options(-Oz -flto -march=native -mtune=native -g -fno-omit-frame-pointer)
 endif ()
 
-add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER}
-        ${LIBZIP_DEFINITIONS} ${CURL_DEFINITIONS})
+add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER} ${LIBZIP_DEFINITIONS} ${CURL_DEFINITIONS})
 
 set(JPPRON_SRCS
         src/jppron/jppron.c
         src/jppron/database.c
         src/jppron/ajt_audio_index_parser.c
-        src/utils/yyjson.c
+        lib/yyjson.c
         src/objects/dict.c
-        include/objects/freqentry.h)
+        include/objects/freqentry.h
+)
+
+set(ANKICONNECTC_SRCS
+        src/ankiconnectc/send_request.c
+        src/ankiconnectc/ankiconnectc.c
+)
+
+set(DICTPOPUP_SRCS
+        src/dictpopup.c
+)
+
+
+# ##############################################################################
+# Clang format
+# ##############################################################################
+if (CLANG_FORMAT)
+    file(GLOB_RECURSE ALL_SOURCE_FILES
+            ${CMAKE_SOURCE_DIR}/src/*.c
+            ${CMAKE_SOURCE_DIR}/src/*.h
+            ${CMAKE_SOURCE_DIR}/include/*.h
+    )
+
+    add_custom_target(
+            format-check
+            COMMAND ${CLANG_FORMAT}
+            -style=file:${CMAKE_CURRENT_SOURCE_DIR}/.clang-format
+            --dry-run
+            --Werror
+            ${ALL_SOURCE_FILES}
+            COMMENT "Checking code format with clang-format"
+    )
+
+    add_custom_target(
+            format
+            COMMAND ${CLANG_FORMAT}
+            -style=file
+            -i
+            ${ALL_SOURCE_FILES}
+            COMMENT "Formatting code with clang-format"
+    )
+endif ()
+# ##############################################################################
+# Cppcheck
+# ##############################################################################
+if (CPPCHECK)
+    add_custom_target(
+            cppcheck
+            COMMAND ${CPPCHECK}
+            --library=gtk.cfg --library=libcurl.cfg
+            --enable=all --std=c11
+            --inconclusive
+            --quiet
+            --force
+            -I ${CMAKE_SOURCE_DIR}/include
+            ${CMAKE_SOURCE_DIR}/src
+    )
+endif ()
+
+# ##############################################################################
+# check-all
+# ##############################################################################
+add_custom_target(
+        check-all
+        COMMAND ${CMAKE_COMMAND} --build . --target format-check
+        COMMAND ${CMAKE_COMMAND} --build . --target cppcheck
+        DEPENDS format-check cppcheck
+        COMMENT "Running format check, static analysis, and tests"
+)
 
 # ##############################################################################
 # dictpopup
 # ##############################################################################
-add_executable(dictpopup ${JPPRON_SRCS}
-        src/frontends/gtk3popup/main.c
+# Compile the ui
+set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
+file(MAKE_DIRECTORY ${GENERATED_DIR})
+
+set(GRESOURCE_XML ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/dictpopup.gresource.xml)
+set(GRESOURCE_C ${GENERATED_DIR}/resources.c)
+
+add_custom_command(
+        OUTPUT ${GRESOURCE_C}
+        COMMAND ${GLIB_COMPILE_RESOURCES}
+        ARGS
+        --target=${GRESOURCE_C}
+        --sourcedir=${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup
+        --generate-source
+        ${GRESOURCE_XML}
+        MAIN_DEPENDENCY ${GRESOURCE_XML}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/main-window.ui
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/settings-window.ui
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/style.css
+        VERBATIM
+)
+add_custom_target(gresource DEPENDS ${GRESOURCE_C})
+##
+
+add_executable(dictpopup
+        src/frontends/gtk3popup/dictpopup-application.c
         src/dictpopup.c
         src/db.c
-        src/ankiconnectc/ankiconnectc.c
         src/deinflector.c
         src/settings.c
         src/utils/util.c
@@ -63,28 +175,37 @@ add_executable(dictpopup ${JPPRON_SRCS}
         src/platformdep/clipboard.c
         src/platformdep/file_operations.c
         src/platformdep/windowtitle.c
-        src/objects/freqentry.c)
-target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD)
-target_include_directories(
-        dictpopup PRIVATE 
-	${GTK3_INCLUDE_DIRS} 
-	${NOTIFY_INCLUDE_DIRS}
-        ${CURL_INCLUDE_DIRS} 
-	${X11_INCLUDE_DIR}
-	include/ 
-	lib/
+        src/objects/freqentry.c
+        ${JPPRON_SRCS}
+        ${ANKICONNECTC_SRCS}
+        ${GRESOURCE_C}
+        src/frontends/gtk3popup/dict_state_manager.c
+        src/frontends/gtk3popup/callbacks.c
+        src/frontends/gtk3popup/main.c
 )
-target_link_directories(dictpopup PRIVATE ${GTK3_LIBRARY_DIRS}
-        ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
-target_link_libraries(dictpopup PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES}
-        ${CURL_LIBRARIES} -lmecab -llmdb)
-target_link_libraries(dictpopup PRIVATE 
-  ${GTK3_LIBRARIES} 
-  ${NOTIFY_LIBRARIES}
-  ${CURL_LIBRARIES} 
-  ${X11_LIBRARIES}
-  -lmecab 
-  -llmdb
+add_dependencies(dictpopup gresource)
+target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD GTK3)
+target_include_directories(
+        dictpopup PRIVATE
+        ${GTK3_INCLUDE_DIRS}
+        ${NOTIFY_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS}
+        ${X11_INCLUDE_DIR}
+        include/
+        lib/
+)
+target_link_directories(dictpopup PRIVATE
+        ${GTK3_LIBRARY_DIRS}
+        ${NOTIFY_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS}
+)
+target_link_libraries(dictpopup PRIVATE
+        ${GTK3_LIBRARIES}
+        ${NOTIFY_LIBRARIES}
+        ${CURL_LIBRARIES}
+        ${X11_LIBRARIES}
+        -lmecab
+        -llmdb
+        -rdynamic
 )
 
 ## X11 window title support
@@ -94,18 +215,19 @@ target_link_libraries(dictpopup PRIVATE -lXfixes -lX11)
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
+# Need to build ui with glib-compile-resources dictpopup.gresource.xml --target=resources.c --generate-source
 add_executable(dictpopup-create
         src/dictpopup_create.c
         src/utils/util.c
-        src/utils/yyjson.c
+        lib/yyjson.c
         src/utils/str.c
         src/db.c
         src/yomichan_parser.c
         src/platformdep/file_operations.c
         src/objects/dict.c
         src/objects/freqentry.c)
-target_include_directories(
-        dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
+#target_include_directories(
+#        dictpopup-create PRIVATE ${GTK3_INCLUDE_DIRS} ${LIBZIP_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-create PRIVATE ${GTK3_LIBRARY_DIRS}
         ${LIBZIP_LIBRARY_DIRS} ${CURL_LIBRARY_DIRS})
 target_link_libraries(dictpopup-create PRIVATE ${GTK3_LIBRARIES} -lzip -llmdb
@@ -120,12 +242,13 @@ add_executable(dictpopup-win EXCLUDE_FROM_ALL
         src/dictpopup.c
         src/db.c
         src/deinflector.c
-        src/ankiconnectc/ankiconnectc.c
         src/settings.c
         src/utils/util.c
         src/platformdep/windowtitle.c
         src/platformdep/file_operations.c
-        src/platformdep/notifications.c)
+        src/platformdep/notifications.c
+        ${ANKICONNECTC_SRCS}
+)
 target_compile_definitions(dictpopup-win PUBLIC NOTIFICATIONS)
 target_include_directories(
         dictpopup-win PRIVATE ${GTK4_INCLUDE_DIRS} ${NOTIFY_INCLUDE_DIRS}
@@ -141,14 +264,14 @@ target_link_libraries(dictpopup-win PRIVATE ${GTK4_LIBRARIES} ${NOTIFY_LIBRARIES
 add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
         src/dictpopup.c
         src/deinflector.c
-        src/ankiconnectc/ankiconnectc.c
         src/utils/util.c
         src/db.c
         src/settings.c
         src/platformdep/file_operations.c
         src/platformdep/clipboard.c
         src/platformdep/windowtitle.c
-        )
+        ${ANKICONNECTC_SRCS}
+)
 target_include_directories(
         dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS})
@@ -166,7 +289,7 @@ if (BUILD_TESTING)
             src/utils/util.c
             src/utils/utf8.c
             src/utils/str.c
-            src/utils/yyjson.c
+            lib/yyjson.c
             src/objects/dict.c
             tests/main.c
             tests/deinflector_tests.c

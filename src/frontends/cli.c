@@ -16,5 +16,5 @@ int main(int argc, char **argv) {
         dictentry_print(dict[i]);
     }
 
-    dictionary_free(&dict);
+    dict_free(&dict);
 }

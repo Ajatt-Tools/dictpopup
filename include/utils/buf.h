@@ -40,7 +40,7 @@ struct buf {
     char buffer[];
 };
 
-#define buf_ptr(v) ((struct buf *)((char *)(v)-offsetof(struct buf, buffer)))
+#define buf_ptr(v) ((struct buf *)((char *)(v) - offsetof(struct buf, buffer)))
 
 #define buf_free(v)                                                                                \
     do {                                                                                           \

@@ -5,7 +5,7 @@
 #include "utils/messages.h"
 #include "utils/str.h"
 #include "utils/util.h"
-#include "utils/yyjson.h"
+#include "yyjson.h"
 #include <deinflector.h>
 #include <errno.h>
 

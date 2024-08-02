@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <requires lib="gtk+" version="3.20"/>
+    <object class="GtkTextBuffer" id="dictionary_textbuffer">
+        <property name="text" translatable="yes">loading...</property>
+    </object>
+
+    <object class="GtkApplicationWindow" id="main_window">
+        <property name="can_focus">False</property>
+        <property name="title" translatable="no">dictpopup</property>
+        <property name="default_width">650</property>
+        <property name="default_height">400</property>
+        <property name="decorated">False</property>
+        <property name="type_hint">popup-menu</property>
+        <property name="resizable">False</property>
+        <child>
+            <object class="GtkBox" id="main_vbox">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <child>
+                    <object class="GtkBox" id="header_bar">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="spacing">0</property>
+                        <child>
+                            <object class="GtkButton" id="btn_l">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="tooltip-text" translatable="yes">Previous Definition</property>
+                                <signal name="clicked" handler="on_button_left_clicked" swapped="no"/>
+                                <accelerator key="a" signal="activate"/>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="icon_name">go-previous-symbolic</property>
+                                    </object>
+                                </child>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="position">0</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkButton" id="add_to_anki_btn">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="tooltip-text" translatable="yes">Add Current Entry To Anki</property>
+                                <signal name="clicked" handler="on_add_to_anki_clicked" swapped="no"/>
+                                <accelerator key="s" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="icon_name">list-add-symbolic</property>
+                                    </object>
+                                </child>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="position">1</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkDrawingArea" id="exists_dot">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="tooltip-text" translatable="yes">Indicator for the word/reading pair in your Anki collection&#10;Green: Exists&#10;Red: Does not exist&#10;Orange: Exists, but all instances are suspended&#10;Blue: Exists, but all instances are new</property>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="padding">5</property>
+                                <property name="position">2</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="lbl_cur_reading">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                            </object>
+                            <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">3</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="lbl_dictnum">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="padding">5</property>
+                                <property name="position">4</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkButton" id="pronounce_btn">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="tooltip-text" translatable="yes">Pronounce Current Word</property>
+                                <signal name="clicked" handler="on_pronounce_clicked" swapped="no"/>
+                                <accelerator key="p" signal="activate"/>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="icon_name">audio-volume-high-symbolic</property>
+                                    </object>
+                                </child>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="position">5</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkButton">
+                                <property name="receives_default">True</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="tooltip-text" translatable="yes">Next Definition</property>
+                                <signal name="clicked" handler="on_button_right_clicked" swapped="no"/>
+                                <accelerator key="s" signal="activate"/>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="icon_name">go-next-symbolic</property>
+                                    </object>
+                                </child>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="position">6</property>
+                            </packing>
+                        </child>
+                    </object>
+                    <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                    </packing>
+                </child>
+                <child>
+                    <object class="GtkScrolledWindow" id="swindow">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="shadow_type">in</property>
+                        <child>
+                            <object class="GtkTextView" id="def_tw">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="editable">False</property>
+                                <property name="wrap_mode">char</property>
+                                <property name="cursor_visible">False</property>
+                                <property name="top_margin">5</property>
+                                <property name="bottom_margin">5</property>
+                                <property name="left_margin">5</property>
+                                <property name="right_margin">5</property>
+                                <property name="buffer">dictionary_textbuffer</property>
+                            </object>
+                        </child>
+                    </object>
+                    <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                    </packing>
+                </child>
+                <child>
+                    <object class="GtkBox" id="bottom_bar">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="spacing">0</property>
+                        <child>
+                            <object class="GtkLabel" id="frequency_lbl">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="position">0</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkLabel" id="dictname_lbl">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                            </object>
+                            <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                            </packing>
+                        </child>
+                        <child>
+                            <object class="GtkButton" id="settings_button">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <signal name="clicked" handler="on_settings_button_clicked" swapped="no"/>
+                                <property name="tooltip-text" translatable="yes">Open Settings Menu</property>
+                                <child>
+                                    <object class="GtkImage">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="icon-name">settings</property>
+                                    </object>
+                                </child>
+                            </object>
+                            <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">False</property>
+                                <property name="position">3</property>
+                            </packing>
+                        </child>
+                    </object>
+                    <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">2</property>
+                    </packing>
+                </child>
+            </object>
+        </child>
+    </object>
+</interface>

@@ -28,9 +28,12 @@
 
 s8 focused_window_title = {0};
 
+static s8 add_bold_tags_around_word(s8 sent, s8 word);
+static s8 create_furigana(s8 kanji, s8 reading);
+
 #define POSSIBLE_ENTRIES_S_NMEMB 9
 typedef struct possible_entries_s {
-    s8 copiedsent;
+    s8 sent;
     s8 boldsent;
     s8 dictkanji;
     s8 dictreading;
@@ -38,7 +41,25 @@ typedef struct possible_entries_s {
     s8 furigana;
     s8 windowname;
     s8 dictname;
-} possible_entries_s;
+} PossibleEntries;
+
+static void _nonnull_ possible_entries_fill_with(PossibleEntries *pe, s8 lookup, s8 sent,
+                                                 dictentry de) {
+    pe->sent = sent;
+    pe->boldsent = add_bold_tags_around_word(pe->sent, lookup);
+
+    pe->dictdefinition = de.definition;
+    pe->dictkanji = de.kanji.len > 0 ? de.kanji : de.reading;
+    pe->dictreading = de.reading;
+    pe->furigana = create_furigana(de.kanji, de.reading);
+    pe->dictname = de.dictname;
+
+    pe->windowname = focused_window_title;
+}
+
+static void possible_entries_free(PossibleEntries pe) {
+    frees8(&pe.boldsent);
+}
 
 static void _nonnull_ appendDeinflections(const database_t *db, s8 word,
                                           dictentry *dict[static 1]) {
@@ -74,17 +95,18 @@ static Dict _nonnull_ lookup_hiragana_conversion(s8 word, database_t *db) {
     return lookup_word(hira, db);
 }
 
-static Dict _nonnull_ lookup(s8 *word, Config config) {
+static DictLookup _nonnull_ lookup(s8 word, Config config) {
     _drop_(db_close) database_t *db = db_open(config.general.dbDir, true);
 
-    Dict dict = lookup_word(*word, db);
+    Dict dict = lookup_word(word, db);
     if (isEmpty(dict) && config.general.mecab) {
-        dict = lookup_hiragana_conversion(*word, db);
+        dict = lookup_hiragana_conversion(word, db);
     }
     if (isEmpty(dict) && config.general.substringSearch) {
-        dict = lookup_first_matching_prefix(word, db);
+        dict = lookup_first_matching_prefix(&word, db);
     }
-    return dict;
+
+    return (DictLookup){.dict = dict, .lookup = word};
 }
 
 static int indexof(char const *str, char *arr[]) {
@@ -118,16 +140,16 @@ static int _nonnull_ dictentry_comparer(const dictentry *a, const dictentry *b) 
     return inda < indb ? -1 : inda == indb ? 0 : 1;
 }
 
-Dict _nonnull_ create_dictionary(s8 *word, Config config) {
+DictLookup _nonnull_ dictionary_lookup(s8 word, Config config) {
     if (config.general.nukeWhitespaceLookup)
-        nuke_whitespace(word);
+        nuke_whitespace(&word);
 
-    Dict dict = lookup(word, config);
+    DictLookup dict_lookup = lookup(word, config);
 
     if (config.general.sortDictEntries)
-        dictSort(dict, dictentry_comparer);
+        dictSort(dict_lookup.dict, dictentry_comparer);
 
-    return dict;
+    return dict_lookup;
 }
 
 /* ---------------- Anki related ----------------- */
@@ -145,81 +167,31 @@ static s8 create_furigana(s8 kanji, s8 reading) {
     // contains hiragana
 }
 
-static s8 get_sentence(void) {
-#ifdef CLIPBOARD
-    if (cfg.anki.copySentence) {
-        msg("Please select the context.");
-        s8 clip = fromcstr_(get_next_clipboard());
-        if (cfg.anki.nukeWhitespaceSentence)
-            nuke_whitespace(&clip);
-        return clip;
-    } else
-#endif
-    {
-        return (s8){0};
-    }
+// TODO: Improve maintainability?
+static s8 map_entry(PossibleEntries p, int i) {
+    if (i < 0 || i > 9)
+        err("Anki field mapping number %i is out of bounds.", i);
+
+    return i == 0   ? S("")
+           : i == 2 ? p.sent
+           : i == 3 ? p.boldsent
+           : i == 4 ? p.dictkanji
+           : i == 5 ? p.dictreading
+           : i == 6 ? p.dictdefinition
+           : i == 7 ? p.furigana
+           : i == 8 ? p.windowname
+           : i == 9 ? p.dictname
+                    : S("");
 }
 
-static void _nonnull_ fill_entries(possible_entries_s *pe, s8 lookup, dictentry const de) {
-    pe->copiedsent = get_sentence();
-    pe->boldsent = add_bold_tags_around_word(pe->copiedsent, lookup);
-
-    pe->dictdefinition = de.definition;
-    pe->dictkanji = de.kanji.len > 0 ? de.kanji : de.reading;
-    pe->dictreading = de.reading;
-    pe->furigana = create_furigana(de.kanji, de.reading);
-    pe->dictname = de.dictname;
-}
-
-static s8 map_entry(s8 lookup, dictentry de, int i) {
-    // A safer way would be switching to strings, but I feel like that's
-    // not very practical to configure
-    // return i == 0   ? S("")
-    //        : i == 2 ? p.copiedsent
-    //        : i == 3 ? p.boldsent
-    //        : i == 4 ? p.dictkanji
-    //        : i == 5 ? p.dictreading
-    //        : i == 6 ? p.dictdefinition
-    //        : i == 7 ? p.furigana
-    //        : i == 8 ? p.windowname
-    //        : i == 9 ? p.dictname
-    //                 : S("");
-
-    switch (i) {
-        case 0:
-            return S("");
-        case 1:
-            return lookup;
-        case 2:
-            return get_sentence();
-        case 3:
-            return add_bold_tags_around_word(get_sentence(), lookup);
-        case 4:
-            return de.kanji;
-        case 5:
-            return de.reading;
-        case 6:
-            return de.definition;
-        case 7:
-            return create_furigana(de.kanji, de.reading);
-        case 8:
-            return focused_window_title;
-        case 9:
-            return de.dictname;
-        default:
-            err("Anki field mapping number %i is out of bounds.", i);
-            return S("");
-    }
-}
-
-static ankicard prepare_ankicard(s8 lookup, dictentry de, Config config) {
-
-    // possible_entries_s p = {.windowname = focused_window_title};
-    // fill_entries(&p, lookup, de);
+static ankicard prepare_ankicard(s8 lookup, s8 sentence, dictentry de, Config config) {
+    PossibleEntries possible_entries = {0};
+    possible_entries_fill_with(&possible_entries, lookup, sentence, de);
 
     char **fieldentries = new (char *, config.anki.numFields);
     for (size_t i = 0; i < config.anki.numFields; i++) {
-        fieldentries[i] = (char *)map_entry(lookup, de, config.anki.fieldMapping[i]).s;
+        fieldentries[i] = (char *)map_entry(possible_entries, config.anki.fieldMapping[i]).s;
+        // TODO: fix
     }
 
     return (ankicard){.deck = config.anki.deck,
@@ -239,8 +211,8 @@ static void send_ankicard(ankicard ac) {
         msg("Successfully added card.");
 }
 
-void create_ankicard(s8 lookup, dictentry de, Config config) {
-    ankicard ac = prepare_ankicard(lookup, de, config);
+void create_ankicard(s8 lookup, s8 sentence, dictentry de, Config config) {
+    ankicard ac = prepare_ankicard(lookup, sentence, de, config);
     send_ankicard(ac);
     free(ac.fieldentries);
 }

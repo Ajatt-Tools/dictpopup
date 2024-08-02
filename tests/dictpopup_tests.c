@@ -31,7 +31,7 @@ const char *get_user_data_dir(void) {
     return "/home/user/.local/share";
 }
 
-char *get_next_clipboard(void) {
+s8 get_next_clipboard(void) {
     return (char *)mock();
 }
 

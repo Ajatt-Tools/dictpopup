@@ -1,8 +1,8 @@
 #ifndef S8_H
 #define S8_H
 
-#include <stdbool.h>
 #include "utils/util.h"
+#include <stdbool.h>
 
 typedef struct {
     u8 *s;
@@ -15,8 +15,7 @@ typedef struct {
         .s = (u8[]){0xF8}, .len = 1                                                                \
     }
 #define lengthof(s) (arrlen("" s "") - 1)
-#define s8(s)                                                                                      \
-    { (u8 *)s, arrlen(s) - 1 }
+#define s8(s) {(u8 *)s, arrlen(s) - 1}
 #define S(s) (s8) s8(s)
 
 /*
@@ -35,6 +34,7 @@ s8 s8copy(s8 dst, s8 src);
  * Returns a copy of s
  */
 s8 s8dup(s8 src);
+s8 *s8dup_ptr(s8 src);
 /*
  * Turns @z into an s8 string, reusing the pointer.
  */
@@ -85,7 +85,6 @@ s8 _nonnull_ concat_(s8 *strings);
 s8 _nonnull_ buildpath_(s8 *pathcomps);
 s8 enclose_word_in_s8_with(s8 str, s8 word, s8 prefix, s8 suffix);
 
-
 /* --------------------------- string builder -----------------------_ */
 typedef struct {
     u8 *data;
@@ -104,6 +103,6 @@ void _nonnull_ sb_free(stringbuilder_s *sb);
 /* ------------------------------------------------------------------ */
 
 void substrremove(char *str, const s8 sub);
-void nuke_whitespace(s8 *z);
+void nuke_whitespace(s8 z[static 1]);
 
-#endif //S8_H
+#endif // S8_H

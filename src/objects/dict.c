@@ -29,7 +29,7 @@ void dictionary_add(dictentry **dict, dictentry de) {
     buf_push(*dict, de);
 }
 
-isize dictLen(dictentry *dict) {
+size_t dictLen(dictentry *dict) {
     return buf_size(dict);
 }
 
@@ -46,18 +46,24 @@ void dictentry_free(dictentry de) {
     frees8(&de.definition);
 }
 
-void dictionary_free(dictentry **dict) {
-    while (buf_size(*dict) > 0)
-        dictentry_free(buf_pop(*dict));
-    buf_free(*dict);
+void dict_free(Dict dict) {
+    while (buf_size(dict) > 0)
+        dictentry_free(buf_pop(dict));
+    buf_free(dict);
 }
 
-dictentry dictentry_at_index(dictentry *dict, isize index) {
-    assert(index >= 0 && (size_t)index < buf_size(dict));
+dictentry dictentry_at_index(Dict dict, size_t index) {
+    assert(index < buf_size(dict));
     return dict[index];
 }
 
 dictentry *pointer_to_entry_at(dictentry *dict, isize index) {
     assert(index >= 0 && (size_t)index < buf_size(dict));
     return dict + index;
+}
+
+void dict_lookup_free(DictLookup *dl) {
+    dict_free(dl->dict);
+    frees8(&dl->lookup);
+    free(dl);
 }

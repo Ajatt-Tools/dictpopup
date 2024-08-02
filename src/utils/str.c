@@ -44,6 +44,12 @@ s8 s8dup(s8 src) {
     return r;
 }
 
+s8 *s8dup_ptr(s8 src) {
+    s8 *ret = new (s8, 1);
+    *ret = s8dup(src);
+    return ret;
+}
+
 s8 fromcstr_(char *z) {
     s8 s = {0};
     s.s = (u8 *)z;
@@ -283,9 +289,10 @@ void sb_free(stringbuilder_s *sb) {
 }
 /* --------------- End stringbuilder --------------- */
 
-
 void substrremove(char *str, const s8 sub) {
     assert(sub.s[sub.len] == '\0');
+    if (!str)
+        return;
 
     if (sub.len > 0) {
         char *p = str;
@@ -296,7 +303,7 @@ void substrremove(char *str, const s8 sub) {
 }
 
 // TODO: Cleaner (and non-null terminated) implementation
-void nuke_whitespace(s8 *z) {
+void nuke_whitespace(s8 z[static 1]) {
     substrremove((char *)z->s, S("\n"));
     substrremove((char *)z->s, S("\t"));
     substrremove((char *)z->s, S(" "));

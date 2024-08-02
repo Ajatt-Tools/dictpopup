@@ -20,7 +20,7 @@
  SOFTWARE.
  *============================================================================*/
 
-#include "utils/yyjson.h"
+#include "yyjson.h"
 #include <math.h>
 
 

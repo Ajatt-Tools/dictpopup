@@ -17,16 +17,24 @@ void _nonnull_ dictentry_free(dictentry de);
 void dictentry_print(dictentry de);
 
 typedef dictentry *Dict;
+
 Dict newDict(void);
 bool isEmpty(Dict dict);
 void _nonnull_ dictionary_add(Dict *dict, dictentry de);
-isize dictLen(Dict dict);
+size_t dictLen(Dict dict);
 
 // Sorts @dict in place
 void dictSort(Dict dict, int (*dictentryComparer)(const dictentry *a, const dictentry *b));
 
-void _nonnull_ dictionary_free(Dict *dict);
-dictentry dictentry_at_index(Dict dict, isize index);
+void dict_free(Dict dict);
+dictentry dictentry_at_index(Dict dict, size_t index);
 dictentry *pointer_to_entry_at(Dict dict, isize index);
+
+typedef struct {
+    s8 lookup;
+    Dict dict;
+} DictLookup;
+
+void dict_lookup_free(DictLookup *dl);
 
 #endif // DICT_H

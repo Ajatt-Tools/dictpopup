@@ -93,14 +93,15 @@ void free_pronfile_buffer(pronfile_s *pronfiles) {
 }
 
 static fileinfo_s *get_fileinfo_for_array(database *db, s8 *files) {
-    fileinfo_s *fi = new(fileinfo_s, buf_size(files));
+    fileinfo_s *fi = new (fileinfo_s, buf_size(files));
     for (size_t i = 0; i < buf_size(files); i++) {
         fi[i] = jdb_get_fileinfo(db, files[i]);
     }
     return fi;
 }
 
-static void get_all_files_and_fileinfo_for(s8 word, s8 db_path, s8 *files[static 1], fileinfo_s *fileinfo[static 1]) {
+static void get_all_files_and_fileinfo_for(s8 word, s8 db_path, s8 *files[static 1],
+                                           fileinfo_s *fileinfo[static 1]) {
     _drop_(jdb_close) database *db = jdb_open((char *)db_path.s, true);
 
     *files = jdb_get_files(db, word);
@@ -115,7 +116,7 @@ pronfile_s *get_pronfiles_for(s8 word, s8 reading, s8 db_path) {
     _drop_(free) fileinfo_s *fileinfo = 0;
     get_all_files_and_fileinfo_for(word, db_path, &files, &fileinfo);
 
-    if(!files)
+    if (!files)
         return NULL;
 
     _drop_(frees8) s8 normread = normalize_reading(reading);
@@ -177,14 +178,14 @@ void jppron(s8 word, s8 reading, char *audio_folders_path) {
         }
     }
 
-    /* _drop_(free_pronfile_buffer) pronfile_s *pronfiles = get_pronfiles_for(word, reading, dbpath); */
+    /* _drop_(free_pronfile_buffer) pronfile_s *pronfiles = get_pronfiles_for(word, reading,
+     * dbpath); */
     pronfile_s *pronfiles = get_pronfiles_for(word, reading, dbpath);
     if (pronfiles) {
-      play_pronfiles(pronfiles);
-      free_pronfile_buffer(pronfiles);
-    }
-    else
-      msg("No pronunciation found.");
+        play_pronfiles(pronfiles);
+        free_pronfile_buffer(pronfiles);
+    } else
+        msg("No pronunciation found.");
 }
 
 // #ifdef JPPRON_MAIN
