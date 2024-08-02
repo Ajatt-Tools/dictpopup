@@ -18,6 +18,11 @@ if (NOT GLIB_COMPILE_RESOURCES)
     message(FATAL_ERROR "glib-compile-resources binary not found")
 endif ()
 
+find_program(GPERF NAMES gperf)
+if (NOT GPERF)
+    message(FATAL_ERROR "gperf binary not found")
+endif ()
+
 # Optional dependencies
 find_package(X11)
 if (X11_FOUND)
@@ -44,10 +49,10 @@ set(CMAKE_C_COMPILER gcc)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDEBUG)
     set(CMAKE_C_FLAGS
-            "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes -Wshadow -Wdouble-promotion \
+            "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -Wstrict-prototypes -Wshadow -Wdouble-promotion \
 	     -Wno-unused-parameter -Wno-sign-conversion -Wno-unused-function -Wpointer-arith \
 	     -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align \
-	     -Wno-overlength-strings \
+	     -Wno-overlength-strings -Wno-missing-field-initializers \
 	     -O0 -ggdb")
     #-Wdouble-promotion
     set(CMAKE_C_FLAGS
@@ -74,6 +79,11 @@ set(ANKICONNECTC_SRCS
 
 set(DICTPOPUP_SRCS
         src/dictpopup.c
+)
+
+set(DEINFLECTOR_SRCS
+        ${DEINFLECTION_RULES_C}
+        src/deinflector/deinflector.c
 )
 
 
@@ -141,6 +151,7 @@ add_custom_target(
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
+# #########
 set(GRESOURCE_XML ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/dictpopup.gresource.xml)
 set(GRESOURCE_C ${GENERATED_DIR}/resources.c)
 
@@ -159,13 +170,28 @@ add_custom_command(
         VERBATIM
 )
 add_custom_target(gresource DEPENDS ${GRESOURCE_C})
-##
+# ###########
+
+# #### TODO: move
+set(DEINFLECTION_RULES_GPERF ${CMAKE_CURRENT_SOURCE_DIR}/src/deinflector/deinflection_rules.gperf)
+set(DEINFLECTION_RULES_C ${GENERATED_DIR}/deinflection_rules.c)
+add_custom_command(
+        OUTPUT ${DEINFLECTION_RULES_C}
+        COMMAND ${GPERF}
+        ARGS
+        -t
+        --output-file=${DEINFLECTION_RULES_C}
+        ${DEINFLECTION_RULES_GPERF}
+        MAIN_DEPENDENCY ${DEINFLECTION_RULES_GPERF}
+        VERBATIM
+)
+add_custom_target(deinflection_rules DEPENDS ${DEINFLECTION_RULES_C})
+# #######
 
 add_executable(dictpopup
         src/frontends/gtk3popup/dictpopup-application.c
         src/dictpopup.c
         src/db.c
-        src/deinflector.c
         src/settings.c
         src/utils/util.c
         src/utils/utf8.c
@@ -179,6 +205,8 @@ add_executable(dictpopup
         ${JPPRON_SRCS}
         ${ANKICONNECTC_SRCS}
         ${GRESOURCE_C}
+        ${DEINFLECTION_RULES_C}
+        src/deinflector/deinflector.c
         src/frontends/gtk3popup/dict_state_manager.c
         src/frontends/gtk3popup/callbacks.c
         src/frontends/gtk3popup/main.c
@@ -241,13 +269,13 @@ add_executable(dictpopup-win EXCLUDE_FROM_ALL
         src/frontends/gtk4window.c
         src/dictpopup.c
         src/db.c
-        src/deinflector.c
         src/settings.c
         src/utils/util.c
         src/platformdep/windowtitle.c
         src/platformdep/file_operations.c
         src/platformdep/notifications.c
         ${ANKICONNECTC_SRCS}
+        ${DEINFLECTOR_SRCS}
 )
 target_compile_definitions(dictpopup-win PUBLIC NOTIFICATIONS)
 target_include_directories(
@@ -263,7 +291,6 @@ target_link_libraries(dictpopup-win PRIVATE ${GTK4_LIBRARIES} ${NOTIFY_LIBRARIES
 # ##############################################################################
 add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
         src/dictpopup.c
-        src/deinflector.c
         src/utils/util.c
         src/db.c
         src/settings.c
@@ -285,7 +312,6 @@ if (BUILD_TESTING)
     find_package(cgreen REQUIRED)
     add_executable(
             c_tests
-            src/deinflector.c
             src/utils/util.c
             src/utils/utf8.c
             src/utils/str.c
