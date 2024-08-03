@@ -39,12 +39,22 @@ static bool buffer_contains(s8 *buffer, s8 word) {
     return contains;
 }
 
+static void buffer_dump(s8 *buffer) {
+    for (size_t i = 0; i < buf_size(buffer); i++) {
+        printf("%s\n", (char *)buffer[i].s);
+    }
+}
+
 #define DEINFLECT(expected_deinf, ...)                                                             \
     do {                                                                                           \
         char **words = (char *[]){__VA_ARGS__, NULL};                                              \
         for (char **wordptr = words; *wordptr != NULL; wordptr++) {                                \
             _drop_(frees8buffer) s8 *deinfs = deinflect(fromcstr_(*wordptr));                      \
             bool contains = buffer_contains(deinfs, S(expected_deinf));                            \
+            if (!contains) {                                                                       \
+                printf("Expected '%s' to be deinflected to '%s'\n", *wordptr, expected_deinf);     \
+                buffer_dump(deinfs);                                                               \
+            }                                                                                      \
             assert_that(contains, is_true);                                                        \
         }                                                                                          \
     } while (0)
