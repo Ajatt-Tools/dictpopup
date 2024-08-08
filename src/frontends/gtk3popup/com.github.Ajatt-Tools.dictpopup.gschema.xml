@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <schema id="com.github.Ajatt-Tools.dictpopup" path="/com/github/Ajatt-Tools/dictpopup/">
+        <key name="database-path" type="s">
+            <default>''</default>
+            <summary>Database Path</summary>
+            <description>Path to the dictionary database</description>
+        </key>
+        <key name="sort-entries" type="b">
+            <default>false</default>
+            <summary>Sort Dictionary Entries</summary>
+            <description>Whether to sort dictionary entries</description>
+        </key>
+        <key name="dict-sort-order" type="as">
+            <default>[]</default>
+            <summary>Dictionary Sort Order</summary>
+            <description>Order of dictionaries for sorting</description>
+        </key>
+        <key name="nuke-whitespace-lookup" type="b">
+            <default>true</default>
+            <summary>Remove Whitespace from Lookup</summary>
+            <description>Whether to remove whitespace from lookup strings</description>
+        </key>
+        <key name="mecab-conversion" type="b">
+            <default>false</default>
+            <summary>Fallback to a Hiragana Conversion</summary>
+            <description>Whether to fall back to a hiragana conversion using MeCab if no entry could be found</description>
+        </key>
+        <key name="substring-search" type="b">
+            <default>true</default>
+            <summary>Enable Substring Search</summary>
+            <description>Whether to enable substring search</description>
+        </key>
+        <key name="font-scale" type="d">
+            <range min="0.5" max="4.0"/>
+            <default>1.0</default>
+        </key>
+        <key name="anki-deck" type="s">
+            <default>''</default>
+            <summary>Anki Deck</summary>
+            <description>Name of the Anki deck to add the words to</description>
+        </key>
+        <key name="anki-notetype" type="s">
+            <default>''</default>
+            <summary>Anki Note Type</summary>
+            <description>Name of the Anki note type to use</description>
+        </key>
+        <key name="anki-search-field" type="s">
+            <default>''</default>
+            <summary>Anki Search Field</summary>
+            <description>Name of the Anki field to search the word in (for the dot indicator)</description>
+        </key>
+        <key name="anki-fieldnames" type="as">
+            <default>[]</default>
+            <summary>Anki Field Names</summary>
+            <description>Names of the Anki note fields</description>
+        </key>
+        <key name="anki-fieldentries" type="ai">
+            <default>[]</default>
+            <summary>Anki Field Entries</summary>
+            <description>Integer values corresponding to the Anki field entries</description>
+        </key>
+    </schema>
+</schemalist>

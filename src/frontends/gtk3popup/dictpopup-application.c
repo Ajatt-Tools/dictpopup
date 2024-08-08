@@ -2,9 +2,12 @@
 
 #include "dictpopup-application.h"
 
-#include "callback.h"
+#include "callbacks.h"
 #include "dict_state_manager.h"
-#include <dictpopup.h>
+#include "dp-settings.h"
+
+#include <ankiconnectc.h>
+#include <dictionary_lookup.h>
 #include <objects/dict.h>
 #include <platformdep/clipboard.h>
 #include <utils/messages.h>
@@ -12,19 +15,26 @@
 G_DEFINE_TYPE(DpApplication, dp_application, GTK_TYPE_APPLICATION)
 
 void perform_lookup(DpApplication *app, s8 word);
+static gboolean dp_update_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data);
 
 static void dp_application_dispose(GObject *object) {
-    // DpApplication *self = DP_APPLICATION(object);
+    DpApplication *self = DP_APPLICATION(object);
+
+    g_clear_object(&self->settings);
+    frees8(&self->lookup_str);
+
+    G_OBJECT_CLASS(dp_application_parent_class)->dispose(object);
 }
 
 static void dictpopup_activate(GApplication *app) {
     DpApplication *self = DP_APPLICATION(app);
-    gtk_widget_show_all(GTK_WIDGET(self->main_window));
 
-    if (!self->lookup_word.len) {
-        self->lookup_word = get_selection();
+    if (!self->lookup_str.len) {
+        self->lookup_str = get_selection();
     }
-    perform_lookup(self, self->lookup_word);
+    dict_lookup_async(self);
+
+    gtk_widget_show_all(GTK_WIDGET(self->main_window));
 }
 
 static void move_win_to_mouse_ptr(GtkWindow *win) {
@@ -35,17 +45,20 @@ static void move_win_to_mouse_ptr(GtkWindow *win) {
     gtk_window_move(win, x, y);
 }
 
-static void quit_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
-    GApplication *app = G_APPLICATION(data);
-    g_application_quit(app);
-}
-
 static GActionEntry app_entries[] = {
     {"quit", quit_activated, NULL, NULL, NULL, {0}},
+    {"next-definition", next_definition_activated, NULL, NULL, NULL, {0}},
+    {"previous-definition", previous_definition_activated, NULL, NULL, NULL, {0}},
+    {"pronounce", pronounce_activated, NULL, NULL, NULL, {0}},
+    {"add-to-anki", add_to_anki_activated, NULL, NULL, NULL, {0}},
 };
 
 static void dictpopup_startup(GApplication *app) {
     const char *const close_window_accels[] = {"q", "Escape", NULL};
+    const char *const next_definition_accels[] = {"s", NULL};
+    const char *const previous_definition_accels[] = {"a", NULL};
+    const char *const pronounce_accels[] = {"p", NULL};
+    const char *const add_to_anki_accels[] = {"<Ctrl>s", NULL};
 
     DpApplication *self = DP_APPLICATION(app);
     G_APPLICATION_CLASS(dp_application_parent_class)->startup(app);
@@ -61,6 +74,10 @@ static void dictpopup_startup(GApplication *app) {
     self->dictname_lbl = GTK_LABEL(gtk_builder_get_object(builder, "dictname_lbl"));
     self->current_word_lbl = GTK_LABEL(gtk_builder_get_object(builder, "lbl_cur_reading"));
     self->frequency_lbl = GTK_LABEL(gtk_builder_get_object(builder, "frequency_lbl"));
+    self->anki_status_dot = GTK_WIDGET(gtk_builder_get_object(builder, "anki_status_dot"));
+    g_signal_connect(self->anki_status_dot, "draw", G_CALLBACK(dp_update_exists_dot), self);
+    g_signal_connect(self->anki_status_dot, "button-press-event",
+                     G_CALLBACK(on_anki_status_clicked), self);
 
     gtk_builder_connect_signals(builder, self);
     g_object_unref(builder);
@@ -77,12 +94,20 @@ static void dictpopup_startup(GApplication *app) {
     gtk_window_set_application(GTK_WINDOW(self->main_window), GTK_APPLICATION(app));
 
     gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.quit", close_window_accels);
+    gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.next-definition",
+                                          next_definition_accels);
+    gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.previous-definition",
+                                          previous_definition_accels);
+    gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.pronounce", pronounce_accels);
+    gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.add-to-anki",
+                                          add_to_anki_accels);
 }
 
 static void dp_application_init(DpApplication *self) {
+    self->settings = dp_settings_new();
     g_mutex_init(&self->dict_manager_mutex);
     dict_manager_init(&self->dict_manager);
-    self->lookup_word = (s8){0};
+    self->lookup_str = (s8){0};
 
     g_action_map_add_action_entries(G_ACTION_MAP(self), app_entries, G_N_ELEMENTS(app_entries),
                                     self);
@@ -94,12 +119,8 @@ static int dp_application_command_line(GApplication *app, GApplicationCommandLin
     int argc;
     char **argv = g_application_command_line_get_arguments(cmdline, &argc);
 
-    for (int i = 0; i < argc; i++) {
-        if (i == 0) {
-            continue;
-        }
-
-        self->lookup_word = s8dup(fromcstr_(argv[i]));
+    for (int i = 1; i < argc; i++) {
+        self->lookup_str = s8dup(fromcstr_(argv[i]));
     }
 
     g_strfreev(argv);
@@ -108,19 +129,92 @@ static int dp_application_command_line(GApplication *app, GApplicationCommandLin
 }
 
 static void dp_application_class_init(DpApplicationClass *klass) {
-    G_APPLICATION_CLASS(klass)->activate = dictpopup_activate;
-    G_APPLICATION_CLASS(klass)->startup = dictpopup_startup;
-    G_APPLICATION_CLASS(klass)->command_line = dp_application_command_line;
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    GApplicationClass *app_class = G_APPLICATION_CLASS(klass);
+
+    object_class->dispose = dp_application_dispose;
+
+    app_class->activate = dictpopup_activate;
+    app_class->startup = dictpopup_startup;
+    app_class->command_line = dp_application_command_line;
 }
 
+/* ---------------- START OBJECT FUNCTIONS ---------------------- */
+s8 *dp_get_lookup_str(DpApplication *app) {
+    g_mutex_lock(&app->dict_manager_mutex);
+
+    s8 *lookup_copy = new (s8, 1);
+    *lookup_copy = s8dup(app->lookup_str);
+
+    g_mutex_unlock(&app->dict_manager_mutex);
+
+    return lookup_copy;
+}
+
+static void on_lookup_completed(DpApplication *app) {
+    refresh_ui(app);
+    pronounce_current_word(app);
+    gtk_widget_queue_draw(app->anki_status_dot);
+}
+
+void dp_swap_dict_lookup(DpApplication *app, DictLookup new_dict_lookup) {
+    g_mutex_lock(&app->dict_manager_mutex);
+    dm_replace_dict(&app->dict_manager, new_dict_lookup.dict);
+    app->lookup_str = new_dict_lookup.lookup;
+    g_mutex_unlock(&app->dict_manager_mutex);
+
+    on_lookup_completed(app);
+}
+
+Word *dp_get_copy_of_current_word(DpApplication *app) {
+    Word *word_copy = new (Word, 1);
+
+    g_mutex_lock(&app->dict_manager_mutex);
+    dictentry current_entry = dm_get_currently_visible(app->dict_manager);
+    *word_copy = word_dup((Word){.kanji = current_entry.kanji, .reading = current_entry.reading});
+    g_mutex_unlock(&app->dict_manager_mutex);
+
+    return word_copy;
+}
+
+static void refresh_exists_dot_with_color(GtkWidget *widget, cairo_t *cr, Color color);
+static gboolean dp_update_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
+    DpApplication *app = DP_APPLICATION(user_data);
+
+    if (num_of_dictentries(app->dict_manager.dictionary) == 0) // TODO TODO
+        return FALSE;
+
+    // TODO: Pointer is unnecessary here
+    Word *current_word = dp_get_copy_of_current_word(app);
+
+    AnkiCollectionStatus exists_status = ac_check_exists(
+        dp_settings_get_anki_deck(app->settings), dp_settings_get_anki_search_field(app->settings),
+        (char *)current_word->kanji.s, 0);
+    Color color = map_ac_status_to_color(exists_status);
+    refresh_exists_dot_with_color(widget, cr, color);
+
+    word_ptr_free(current_word);
+
+    return FALSE;
+}
+/* ---------------- END OBJECT FUNCTIONS ---------------------- */
+
 /* ------------ START REFRESH UI ------------------ */
-static void refresh_definition_with(DpApplication *app, dictentry de) {
+static void refresh_exists_dot_with_color(GtkWidget *widget, cairo_t *cr, Color color) {
+    int width = gtk_widget_get_allocated_width(widget);
+    int height = gtk_widget_get_allocated_height(widget);
+    int size = MIN(width, height) * 2 / 3;
+    int x = (width - size) / 2;
+    int y = (height - size) / 2;
+
+    cairo_set_source_rgb(cr, color.red, color.green, color.blue);
+    cairo_arc(cr, x + size / 2, y + size / 2, size / 2, 0, 2 * G_PI);
+    cairo_fill(cr);
+}
+
+static void refresh_definition_with_entry(DpApplication *app, dictentry de) {
     gtk_text_buffer_set_text(app->definition_textbuffer, (char *)de.definition.s,
                              (gint)de.definition.len);
-
-    // GtkTextIter start, end;
-    // gtk_text_buffer_get_bounds(app->definition_textbuffer, &start, &end);
-    // gtk_text_buffer_apply_tag_by_name(app->definition_textbuffer, "x-large", &start, &end);
 }
 
 static void refresh_dictionary_number(DpApplication *app) {
@@ -130,11 +224,11 @@ static void refresh_dictionary_number(DpApplication *app) {
     gtk_label_set_text(app->dictionary_number_lbl, tmp);
 }
 
-static void refresh_dictname_with(DpApplication *app, dictentry de) {
+static void refresh_dictname_with_entry(DpApplication *app, dictentry de) {
     gtk_label_set_text(app->dictname_lbl, (char *)de.dictname.s);
 }
 
-static void refresh_title_with(DpApplication *app, dictentry de) {
+static void refresh_title_with_entry(DpApplication *app, dictentry de) {
     _drop_(frees8) s8 title =
         concat(S("dictpopup - "), de.reading, S("【"), de.kanji, S("】from "), de.dictname);
     gtk_window_set_title(app->main_window, (char *)title.s);
@@ -148,7 +242,7 @@ static void set_frequency_to(DpApplication *app, u32 freq) {
     gtk_label_set_text(app->frequency_lbl, freqstr);
 }
 
-static void refresh_current_word_with(DpApplication *app, dictentry de) {
+static void refresh_current_word_with_entry(DpApplication *app, dictentry de) {
     _drop_(frees8) s8 txt = {0};
     if (de.kanji.len && de.reading.len) {
         if (s8equals(de.kanji, de.reading))
@@ -173,10 +267,10 @@ static gboolean _refresh_ui(gpointer user_data) {
 
     refresh_dictionary_number(app);
 
-    refresh_definition_with(app, current_entry);
-    refresh_dictname_with(app, current_entry);
-    refresh_title_with(app, current_entry);
-    refresh_current_word_with(app, current_entry);
+    refresh_definition_with_entry(app, current_entry);
+    refresh_dictname_with_entry(app, current_entry);
+    refresh_title_with_entry(app, current_entry);
+    refresh_current_word_with_entry(app, current_entry);
     set_frequency_to(app, current_entry.frequency);
 
     g_mutex_unlock(&app->dict_manager_mutex);
@@ -188,71 +282,3 @@ void refresh_ui(DpApplication *app) {
     gdk_threads_add_idle(_refresh_ui, app);
 }
 /* ------------ END REFRESH UI ------------------ */
-
-/* ------------- START DICTIONARY LOOKUP --------------------- */
-
-static void dictionary_lookup_thread(GTask *task, gpointer source_object, gpointer task_data,
-                                     GCancellable *cancellable) {
-    s8 *lookup_str = task_data;
-    DictLookup dict_lookup = dictionary_lookup(*lookup_str, cfg);
-
-    if (g_task_return_error_if_cancelled(task)) {
-        free(lookup_str->s);
-        free(lookup_str);
-        dict_free(dict_lookup.dict);
-        return;
-    }
-
-    DictLookup *dict_lookup_ptr = new (DictLookup, 1);
-    *dict_lookup_ptr = dict_lookup;
-    g_task_return_pointer(task, dict_lookup_ptr, (GDestroyNotify)dict_lookup_free);
-}
-
-static void lookup_dictionary_async(DpApplication *app, const s8 word, GCancellable *cancellable,
-                                    GAsyncReadyCallback callback) {
-    GTask *task = g_task_new(app, cancellable, callback, NULL);
-    g_task_set_task_data(task, s8dup_ptr(word), g_free);
-    g_task_run_in_thread(task, dictionary_lookup_thread);
-    g_object_unref(task);
-}
-
-static DictLookup *lookup_dictionary_finish(DpApplication *app, GAsyncResult *result,
-                                            GError **error) {
-    return g_task_propagate_pointer(G_TASK(result), error);
-}
-
-static void lookup_dictionary_callback(GObject *source_object, GAsyncResult *res,
-                                       gpointer user_data) {
-    DpApplication *app = DP_APPLICATION(source_object);
-    GError *error = NULL;
-    DictLookup *new_dict_lookup = lookup_dictionary_finish(app, res, &error);
-
-    if (error) {
-        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-            err("%s", error->message);
-        }
-        g_error_free(error);
-        return;
-    }
-
-    g_mutex_lock(&app->dict_manager_mutex);
-    dm_replace_dict(&app->dict_manager, new_dict_lookup->dict);
-    app->lookup_word = new_dict_lookup->lookup;
-    g_mutex_unlock(&app->dict_manager_mutex);
-
-    // Update UI with new dictionary contents
-    refresh_ui(app);
-
-    free(new_dict_lookup);
-}
-
-void perform_lookup(DpApplication *app, const s8 word) {
-    // Cancel any ongoing lookup
-    if (app->current_cancellable) {
-        g_cancellable_cancel(app->current_cancellable);
-        g_clear_object(&app->current_cancellable);
-    }
-    app->current_cancellable = g_cancellable_new();
-
-    lookup_dictionary_async(app, word, app->current_cancellable, lookup_dictionary_callback);
-}

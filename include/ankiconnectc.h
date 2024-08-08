@@ -20,7 +20,10 @@ void ankicard_free(ankicard *ac);
 bool ac_check_connection(void);
 s8 *ac_get_decks(char **error);
 s8 *ac_get_notetypes(char **error);
-int ac_check_exists(char *deck, char *field, char *entry, char **error);
+
+typedef enum { AC_ERROR, AC_EXISTS, AC_DOES_NOT_EXIST, AC_EXISTS_SUSPENDED, AC_EXISTS_NEW } AnkiCollectionStatus;
+AnkiCollectionStatus ac_check_exists(const char *deck, const char *field, const char *entry, char **error);
+
 void ac_gui_search(const char *deck, const char *field, const char *entry, char **error);
 void _nonnull_ ac_addNote(ankicard ac, char **error);
 

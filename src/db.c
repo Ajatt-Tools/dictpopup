@@ -22,7 +22,7 @@ struct database_s {
 static int rc = 0;
 #define C(call) die_on((rc = (call)) != MDB_SUCCESS, "Database error: %s", mdb_strerror(rc));
 
-database_t *db_open(char *dbpath, bool readonly) {
+database_t *db_open(const char *dbpath, bool readonly) {
     dbg("Opening database in directory: '%s'", dbpath);
 
     database_t *db = new (database_t, 1);
@@ -32,7 +32,7 @@ database_t *db_open(char *dbpath, bool readonly) {
     mdb_env_set_maxdbs(db->env, 3);
 
     if (readonly) {
-        die_on(!db_check_exists(fromcstr_(dbpath)),
+        die_on(!db_check_exists(fromcstr_((char*)dbpath)),
                "There is no database in '%s'. You must create one first with dictpopup-create.",
                dbpath);
 

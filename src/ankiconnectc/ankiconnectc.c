@@ -50,7 +50,7 @@ static char *json_escape_str(const char *str) {
             case '\n':
                 sb_append(&sb, S("<br>"));
                 break;
-            // TODO: I we escape '<' and '>', bold tags won't work anymore
+            // TODO: If we escape '<' and '>', bold tags won't work anymore
             // case '<':
             // sb_append(&sb, S("&lt;"));
             // break;
@@ -139,7 +139,7 @@ bool ac_check_connection(void) {
     return true;
 }
 
-static s8 form_search_req(bool include_suspended, bool include_new, char *deck, char *field,
+static s8 form_search_req(bool include_suspended, bool include_new, const char *deck, const char *field,
                           char *entry) {
     return concat(S("{ \"action\": \"findCards\", \"version\": 6, \"params\": "
                     "{ \"query\" : \"\\\""),
@@ -149,7 +149,7 @@ static s8 form_search_req(bool include_suspended, bool include_new, char *deck, 
                   include_new ? S("") : S(" -is:new"), S("\" } }"));
 }
 
-static int check_exists_with_(bool include_suspended, bool include_new, char *deck, char *field,
+static int check_exists_with_(bool include_suspended, bool include_new, const char *deck, const char *field,
                               char *str, char **error) {
     _drop_(frees8) s8 req = form_search_req(include_suspended, include_new, deck, field, str);
     retval_s r = sendRequest(req, search_checker);
@@ -166,36 +166,32 @@ static int check_exists_with_(bool include_suspended, bool include_new, char *de
  * @field: The field where @entry should be searched in.
  * @str: The string to search for
  *
- * Returns: 1 if cards with @str as @field exist, which are not suspended and not new
- *          2 if there are new cards with @str as @field (and maybe also suspended cards)
- *          3 if there are only suspended cards with @str as @field
- *         -1 on error
  */
-int ac_check_exists(char *deck, char *field, char *lookup, char **error) {
+AnkiCollectionStatus ac_check_exists(const char *deck, const char *field, const char *lookup, char **error) {
     if (!lookup) {
         *error = strdup("Lookup string called with NULL value in ac_check_exists!");
-        return -1;
+        return AC_ERROR;
     }
 
     int rc = check_exists_with_(false, false, deck, field, lookup, error);
-    if (rc == -1)
-        return -1;
     if (rc == 1)
-        return 1;
+        return AC_EXISTS;
+    if (rc == -1)
+        return AC_ERROR;
 
     rc = check_exists_with_(false, true, deck, field, lookup, error);
-    if (rc == -1)
-        return -1;
     if (rc == 1)
-        return 2;
-
-    rc = check_exists_with_(true, true, deck, field, lookup, error);
+        return AC_EXISTS_NEW;
     if (rc == -1)
-        return -1;
-    if (rc == 1)
-        return 3;
+        return AC_ERROR;
 
-    return 0;
+    rc = check_exists_with_(true, false, deck, field, lookup, error);
+    if (rc == 1)
+        return AC_EXISTS_SUSPENDED;
+    if (rc == -1)
+        return AC_ERROR;
+
+    return AC_DOES_NOT_EXIST;
 }
 
 static s8 form_gui_search_req(const char *deck, const char *field, const char *entry) {

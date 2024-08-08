@@ -8,7 +8,7 @@ struct database_s {
     int dummy;
 };
 
-database_t *db_open(char *dbpath, bool readonly) {
+database_t *db_open(const char *dbpath, bool readonly) {
     return new(database_t, 1);
 }
 

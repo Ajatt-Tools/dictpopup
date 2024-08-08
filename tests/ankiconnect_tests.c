@@ -7,7 +7,7 @@
 
 TestSuite *ankiconnect_tests(void);
 
-static retval_s sendRequest(s8 request, ResponseFunc response_checker) {
+retval_s sendRequest(s8 request, ResponseFunc response_checker) {
     mock(request.s);
     return (retval_s){.ok=true};
 }

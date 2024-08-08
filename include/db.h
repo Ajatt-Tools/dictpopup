@@ -8,7 +8,7 @@
 // An opaque struct
 typedef struct database_s database_t;
 
-__attribute__((returns_nonnull)) database_t *_nonnull_ db_open(char *dbpath, bool readonly);
+__attribute__((returns_nonnull)) database_t *_nonnull_ db_open(const char *dbpath, bool readonly);
 void _nonnull_ db_close(database_t *db);
 
 void _nonnull_ db_put_dictent(database_t *db, dictentry de);

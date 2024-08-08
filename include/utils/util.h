@@ -6,6 +6,7 @@
 #include <unistd.h> // close()
 
 typedef unsigned char u8;
+typedef char i8;
 typedef signed int i32;
 typedef unsigned int u32;
 typedef __PTRDIFF_TYPE__ isize;

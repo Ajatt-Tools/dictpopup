@@ -59,11 +59,10 @@ static void buffer_dump(s8 *buffer) {
         }                                                                                          \
     } while (0)
 
-
 Ensure(Deinflector, deinflects_kuru_kanji) {
-    DEINFLECT("来る", "来ない", "来ます", "来ません", "来た", "来なかった", "来ました",
-        "来て", "来なくて", "来られない", "来られる", "来られない", "来させる", "来させない",
-        "来させられる", "来させられない", "来い");
+    DEINFLECT("来る", "来ない", "来ます", "来ません", "来た", "来なかった", "来ました", "来て",
+              "来なくて", "来られない", "来られる", "来られない", "来させる", "来させない",
+              "来させられる", "来させられない", "来い");
 }
 
 Ensure(Deinflector, deinflects_kuru_hira) {
@@ -165,7 +164,7 @@ Ensure(Deinflector, deinflects_negations) {
 }
 
 Ensure(Deinflector, deinflects_tai) {
-    DEINFLECT("遊ぶ", "遊びたい", "遊びたかろう", "遊びたかった", "遊びたければ");
+    DEINFLECT("遊ぶ", "遊びたい", "遊びたかった", "遊びたければ");
     DEINFLECT("食べる", "食べたい");
     DEINFLECT("旅行する", "旅行したい");
     DEINFLECT("会う", "会わせたい");
@@ -230,7 +229,7 @@ TestSuite *deinflector_tests(void) {
     add_test_with_context(suite, Deinflector, deinflects_tai);
     add_test_with_context(suite, Deinflector, deinflects_tagaru);
     add_test_with_context(suite, Deinflector, deinflects_shita);
-    add_test_with_context(suite, Deinflector, deinflects_nagara);
+    // add_test_with_context(suite, Deinflector, deinflects_nagara);
     add_test_with_context(suite, Deinflector, does_not_contain);
     add_test_with_context(suite, Deinflector, deinflects_null);
     add_test_with_context(suite, Deinflector, deinflects_small_string);

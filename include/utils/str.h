@@ -15,8 +15,7 @@ typedef struct {
         .s = (u8[]){0xF8}, .len = 1                                                                \
     }
 #define lengthof(s) (arrlen("" s "") - 1)
-#define s8(s) {(u8 *)s, arrlen(s) - 1}
-#define S(s) (s8) s8(s)
+#define S(s) (s8){(u8 *)s, arrlen(s) - 1}
 
 /*
  * Allocates a new s8 with length @len

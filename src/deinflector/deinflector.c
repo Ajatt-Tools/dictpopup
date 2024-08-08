@@ -6,7 +6,7 @@
 #include <utils/str.h>
 #include <utils/utf8.h>
 
-#define MIN(A, B)               ((A) < (B) ? (A) : (B))
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
 
 // works inplace
 void kata2hira(s8 kata_in) {
@@ -106,10 +106,45 @@ static void add_replace_suffix(s8 word, s8 replacement, isize suffix_len) {
     add_deinflection(replstr);
 }
 
+// TODO: Would be cool if the for loop could expand at compile time, so S(..)
+// can be used.	Or just use multiple macros with different arguement length
+#define IF_ENDSWITH_REPLACE(ending, ...)                                                           \
+    do {                                                                                           \
+        if (endswith(word, S(ending))) {                                                           \
+            for (const char **iterator = (const char *[]){__VA_ARGS__, NULL}; *iterator;           \
+                 iterator++) {                                                                     \
+                add_replace_suffix(word, fromcstr_((char *)*iterator), lengthof(ending));          \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+
+/*
+ * @word: The word to be converted
+ * @len_ending: The length of the ending to be disregarded
+ *
+ * Converts a word in い-form to the う-form.
+ */
+// TODO: should be called something with verb stem
+static void itou_form(s8 word) {
+    IF_ENDSWITH_REPLACE("し", "する");
+    IF_ENDSWITH_REPLACE("き", "くる");
+
+    IF_ENDSWITH_REPLACE("", "る");
+    IF_ENDSWITH_REPLACE("し", "す");
+    IF_ENDSWITH_REPLACE("き", "く");
+    IF_ENDSWITH_REPLACE("ぎ", "ぐ");
+    IF_ENDSWITH_REPLACE("び", "ぶ");
+    IF_ENDSWITH_REPLACE("ち", "つ");
+    IF_ENDSWITH_REPLACE("み", "む");
+    IF_ENDSWITH_REPLACE("い", "う");
+    IF_ENDSWITH_REPLACE("に", "ぬ");
+    IF_ENDSWITH_REPLACE("り", "る");
+}
+
 static void deinflect_one_iter(s8 word) {
     // TODO: Use character width instead of hardcoded 3. Currently breaks with non-japanese chars
-    // 4 characters each 3 bytes (japanese characters)
-    for (size_t len = MIN(word.len, 3*4); len > 0; len -= 3) {
+    // 7 characters each 3 bytes (japanese characters)
+    for (int len = MIN(word.len, 3 * 7); len > 0; len -= 3) {
         s8 ending = taketail(word, len);
         DeinflectionRule *rule = in_word_set((char *)ending.s, ending.len);
 
@@ -124,7 +159,37 @@ static void deinflect_one_iter(s8 word) {
     }
 }
 
+// Assumes valid utf-8
+static i32 contains_katakana(s8 word) {
+    u8 *h = word.s;
+    isize i = 0;
+
+    // Assumes valid utf-8 + null-termination
+    while (i + 2 < word.len) {
+        /* Check that this is within the katakana block from E3 82 A0 to E3 83
+         * BF.
+         */
+        if (h[i] == 0xe3 && (h[i + 1] == 0x82 || h[i + 1] == 0x83)) {
+            if ((h[i + 1] == 0x82 && h[i + 2] >= 0xa1) || (h[i + 1] == 0x83 && h[i + 2] <= 0xb6) ||
+                (h[i + 1] == 0x83 && (h[i + 2] == 0xbd || h[i + 2] == 0xbe))) {
+                return 1;
+                }
+        }
+        i += utf8_chr_len(h + i);
+    }
+    return 0;
+}
+
+static void check_katakana(s8 word) {
+    if (contains_katakana(word)) {
+        s8 hira = s8dup(word);
+        kata2hira(hira);
+        add_deinflection(hira);
+    }
+}
+
 s8 *deinflect(s8 word) {
+    check_katakana(word);
     deinflect_one_iter(word);
     for (size_t i = 0; i < buf_size(deinfs); i++)
         deinflect_one_iter(deinfs[i]);

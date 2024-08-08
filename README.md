@@ -55,7 +55,7 @@ Then install with:
 ```bash
 git clone "https://github.com/Ajatt-Tools/dictpopup.git"
 cd dictpopup
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
 sudo cmake --build build --target install -j 2
 ```
 

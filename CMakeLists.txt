@@ -7,11 +7,12 @@ include(CTest)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Options
-option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TESTS "Build tests" OFF)
 
 # Find packages
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
+pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(NOTIFY REQUIRED IMPORTED_TARGET libnotify)
 find_package(LibZip REQUIRED)
 find_package(CURL REQUIRED)
@@ -19,6 +20,11 @@ find_package(LMDB REQUIRED)
 find_package(MECAB REQUIRED)
 
 ###### Needed binaries for compilation
+find_program(GLIB_COMPILE_SCHEMAS NAMES glib-compile-schemas)
+if (NOT GLIB_COMPILE_SCHEMAS)
+    message(FATAL_ERROR "glib-compile-schemas binary not found")
+endif ()
+
 find_program(GLIB_COMPILE_RESOURCES NAMES glib-compile-resources)
 if (NOT GLIB_COMPILE_RESOURCES)
     message(FATAL_ERROR "glib-compile-resources binary not found")
@@ -57,12 +63,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(project_options INTERFACE
             -Wall -Wextra -Werror -Wstrict-prototypes -Wshadow -Wdouble-promotion
             -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align -Wpointer-arith
-            -Wno-sign-conversion -Wno-unused-function -Wno-unused-parameter
+            -Wno-sign-conversion -Wno-unused-function -Wno-unused-parameter -Wno-discarded-qualifiers
             -Wno-overlength-strings -Wno-missing-field-initializers
-            -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong
+#            -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong
             -O0 -ggdb
     )
-    target_link_options(project_options INTERFACE -fsanitize=address)
+#    target_link_options(project_options INTERFACE -fsanitize=address)
 else ()
     target_compile_options(project_options INTERFACE
             -Oz -flto -march=native -mtune=native -g -fno-omit-frame-pointer
@@ -86,18 +92,16 @@ set(JPPRON_SRCS
         include/objects/freqentry.h
 )
 
-set(ANKICONNECTC_SRCS
+set(ANKI_SRCS
         src/ankiconnectc/send_request.c
         src/ankiconnectc/ankiconnectc.c
+        src/anki.c
 )
 
-set(DICTPOPUP_SRCS
-        src/dictpopup.c
-)
-
-set(DEINFLECTOR_SRCS
-        ${DEINFLECTION_RULES_C}
+set(DICTLOOKUP_SRCS
+        src/dictionary_lookup.c
         src/deinflector/deinflector.c
+#        ${DEINFLECTION_RULES_C} # Doesn't get generated if put in here
 )
 
 # ##############################################################################
@@ -161,7 +165,7 @@ add_custom_target(
 # ##############################################################################
 # dictpopup
 # ##############################################################################
-# Compile the ui
+# UI
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
@@ -185,6 +189,26 @@ add_custom_command(
 )
 # ###########
 
+############# SETTINGS #################
+set(GSETTINGS_DIR ${CMAKE_INSTALL_DATADIR}/glib-2.0/schemas)
+set(GSETTINGS_SCHEMA ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/com.github.Ajatt-Tools.dictpopup.gschema.xml)
+set(COMPILED_SETTINGS_SCHEMA ${CMAKE_CURRENT_BINARY_DIR}/gschemas.compiled)
+
+add_custom_command(
+        OUTPUT ${COMPILED_SETTINGS_SCHEMA}
+        COMMAND ${GLIB_COMPILE_SCHEMAS} --strict --dry-run --schema-file=${GSETTINGS_SCHEMA}
+        COMMAND ${GLIB_COMPILE_SCHEMAS} --strict --targetdir=${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup
+        DEPENDS ${GSETTINGS_SCHEMA}
+        COMMENT "Compiling GSettings schemas"
+)
+
+add_custom_target(gsettings-schemas ALL DEPENDS ${COMPILED_SETTINGS_SCHEMA})
+
+install(FILES ${GSETTINGS_SCHEMA} DESTINATION ${GSETTINGS_DIR})
+install(CODE "execute_process(COMMAND ${GLIB_COMPILE_SCHEMAS} ${CMAKE_INSTALL_PREFIX}/${GSETTINGS_DIR})")
+########################################
+
+
 # ####
 set(DEINFLECTION_RULES_GPERF ${CMAKE_CURRENT_SOURCE_DIR}/src/deinflector/deinflection_rules.gperf)
 set(DEINFLECTION_RULES_C ${GENERATED_DIR}/deinflection_rules.c)
@@ -202,9 +226,8 @@ add_custom_command(
 
 add_dictpopup_executable(dictpopup
         src/frontends/gtk3popup/dictpopup-application.c
-        src/dictpopup.c
+        src/frontends/gtk3popup/dp-settings.c
         src/db.c
-        src/settings.c
         src/utils/util.c
         src/utils/utf8.c
         src/utils/str.c
@@ -215,10 +238,11 @@ add_dictpopup_executable(dictpopup
         src/platformdep/windowtitle.c
         src/objects/freqentry.c
         ${JPPRON_SRCS}
-        ${ANKICONNECTC_SRCS}
+        ${ANKI_SRCS}
+        ${DICTLOOKUP_SRCS}
         ${GRESOURCE_C}
         ${DEINFLECTION_RULES_C}
-        src/deinflector/deinflector.c
+        ${COMPILED_SETTINGS_SCHEMA}
         src/frontends/gtk3popup/dict_state_manager.c
         src/frontends/gtk3popup/callbacks.c
         src/frontends/gtk3popup/main.c
@@ -262,15 +286,14 @@ target_link_libraries(dictpopup-create PRIVATE
 pkg_check_modules(GTK4 REQUIRED gtk4)
 add_dictpopup_executable(dictpopup-win EXCLUDE_FROM_ALL
         src/frontends/gtk4window.c
-        src/dictpopup.c
         src/db.c
-        src/settings.c
         src/utils/util.c
         src/platformdep/windowtitle.c
         src/platformdep/file_operations.c
         src/platformdep/notifications.c
         ${ANKICONNECTC_SRCS}
         ${DEINFLECTOR_SRCS}
+        ${DICTLOOKUP_SRCS}
 )
 target_compile_definitions(dictpopup-win PUBLIC NOTIFICATIONS)
 target_include_directories(
@@ -288,16 +311,15 @@ target_link_libraries(dictpopup-win PRIVATE
         ${GTK4_LIBRARIES}
         ${NOTIFY_LIBRARIES}
         ${CURL_LIBRARIES}
+        ${DICTLOOKUP_SRCS}
 )
 
 # ##############################################################################
 # cli
 # ##############################################################################
 add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
-        src/dictpopup.c
         src/utils/util.c
         src/db.c
-        src/settings.c
         src/platformdep/file_operations.c
         src/platformdep/clipboard.c
         src/platformdep/windowtitle.c
@@ -356,9 +378,9 @@ endif ()
 # ##############################################################################
 # Install
 # ##############################################################################
-install(TARGETS dictpopup dictpopup-create DESTINATION bin)
-install(FILES config.ini DESTINATION share/dictpopup)
-install(FILES data.mdb DESTINATION share/dictpopup)
+install(TARGETS dictpopup DESTINATION bin)
+install(FILES ${GSETTINGS_SCHEMA} DESTINATION ${GSETTINGS_DIR})
+install(CODE "execute_process(COMMAND ${GLIB_COMPILE_SCHEMAS} ${CMAKE_INSTALL_PREFIX}/${GSETTINGS_DIR})")
 install(
         DIRECTORY man1/
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1

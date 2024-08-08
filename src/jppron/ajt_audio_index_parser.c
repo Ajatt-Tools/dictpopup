@@ -3,7 +3,6 @@
 #include "utils/str.h"
 
 #include "utils/messages.h"
-#include "utils/str.h"
 #include "utils/util.h"
 #include "yyjson.h"
 #include <deinflector.h>

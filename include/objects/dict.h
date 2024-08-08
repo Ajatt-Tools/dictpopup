@@ -4,6 +4,14 @@
 #include "utils/util.h"
 
 typedef struct {
+    s8 kanji;
+    s8 reading;
+} Word;
+
+Word word_dup(Word word);
+void word_ptr_free(Word *word);
+
+typedef struct {
     s8 dictname;
     s8 kanji;
     s8 reading;
@@ -16,19 +24,21 @@ dictentry dictentry_dup(dictentry de);
 void _nonnull_ dictentry_free(dictentry de);
 void dictentry_print(dictentry de);
 
-typedef dictentry *Dict;
+typedef struct {
+    dictentry *entries;
+} Dict;
 
 Dict newDict(void);
 bool isEmpty(Dict dict);
 void _nonnull_ dictionary_add(Dict *dict, dictentry de);
-size_t dictLen(Dict dict);
+size_t num_of_dictentries(Dict dict);
 
 // Sorts @dict in place
-void dictSort(Dict dict, int (*dictentryComparer)(const dictentry *a, const dictentry *b));
+// Not thread safe
+void dict_sort(Dict dict, const char* const* sort_order);
 
 void dict_free(Dict dict);
 dictentry dictentry_at_index(Dict dict, size_t index);
-dictentry *pointer_to_entry_at(Dict dict, isize index);
 
 typedef struct {
     s8 lookup;
