@@ -2,7 +2,7 @@
 
 #include "ankiconnectc.h"
 #include "db_mock.c"
-#include "dictpopup.c"
+#include "dictionary_lookup.c"
 #include "utils/util.h"
 
 Config cfg = {0};
@@ -31,10 +31,6 @@ const char *get_user_data_dir(void) {
     return "/home/user/.local/share";
 }
 
-s8 get_next_clipboard(void) {
-    return (char *)mock();
-}
-
 TestSuite *dictpopup_tests(void);
 
 Describe(DictPopup);
@@ -44,8 +40,7 @@ AfterEach(DictPopup) {
 }
 
 Ensure(DictPopup, properly_prepares_ankicard) {
-    char *sent = "白鯨同様、世界中が被害を被っている。騎士団も長く辛酸を味わわされてきた相手だ";
-    expect(get_next_clipboard, will_return(sent));
+    s8 sent = S("白鯨同様、世界中が被害を被っている。騎士団も長く辛酸を味わわされてきた相手だ");
     s8 lookup = S("辛酸");
     dictentry de = (dictentry){.dictname = S("明鏡国語辞典　第二版"),
                                .kanji = S("辛酸"),
@@ -62,7 +57,7 @@ Ensure(DictPopup, properly_prepares_ankicard) {
                               .notetype = "Japanese Sentences"}};
     cfg.anki.copySentence = true;
 
-    ankicard ac = prepare_ankicard(lookup, de, config);
+    ankicard ac = prepare_ankicard(lookup, sent, de, config);
 
     assert_that(
         ac.fieldentries[0],
