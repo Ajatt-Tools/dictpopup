@@ -2,7 +2,7 @@
 #include <cgreen/mocks.h>
 #include <glib.h>
 
-#include "yomichan_parser.c"
+#include "../src/dictpopup_create/yomichan_parser.c"
 
 #define DICTENTRIES_DIR "../tests/files/dictionary_entries"
 

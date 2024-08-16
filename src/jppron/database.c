@@ -27,8 +27,8 @@ DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 struct database_s {
     stringbuilder_s lastval;
     MDB_env *env;
-    MDB_dbi dbi1;
-    MDB_dbi dbi2;
+    MDB_dbi db_words_to_id;
+    MDB_dbi db_id_to_definition;
     MDB_txn *txn;
     bool readonly;
 };
@@ -56,8 +56,8 @@ database *jdb_open(char *dbpath, bool readonly) {
 
         MDB_CHECK(mdb_env_open(db->env, dbpath, 0, 0664));
         MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
-        MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT | MDB_CREATE, &db->dbi1));
-        MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", MDB_CREATE, &db->dbi2));
+        MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT | MDB_CREATE, &db->db_words_to_id));
+        MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", MDB_CREATE, &db->db_id_to_definition));
 
         db->lastval = sb_init(200);
     }
@@ -69,8 +69,8 @@ void jdb_close(database *db) {
     if (!db->readonly) {
         int rc;
         MDB_CHECK(mdb_txn_commit(db->txn));
-        mdb_dbi_close(db->env, db->dbi1);
-        mdb_dbi_close(db->env, db->dbi2);
+        mdb_dbi_close(db->env, db->db_words_to_id);
+        mdb_dbi_close(db->env, db->db_id_to_definition);
 
         const char *dbpath = NULL;
         mdb_env_get_path(db->env, &dbpath);
@@ -87,11 +87,11 @@ void jdb_add_headword_with_file(database *db, s8 headword, s8 filepath) {
     MDB_val mdb_key = {.mv_data = headword.s, .mv_size = (size_t)headword.len};
     MDB_val mdb_val = {.mv_data = filepath.s, .mv_size = (size_t)filepath.len};
 
-    rc = mdb_put(db->txn, db->dbi1, &mdb_key, &mdb_val, MDB_NOOVERWRITE);
+    rc = mdb_put(db->txn, db->db_words_to_id, &mdb_key, &mdb_val, MDB_NOOVERWRITE);
     if (rc == MDB_KEYEXIST) {
         if (s8equals(sb_gets8(db->lastval), headword)) {
             mdb_val = (MDB_val){.mv_data = filepath.s, .mv_size = (size_t)filepath.len};
-            rc = mdb_put(db->txn, db->dbi1, &mdb_key, &mdb_val, 0);
+            rc = mdb_put(db->txn, db->db_words_to_id, &mdb_key, &mdb_val, 0);
         }
 
         if (rc != MDB_KEYEXIST)
@@ -136,18 +136,18 @@ void jdb_add_file_with_fileinfo(database *db, s8 filepath, fileinfo_s fi) {
 
     MDB_val mdb_key = {.mv_data = filepath.s, .mv_size = (size_t)filepath.len};
     MDB_val mdb_val = {.mv_data = data.s, .mv_size = (size_t)data.len};
-    MDB_CHECK(mdb_put(db->txn, db->dbi2, &mdb_key, &mdb_val, MDB_NOOVERWRITE));
+    MDB_CHECK(mdb_put(db->txn, db->db_id_to_definition, &mdb_key, &mdb_val, MDB_NOOVERWRITE));
 }
 
 static s8 get_fileinfo_data(database *db, s8 fullpath) {
     int rc;
     MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
-    MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", 0, &db->dbi2));
+    MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", 0, &db->db_id_to_definition));
 
     MDB_val key_m = (MDB_val){.mv_data = fullpath.s, .mv_size = (size_t)fullpath.len};
     MDB_val val_m = {0};
 
-    if ((rc = mdb_get(db->txn, db->dbi2, &key_m, &val_m)) == MDB_NOTFOUND)
+    if ((rc = mdb_get(db->txn, db->db_id_to_definition, &key_m, &val_m)) == MDB_NOTFOUND)
         return (s8){0};
     MDB_CHECK(rc);
 
@@ -165,13 +165,13 @@ fileinfo_s jdb_get_fileinfo(database *db, s8 fullpath) {
 s8 *jdb_get_files(database *db, s8 word) {
     int rc;
     MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
-    MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT, &db->dbi1));
+    MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT, &db->db_words_to_id));
 
     MDB_val key_m = (MDB_val){.mv_data = word.s, .mv_size = (size_t)word.len};
     MDB_val val_m = {0};
 
     _drop_(mdb_cursor_close) MDB_cursor *cursor = 0;
-    MDB_CHECK(mdb_cursor_open(db->txn, db->dbi1, &cursor));
+    MDB_CHECK(mdb_cursor_open(db->txn, db->db_words_to_id, &cursor));
 
     s8 *ret = 0;
     bool first = true;

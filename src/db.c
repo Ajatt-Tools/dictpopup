@@ -5,13 +5,22 @@
 #include "platformdep/file_operations.h"
 #include "utils/messages.h"
 
+#define DICTNAMES_KEY_STR "%STORED_DICTIONARIES%"
+#define DB_DEFAULT_MAPSIZE (2ULL * 1024 * 1024 * 1024) // 2GB
+#define DB_MAX_DBS 4
+#define DB_WORDS_TO_ID "db1"
+#define DB_ID_TO_DEFINITIONS "db2"
+#define DB_FREQUENCIES "db3"
+#define DB_METADATA "db4"
+
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
 struct database_s {
     MDB_env *env;
-    MDB_dbi dbi1;
-    MDB_dbi dbi2;
-    MDB_dbi dbi3;
+    MDB_dbi db_words_to_id;
+    MDB_dbi db_id_to_definition;
+    MDB_dbi db_frequencies;
+    MDB_dbi db_metadata;
     MDB_txn *txn;
     stringbuilder_s lastdatastr;
     stringbuilder_s datastr;
@@ -19,42 +28,53 @@ struct database_s {
     bool readonly;
 };
 
-static int rc = 0;
-#define C(call) die_on((rc = (call)) != MDB_SUCCESS, "Database error: %s", mdb_strerror(rc));
+#define DB_TRY(call)                                                                               \
+    do {                                                                                           \
+        int _rc = (call);                                                                          \
+        die_on(_rc != MDB_SUCCESS, "Database error: %s", mdb_strerror(_rc));                       \
+    } while (0)
 
-database_t *db_open(const char *dbpath, bool readonly) {
-    dbg("Opening database in directory: '%s'", dbpath);
+s8 db_get_dbpath(void) {
+    return buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
+}
+
+database_t *db_open(s8 dbdir, bool readonly) {
+    dbg("Opening database in directory: '%s'", (char *)dbdir.s);
 
     database_t *db = new (database_t, 1);
     db->readonly = readonly;
 
-    C(mdb_env_create(&db->env));
-    mdb_env_set_maxdbs(db->env, 3);
+    DB_TRY(mdb_env_create(&db->env));
+    mdb_env_set_maxdbs(db->env, DB_MAX_DBS);
 
     if (readonly) {
-        die_on(!db_check_exists(fromcstr_((char*)dbpath)),
+        die_on(!db_check_exists(dbdir),
                "There is no database in '%s'. You must create one first with dictpopup-create.",
-               dbpath);
+               (char *)dbdir.s);
 
-        C(mdb_env_open(db->env, dbpath, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
-        C(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
+        DB_TRY(
+            mdb_env_open(db->env, (char *)dbdir.s, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
+        DB_TRY(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
 
-        C(mdb_dbi_open(db->txn, "db1", MDB_DUPSORT | MDB_DUPFIXED, &db->dbi1));
-        C(mdb_dbi_open(db->txn, "db2", MDB_INTEGERKEY, &db->dbi2));
-        C(mdb_dbi_open(db->txn, "db3", 0, &db->dbi3));
+        DB_TRY(
+            mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED, &db->db_words_to_id));
+        DB_TRY(
+            mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY, &db->db_id_to_definition));
+        DB_TRY(mdb_dbi_open(db->txn, DB_FREQUENCIES, 0, &db->db_frequencies));
+        DB_TRY(mdb_dbi_open(db->txn, DB_METADATA, 0, &db->db_metadata));
     } else {
         unsigned int mapsize = 2097152000; // 2Gb
-        C(mdb_env_set_mapsize(db->env, mapsize));
+        DB_TRY(mdb_env_set_mapsize(db->env, mapsize));
 
-        C(mdb_env_open(db->env, dbpath, 0, 0664));
-        C(mdb_txn_begin(db->env, NULL, 0, &db->txn));
+        DB_TRY(mdb_env_open(db->env, (char *)dbdir.s, 0, 0664));
+        DB_TRY(mdb_txn_begin(db->env, NULL, 0, &db->txn));
 
-        // word -> id
-        C(mdb_dbi_open(db->txn, "db1", MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE, &db->dbi1));
-        // id -> dictdef
-        C(mdb_dbi_open(db->txn, "db2", MDB_INTEGERKEY | MDB_CREATE, &db->dbi2));
-        // word+reading -> frequency
-        C(mdb_dbi_open(db->txn, "db3", MDB_CREATE, &db->dbi3));
+        DB_TRY(mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE,
+                            &db->db_words_to_id));
+        DB_TRY(mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY | MDB_CREATE,
+                            &db->db_id_to_definition));
+        DB_TRY(mdb_dbi_open(db->txn, DB_FREQUENCIES, MDB_CREATE, &db->db_frequencies));
+        DB_TRY(mdb_dbi_open(db->txn, DB_METADATA, MDB_CREATE, &db->db_metadata));
 
         db->datastr = sb_init(200);
         db->lastdatastr = sb_init(200);
@@ -67,7 +87,7 @@ void db_close(database_t *db) {
     if (db->readonly) {
         mdb_txn_abort(db->txn);
     } else {
-        C(mdb_txn_commit(db->txn));
+        DB_TRY(mdb_txn_commit(db->txn));
 
         sb_free(&db->datastr);
         sb_free(&db->lastdatastr);
@@ -78,9 +98,9 @@ void db_close(database_t *db) {
         remove((char *)lockfile.s);
     }
 
-    mdb_dbi_close(db->env, db->dbi1);
-    mdb_dbi_close(db->env, db->dbi2);
-    mdb_dbi_close(db->env, db->dbi3);
+    mdb_dbi_close(db->env, db->db_words_to_id);
+    mdb_dbi_close(db->env, db->db_id_to_definition);
+    mdb_dbi_close(db->env, db->db_frequencies);
     mdb_env_close(db->env);
     free(db);
 }
@@ -96,6 +116,28 @@ static void serialize_dictentry(stringbuilder_s sb[static 1], dictentry de) {
     sb_append(sb, de.definition);
 }
 
+static void put_de_if_new(database_t *db, dictentry de) {
+    MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
+    serialize_dictentry(&db->datastr, de);
+    if (!s8equals(sb_gets8(db->datastr), sb_gets8(db->lastdatastr))) {
+        s8 datastr = sb_gets8(db->datastr);
+        db->last_id++; // Note: The above id struct updates too
+        MDB_val val_mdb = {.mv_data = datastr.s, .mv_size = datastr.len};
+        DB_TRY(mdb_put(db->txn, db->db_id_to_definition, &id_mdb, &val_mdb,
+                       MDB_NOOVERWRITE | MDB_APPEND));
+
+        stringbuilder_s tmp = db->lastdatastr;
+        db->lastdatastr = db->datastr;
+        db->datastr = tmp;
+    }
+}
+
+static void add_key_with_id(database_t *db, s8 key, u32 id) {
+    MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
+    MDB_val id_mdb = {.mv_data = &id, .mv_size = sizeof(id)};
+    mdb_put(db->txn, db->db_words_to_id, &key_mdb, &id_mdb, MDB_NODUPDATA);
+}
+
 void db_put_dictent(database_t *db, dictentry de) {
     die_on(db->readonly, "Cannot put dictentry into db in readonly mode.");
     if (!de.definition.len) {
@@ -109,41 +151,24 @@ void db_put_dictent(database_t *db, dictentry de) {
         return;
     }
 
-    MDB_val kanji_mdb = {.mv_data = de.kanji.s, .mv_size = de.kanji.len};
-    MDB_val reading_mdb = {.mv_data = de.reading.s, .mv_size = de.reading.len};
-    MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
-
-    serialize_dictentry(&db->datastr, de);
-
-    if (!s8equals(sb_gets8(db->datastr), sb_gets8(db->lastdatastr))) {
-        s8 datastr = sb_gets8(db->datastr);
-        db->last_id++; // Note: The above id struct updates too
-        MDB_val val_mdb = {.mv_data = datastr.s, .mv_size = datastr.len};
-        C(mdb_put(db->txn, db->dbi2, &id_mdb, &val_mdb, MDB_NOOVERWRITE | MDB_APPEND));
-
-        stringbuilder_s tmp = db->lastdatastr;
-        db->lastdatastr = db->datastr;
-        db->datastr = tmp;
-    }
-
-    // Add key with corresponding id
-    mdb_put(db->txn, db->dbi1, &kanji_mdb, &id_mdb, MDB_NODUPDATA);
-    mdb_put(db->txn, db->dbi1, &reading_mdb, &id_mdb, MDB_NODUPDATA);
+    put_de_if_new(db, de);
+    add_key_with_id(db, de.kanji, db->last_id);
+    add_key_with_id(db, de.reading, db->last_id);
 }
 
-static u32 *getids(const database_t *db, s8 word, size_t *num) {
+static u32 *get_ids(const database_t *db, s8 word, size_t *num) {
     MDB_val key_mdb = (MDB_val){.mv_data = word.s, .mv_size = (size_t)word.len};
     MDB_val val_mdb = {0};
 
     _drop_(mdb_cursor_close) MDB_cursor *cursor;
-    C(mdb_cursor_open(db->txn, db->dbi1, &cursor));
+    DB_TRY(mdb_cursor_open(db->txn, db->db_words_to_id, &cursor));
 
-    rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET);
+    int rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET);
     if (rc == MDB_NOTFOUND)
         return NULL;
-    C(rc);
+    DB_TRY(rc);
     // This reads up to a page, i.e. max 1024 entries, which should be enough
-    C(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE));
+    DB_TRY(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE));
 
     *num = val_mdb.mv_size / sizeof(u32);
     assume(*num * sizeof(u32) == val_mdb.mv_size); // divides cleanly
@@ -152,14 +177,14 @@ static u32 *getids(const database_t *db, s8 word, size_t *num) {
     return ret;
 }
 
-void db_put_freq(const database_t *db, freqentry fe) {
+void db_put_freq(database_t *db, freqentry fe) {
     die_on(db->readonly, "Cannot put frequency into db in readonly mode.");
 
     s8 key = concat(fe.word, S("\0"), fe.reading);
     MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
     MDB_val val_mdb = {.mv_data = &fe.frequency, .mv_size = sizeof(fe.frequency)};
 
-    C(mdb_put(db->txn, db->dbi3, &key_mdb, &val_mdb, MDB_NODUPDATA));
+    DB_TRY(mdb_put(db->txn, db->db_frequencies, &key_mdb, &val_mdb, MDB_NODUPDATA));
 }
 
 static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
@@ -167,10 +192,10 @@ static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
     MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
 
     MDB_val val_m = {0};
-    rc = mdb_get(db->txn, db->dbi3, &key_m, &val_m);
+    int rc = mdb_get(db->txn, db->db_frequencies, &key_m, &val_m);
     if (rc == MDB_NOTFOUND)
         return 0;
-    C(rc);
+    DB_TRY(rc);
 
     u32 freq;
     assume(sizeof(freq) == val_m.mv_size);
@@ -215,7 +240,7 @@ static dictentry data_to_dictent(const database_t *db, s8 data) {
 static s8 getdata(const database_t *db, u32 id) {
     MDB_val key = (MDB_val){.mv_data = &id, .mv_size = sizeof(id)};
     MDB_val data = {0};
-    C(mdb_get(db->txn, db->dbi2, &key, &data));
+    DB_TRY(mdb_get(db->txn, db->db_id_to_definition, &key, &data));
     return (s8){.s = data.mv_data, .len = data.mv_size};
 }
 
@@ -225,7 +250,7 @@ void db_append_lookup(const database_t *db, s8 headword, Dict dict[static 1],
     dbg("Looking up: %.*s", (int)headword.len, (char *)headword.s);
 
     size_t n_ids = 0;
-    _drop_(free) u32 *ids = getids(db, headword, &n_ids);
+    _drop_(free) u32 *ids = get_ids(db, headword, &n_ids);
     if (ids) {
         for (size_t i = 0; i < n_ids; i++) {
             s8 de_data = getdata(db, ids[i]);
@@ -234,6 +259,60 @@ void db_append_lookup(const database_t *db, s8 headword, Dict dict[static 1],
             dictionary_add(dict, de);
         }
     }
+}
+
+// TODO: Check for duplicates
+void _nonnull_ db_put_dictname(database_t *db, s8 dictname) {
+    MDB_val key = (MDB_val){.mv_data = DICTNAMES_KEY_STR, .mv_size = lengthof(DICTNAMES_KEY_STR)};
+
+    MDB_val data;
+    int rc = mdb_get(db->txn, db->db_metadata, &key, &data);
+    if (rc == MDB_NOTFOUND) {
+        // This is the first entry
+        data.mv_data = dictname.s;
+        data.mv_size = dictname.len;
+    } else if (rc == 0) {
+        // There are already other entries
+        s8 existing = {.s = data.mv_data, .len = data.mv_size};
+        s8 new_value = concat(existing, S("\0"), dictname);
+
+        data.mv_size = new_value.len;
+        data.mv_data = new_value.s;
+    } else {
+        DB_TRY(rc);
+    }
+
+    DB_TRY(mdb_put(db->txn, db->db_metadata, &key, &data, 0));
+
+    if (data.mv_data != dictname.s) {
+        free(data.mv_data);
+    }
+}
+
+s8Buf db_get_dictnames(database_t *db) {
+    MDB_val key = (MDB_val){.mv_data = DICTNAMES_KEY_STR, .mv_size = lengthof(DICTNAMES_KEY_STR)};
+
+    MDB_val data;
+    int rc = mdb_get(db->txn, db->db_metadata, &key, &data);
+
+    if (rc == MDB_NOTFOUND) {
+        return NULL;
+    }
+    DB_TRY(rc);
+
+    s8 all_names = {.s = data.mv_data, .len = data.mv_size};
+    s8 *names = NULL;
+
+    size_t start = 0;
+    for (isize i = 0; i <= all_names.len; i++) {
+        if (i == all_names.len || all_names.s[i] == '\0') {
+            s8 name = s8dup((s8){.s = &all_names.s[start], .len = i - start});
+            buf_push(names, name);
+            start = i + 1;
+        }
+    }
+
+    return names;
 }
 
 bool db_check_exists(s8 dbpath) {

@@ -97,13 +97,12 @@ static void add_deinflection(s8 deinf) {
     buf_push(deinfs, deinf);
 }
 
-static void add_replace_suffix(s8 word, s8 replacement, isize suffix_len) {
+static void add_replace_suffix(s8 word, s8 new_suffix, isize suffix_len) {
     assert(word.len >= suffix_len);
 
-    s8 cutword = cuttail(word, suffix_len);
-    s8 replstr = concat(cutword, replacement);
-
-    add_deinflection(replstr);
+    s8 word_without_suffix = cuttail(word, suffix_len);
+    s8 deinflected = concat(word_without_suffix, new_suffix);
+    add_deinflection(deinflected);
 }
 
 // TODO: Would be cool if the for loop could expand at compile time, so S(..)
@@ -118,29 +117,6 @@ static void add_replace_suffix(s8 word, s8 replacement, isize suffix_len) {
         }                                                                                          \
     } while (0)
 
-/*
- * @word: The word to be converted
- * @len_ending: The length of the ending to be disregarded
- *
- * Converts a word in い-form to the う-form.
- */
-// TODO: should be called something with verb stem
-static void itou_form(s8 word) {
-    IF_ENDSWITH_REPLACE("し", "する");
-    IF_ENDSWITH_REPLACE("き", "くる");
-
-    IF_ENDSWITH_REPLACE("", "る");
-    IF_ENDSWITH_REPLACE("し", "す");
-    IF_ENDSWITH_REPLACE("き", "く");
-    IF_ENDSWITH_REPLACE("ぎ", "ぐ");
-    IF_ENDSWITH_REPLACE("び", "ぶ");
-    IF_ENDSWITH_REPLACE("ち", "つ");
-    IF_ENDSWITH_REPLACE("み", "む");
-    IF_ENDSWITH_REPLACE("い", "う");
-    IF_ENDSWITH_REPLACE("に", "ぬ");
-    IF_ENDSWITH_REPLACE("り", "る");
-}
-
 static void deinflect_one_iter(s8 word) {
     // TODO: Use character width instead of hardcoded 3. Currently breaks with non-japanese chars
     // 7 characters each 3 bytes (japanese characters)
@@ -150,7 +126,7 @@ static void deinflect_one_iter(s8 word) {
 
         if (rule) {
             for (int i = 0; i < MAX_OUTPUTS; i++) {
-                s8 kana_out = rule->kana_out[i];
+                s8 kana_out = fromcstr_((char *)rule->kana_out[i]);
                 if (!kana_out.len)
                     break;
                 add_replace_suffix(word, kana_out, ending.len);
@@ -173,7 +149,7 @@ static i32 contains_katakana(s8 word) {
             if ((h[i + 1] == 0x82 && h[i + 2] >= 0xa1) || (h[i + 1] == 0x83 && h[i + 2] <= 0xb6) ||
                 (h[i + 1] == 0x83 && (h[i + 2] == 0xbd || h[i + 2] == 0xbe))) {
                 return 1;
-                }
+            }
         }
         i += utf8_chr_len(h + i);
     }

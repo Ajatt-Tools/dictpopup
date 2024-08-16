@@ -8,7 +8,7 @@
 
 #include "ankiconnectc/send_request.h"
 
-static int get_array_len(const char *array[static 1]) {
+static int get_array_len(char *array[static 1]) {
     int n = 0;
     while (*array++)
         n++;
@@ -20,7 +20,7 @@ static int get_array_len(const char *array[static 1]) {
  *
  * Returns: A json escaped copy of @str. The data is owned by the caller.
  */
-static char *json_escape_str(const char *str) {
+static char *json_escape_str(char *str) {
     if (!str)
         return NULL;
 
@@ -72,7 +72,7 @@ static char *json_escape_str(const char *str) {
  *
  * Returns: A null terminated copy of @array with every string json escaped.
  */
-static char **json_escape_str_array(int n, const char **array) {
+static char **json_escape_str_array(int n, char **array) {
     if (!array)
         return NULL;
 
@@ -115,7 +115,7 @@ static size_t check_add_response(char *ptr, size_t size, size_t nmemb, void *use
 }
 /* ------- End Callback functions ----------- */
 
-void ankicard_free(ankicard *ac) {
+void ankicard_free(AnkiCard *ac) {
     free(ac->deck);
     free(ac->notetype);
 
@@ -125,7 +125,7 @@ void ankicard_free(ankicard *ac) {
     g_strfreev(ac->tags);
 }
 
-DEFINE_DROP_FUNC_PTR(ankicard, ankicard_free)
+DEFINE_DROP_FUNC_PTR(AnkiCard, ankicard_free)
 
 bool ac_check_connection(void) {
     s8 req = S("{\"action\": \"version\", \"version\": 6}");
@@ -139,7 +139,7 @@ bool ac_check_connection(void) {
     return true;
 }
 
-static s8 form_search_req(bool include_suspended, bool include_new, const char *deck, const char *field,
+static s8 form_search_req(bool include_suspended, bool include_new, char *deck, char *field,
                           char *entry) {
     return concat(S("{ \"action\": \"findCards\", \"version\": 6, \"params\": "
                     "{ \"query\" : \"\\\""),
@@ -149,12 +149,13 @@ static s8 form_search_req(bool include_suspended, bool include_new, const char *
                   include_new ? S("") : S(" -is:new"), S("\" } }"));
 }
 
-static int check_exists_with_(bool include_suspended, bool include_new, const char *deck, const char *field,
+static int check_exists_with_(bool include_suspended, bool include_new, char *deck, char *field,
                               char *str, char **error) {
     _drop_(frees8) s8 req = form_search_req(include_suspended, include_new, deck, field, str);
     retval_s r = sendRequest(req, search_checker);
     if (!r.ok) {
-        *error = r.data.string;
+        if (error)
+            *error = r.data.string;
         return -1;
     }
 
@@ -167,9 +168,10 @@ static int check_exists_with_(bool include_suspended, bool include_new, const ch
  * @str: The string to search for
  *
  */
-AnkiCollectionStatus ac_check_exists(const char *deck, const char *field, const char *lookup, char **error) {
+AnkiCollectionStatus ac_check_exists(char *deck, char *field, char *lookup, char **error) {
     if (!lookup) {
-        *error = strdup("Lookup string called with NULL value in ac_check_exists!");
+        if (error)
+            *error = strdup("Lookup string called with NULL value in ac_check_exists!");
         return AC_ERROR;
     }
 
@@ -194,14 +196,14 @@ AnkiCollectionStatus ac_check_exists(const char *deck, const char *field, const 
     return AC_DOES_NOT_EXIST;
 }
 
-static s8 form_gui_search_req(const char *deck, const char *field, const char *entry) {
+static s8 form_gui_search_req(char *deck, char *field, char *entry) {
     return concat(
         S("{ \"action\": \"guiBrowse\", \"version\": 6, \"params\": { \"query\" : \"\\\""),
         deck ? S("deck:") : S(""), deck ? fromcstr_((char *)deck) : S(""), S("\\\" \\\""),
         fromcstr_((char *)field), S(":"), fromcstr_((char *)entry), S("\\\"\" } }"));
 }
 
-void ac_gui_search(const char *deck, const char *field, const char *entry, char **error) {
+void ac_gui_search(char *deck, char *field, char *entry, char **error) {
 
     _drop_(frees8) s8 req = form_gui_search_req(deck, field, entry);
     retval_s r = sendRequest(req, NULL);
@@ -215,7 +217,7 @@ s8 *ac_get_notetypes(char **error) {
     return 0;
 }
 
-static s8 form_store_file_req(char const *filename, char const *path) {
+static s8 form_store_file_req(char *filename, char *path) {
     return concat(
         S("{ \"action\": \"storeMediaFile\", \"version\": 6, \"params\": { \"filename\" : \""),
         fromcstr_((char *)filename), S("\", \"path\": \""), fromcstr_((char *)path),
@@ -226,30 +228,29 @@ static s8 form_store_file_req(char const *filename, char const *path) {
  * Stores the file at @path in the Anki media collection under the name
  * @filename. Doesn't overwrite existing files.
  */
-void ac_store_file(char const *filename, char const *path, char **error) {
+void ac_store_file(char *filename, char *path, char **error) {
 
     _drop_(frees8) s8 req = form_store_file_req(filename, path);
     retval_s r = sendRequest(req, NULL); // TODO: Check error response
-    if (!r.ok)
+    if (!r.ok && error)
         *error = r.data.string;
 }
 
 /*
  * Creates a json escaped and \n -> <br> converted copy of the anki card.
  */
-static ankicard ankicard_dup_json_esc(const ankicard ac) {
+static AnkiCard ankicard_dup_json_esc(AnkiCard ac) {
     size_t num_fields = ac.num_fields;
-    return (ankicard){.deck = json_escape_str(ac.deck),
+    return (AnkiCard){.deck = json_escape_str(ac.deck),
                       .notetype = json_escape_str(ac.notetype),
                       .num_fields = num_fields,
-                      .fieldnames = json_escape_str_array(num_fields, (const char **)ac.fieldnames),
-                      .fieldentries =
-                          json_escape_str_array(num_fields, (const char **)ac.fieldentries),
-                      .tags = ac.tags ? json_escape_str_array(-1, (const char **)ac.tags) : NULL};
+                      .fieldnames = json_escape_str_array(num_fields, ac.fieldnames),
+                      .fieldentries = json_escape_str_array(num_fields, ac.fieldentries),
+                      .tags = ac.tags ? json_escape_str_array(-1, ac.tags) : NULL};
 }
 
-static s8 form_addNote_req(ankicard ac) {
-    _drop_(ankicard_free) ankicard ac_je = ankicard_dup_json_esc(ac);
+static s8 form_addNote_req(AnkiCard ac) {
+    _drop_(ankicard_free) AnkiCard ac_je = ankicard_dup_json_esc(ac);
 
     stringbuilder_s sb = sb_init(1 << 9);
 
@@ -301,7 +302,7 @@ static s8 form_addNote_req(ankicard ac) {
     return sb_steals8(sb);
 }
 
-static char *check_card(ankicard const ac) {
+static char *check_card(AnkiCard ac) {
     return !ac.deck           ? "No deck specified."
            : !ac.notetype     ? "No notetype specified."
            : !ac.num_fields   ? "Number of fields is 0"
@@ -310,8 +311,9 @@ static char *check_card(ankicard const ac) {
                               : NULL;
 }
 
-void ac_addNote(ankicard const ac, char **error) {
-    if ((*error = check_card(ac)))
+void ac_addNote(AnkiCard ac, char **error) {
+    *error = check_card(ac);
+    if (*error)
         return;
 
     _drop_(frees8) s8 req = form_addNote_req(ac);

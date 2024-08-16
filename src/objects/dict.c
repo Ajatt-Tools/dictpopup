@@ -5,7 +5,7 @@
 #include <string.h>
 
 Word word_dup(Word word) {
-    return (Word) { .kanji = s8dup(word.kanji), .reading = s8dup(word.reading)};
+    return (Word){.kanji = s8dup(word.kanji), .reading = s8dup(word.reading)};
 }
 
 void word_ptr_free(Word *word) {
@@ -46,7 +46,7 @@ size_t num_of_dictentries(Dict dict) {
     return buf_size(dict.entries);
 }
 
-static int indexof(char const *str, const char* const* arr) {
+static int indexof(char const *str, const char *const *arr) {
     if (str && arr) {
         for (int i = 0; arr[i]; i++) {
             if (strcmp(str, arr[i]) == 0)
@@ -57,7 +57,7 @@ static int indexof(char const *str, const char* const* arr) {
 }
 
 // qsort_r is unfortunately only available for GNU
-static const char* const* SORT_ORDER = NULL;
+static const char *const *SORT_ORDER = NULL;
 /*
  * -1 means @a comes first
  */
@@ -79,7 +79,7 @@ static int _nonnull_ dictentry_comparer(const dictentry *a, const dictentry *b) 
     return inda < indb ? -1 : inda == indb ? 0 : 1;
 }
 
-void dict_sort(Dict dict, const char* const* sort_order) {
+void dict_sort(Dict dict, const char *const *sort_order) {
     SORT_ORDER = sort_order;
     if (!isEmpty(dict))
         qsort(dict.entries, num_of_dictentries(dict), sizeof(dictentry),
@@ -105,6 +105,14 @@ dictentry dictentry_at_index(Dict dict, size_t index) {
     return dict.entries[index];
 }
 
+bool dict_contains(Dict dict, s8 word) {
+    for (size_t i = 0; i < num_of_dictentries(dict); i++) {
+        if (s8equals(dict.entries[i].kanji, word)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 void dict_lookup_free(DictLookup *dl) {
     dict_free(dl->dict);

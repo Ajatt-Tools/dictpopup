@@ -139,20 +139,13 @@ s8 concat_(s8 *strings) {
     return ret;
 }
 
-// TODO: Don't append sep when already there
-s8 buildpath_(s8 *pathcomps) {
-#ifdef _WIN32
-    s8 sep = S("\\");
-#else
-    s8 sep = S("/");
-#endif
+s8 _concat_with_sep(s8 sep, s8 *strings) {
     isize pathlen = 0;
     bool first = true;
-    for (s8 *pc = pathcomps; !s8equals(*pc, S8_STOPPER); pc++) {
+    for (s8 *str = strings; !s8equals(*str, S8_STOPPER); str++) {
         if (!first)
             pathlen += sep.len;
-        pathlen += pc->len;
-
+        pathlen += str->len;
         first = false;
     }
 
@@ -160,15 +153,25 @@ s8 buildpath_(s8 *pathcomps) {
     s8 p = retpath;
 
     first = true;
-    for (s8 *pc = pathcomps; !s8equals(*pc, S8_STOPPER); pc++) {
+    for (s8 *pc = strings; !s8equals(*pc, S8_STOPPER); pc++) {
         if (!first)
             p = s8copy(p, sep);
         p = s8copy(p, *pc);
-
         first = false;
     }
 
     return retpath;
+}
+
+// TODO: Don't append sep when already there
+s8 buildpath_(s8 *pathcomps) {
+#ifdef _WIN32
+    s8 sep = S("\\");
+#else
+    s8 sep = S("/");
+#endif
+
+    return _concat_with_sep(sep, pathcomps);
 }
 
 static bool whitespace(u8 c) {
@@ -310,4 +313,18 @@ void nuke_whitespace(s8 z[static 1]) {
     substrremove((char *)z->s, S("　"));
 
     *z = fromcstr_((char *)z->s);
+}
+
+void s8_buf_free(s8Buf buf) {
+    buf_free(buf);
+}
+
+size_t s8_buf_size(s8Buf buf) {
+    return buf_size(buf);
+}
+
+void s8_buf_print(s8Buf buf) {
+    for (size_t i = 0; i < s8_buf_size(buf); i++) {
+        printf("%.*s\n", (int)buf[i].len, (char *)buf[i].s);
+    }
 }

@@ -32,8 +32,12 @@ static void dictpopup_activate(GApplication *app) {
     if (!self->lookup_str.len) {
         self->lookup_str = get_selection();
     }
-    dict_lookup_async(self);
+    if (!self->lookup_str.len) {
+        msg("No selection and no argument provided. Exiting..");
+        exit(EXIT_FAILURE);
+    }
 
+    dict_lookup_async(self);
     gtk_widget_show_all(GTK_WIDGET(self->main_window));
 }
 
@@ -57,7 +61,7 @@ static void dictpopup_startup(GApplication *app) {
     const char *const close_window_accels[] = {"q", "Escape", NULL};
     const char *const next_definition_accels[] = {"s", NULL};
     const char *const previous_definition_accels[] = {"a", NULL};
-    const char *const pronounce_accels[] = {"p", NULL};
+    const char *const pronounce_accels[] = {"p", "r", NULL};
     const char *const add_to_anki_accels[] = {"<Ctrl>s", NULL};
 
     DpApplication *self = DP_APPLICATION(app);
@@ -74,8 +78,10 @@ static void dictpopup_startup(GApplication *app) {
     self->dictname_lbl = GTK_LABEL(gtk_builder_get_object(builder, "dictname_lbl"));
     self->current_word_lbl = GTK_LABEL(gtk_builder_get_object(builder, "lbl_cur_reading"));
     self->frequency_lbl = GTK_LABEL(gtk_builder_get_object(builder, "frequency_lbl"));
+
     self->anki_status_dot = GTK_WIDGET(gtk_builder_get_object(builder, "anki_status_dot"));
     g_signal_connect(self->anki_status_dot, "draw", G_CALLBACK(dp_update_exists_dot), self);
+    gtk_widget_add_events(self->anki_status_dot, GDK_BUTTON_PRESS_MASK);
     g_signal_connect(self->anki_status_dot, "button-press-event",
                      G_CALLBACK(on_anki_status_clicked), self);
 

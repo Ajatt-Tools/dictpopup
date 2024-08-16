@@ -23,9 +23,8 @@ void db_put_dictent(database_t *db, dictentry de) {
 void _nonnull_ db_append_lookup(const database_t *db, s8 headword, Dict dict[static 1],
                                 bool is_deinflection) {
     if (s8equals(headword, S("世界"))) {
-        dictionary_add(dict, (dictentry){ .kanji = S("世界") });
+        dictionary_add(dict, (dictentry){ .kanji = s8dup(S("世界")) });
     }
-    // mock(db, headword.s, dict);
 }
 
 void db_put_freq(const database_t *db, freqentry fe) {

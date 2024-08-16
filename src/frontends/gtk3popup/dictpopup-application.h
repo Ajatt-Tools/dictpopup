@@ -2,6 +2,7 @@
 #define DICTPOPUP_APP_H
 
 #include "dict_state_manager.h"
+#include "dp-preferences-window.h"
 #include "dp-settings.h"
 
 #include <gtk/gtk.h>
@@ -14,8 +15,9 @@ struct _DpApplication {
 
     DpSettings *settings;
 
+    DpPreferencesWindow *preferences_window;
+
     GtkWindow *main_window;
-    GtkWidget *settings_window;
     GtkWidget *settings_button;
     GtkLabel *dictionary_number_lbl;
     GtkTextBuffer *definition_textbuffer;
@@ -35,5 +37,7 @@ Word *dp_get_copy_of_current_word(DpApplication *app);
 
 void refresh_ui(DpApplication *app);
 void dp_swap_dict_lookup(DpApplication *app, DictLookup new_dict_lookup);
+
+void dp_application_show_preferences(DpApplication *self);
 
 #endif // DICTPOPUP_APP_H

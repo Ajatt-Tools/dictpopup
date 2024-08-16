@@ -5,9 +5,11 @@
 #include "platformdep/file_operations.h"
 #include "utils/messages.h"
 
-void createdir(char *dirpath) {
-    int ret = g_mkdir_with_parents(dirpath, 0777);
-    die_on(ret != 0, "Creating directory '%s': %s", dirpath, strerror(errno));
+#include <utils/str.h>
+
+void createdir(s8 dirpath) {
+    int ret = g_mkdir_with_parents((char *)dirpath.s, 0777);
+    die_on(ret != 0, "Creating directory '%s': %s", (char *)dirpath.s, strerror(errno));
 }
 
 bool check_file_exists(const char *fn) {

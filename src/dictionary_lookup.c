@@ -25,8 +25,7 @@
 
 s8 focused_window_title = {0};
 
-static void _nonnull_ appendDeinflections(const database_t *db, s8 word,
-                                          Dict dict[static 1]) {
+static void _nonnull_ appendDeinflections(const database_t *db, s8 word, Dict dict[static 1]) {
     _drop_(frees8buffer) s8 *deinfs_b = deinflect(word);
 
     if (deinfs_b == NULL)
@@ -63,7 +62,8 @@ static Dict _nonnull_ lookup_hiragana_conversion(s8 word, database_t *db) {
 }
 
 static DictLookup _nonnull_ lookup(s8 word, DictpopupConfig cfg) {
-    _drop_(db_close) database_t *db = db_open(cfg.database_dir, true);
+    _drop_(frees8) s8 dbpath = db_get_dbpath();
+    _drop_(db_close) database_t *db = db_open(dbpath, true);
 
     Dict dict = lookup_word(word, db);
     if (isEmpty(dict) && cfg.fallback_to_mecab_conversion) {
@@ -88,28 +88,29 @@ DictLookup _nonnull_ dictionary_lookup(s8 word, DictpopupConfig cfg) {
     return dict_lookup;
 }
 
-static void copy_default_database_to(char *path) {
-    const char *default_db_loc = NULL;
-    for (size_t i = 0; i < arrlen(DEFAULT_DATABASE_LOCATIONS); i++) {
-        if (check_file_exists(DEFAULT_DATABASE_LOCATIONS[i])) {
-            default_db_loc = DEFAULT_DATABASE_LOCATIONS[i];
-            break;
-        }
-    }
-    die_on(default_db_loc == NULL,
-           "Could not access the default database either. You need to create your own with"
-           "dictpopup-create or download data.mdb from the repository.");
-
-    createdir(path);
-    _drop_(frees8) s8 dbpath = buildpath(fromcstr_(path), S("data.mdb"));
-    file_copy_sync(default_db_loc, (char *)dbpath.s);
-}
+// static void copy_default_database_to(char *path) {
+//     const char *default_db_loc = NULL;
+//     for (size_t i = 0; i < arrlen(DEFAULT_DATABASE_LOCATIONS); i++) {
+//         if (check_file_exists(DEFAULT_DATABASE_LOCATIONS[i])) {
+//             default_db_loc = DEFAULT_DATABASE_LOCATIONS[i];
+//             break;
+//         }
+//     }
+//     die_on(default_db_loc == NULL,
+//            "Could not access the default database either. You need to create your own with"
+//            "dictpopup-create or download data.mdb from the repository.");
+//
+//     createdir(path);
+//     _drop_(frees8) s8 dbpath = buildpath(fromcstr_(path), S("data.mdb"));
+//     file_copy_sync(default_db_loc, (char *)dbpath.s);
+// }
 
 // void dictpopup_init(DictpopupConfig cfg) {
 //     setlocale(LC_ALL, "");
 //
 //     if (!db_check_exists(fromcstr_((char*)cfg.database_dir))) {
-//         msg("No database found. We recommend creating your own database with dictpopup-create, but "
+//         msg("No database found. We recommend creating your own database with dictpopup-create,
+//         but "
 //             "copying default dictionary for now..");
 //         copy_default_database_to((char*)cfg.database_dir);
 //     }

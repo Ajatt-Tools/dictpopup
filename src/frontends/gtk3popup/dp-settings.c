@@ -8,7 +8,6 @@ struct _DpSettings {
 
     GSettings *settings;
 
-    gchar *database_path;
     gboolean sort_entries;
     gchar **dict_sort_order;
     gboolean nuke_whitespace_of_lookup;
@@ -26,7 +25,6 @@ G_DEFINE_TYPE(DpSettings, dp_settings, G_TYPE_OBJECT)
 
 enum {
     PROP_0,
-    PROP_DATABASE_PATH,
     PROP_SORT_ENTRIES,
     PROP_NUKE_WHITESPACE_LOOKUP,
     PROP_MECAB_CONVERSION,
@@ -49,10 +47,6 @@ static void dp_settings_set_property(GObject *object, guint property_id, const G
     DpSettings *self = DP_SETTINGS(object);
 
     switch (property_id) {
-        case PROP_DATABASE_PATH:
-            g_free(self->database_path);
-            self->database_path = g_value_dup_string(value);
-            break;
         case PROP_SORT_ENTRIES:
             self->sort_entries = g_value_get_boolean(value);
             break;
@@ -100,9 +94,6 @@ static void dp_settings_get_property(GObject *object, guint property_id, GValue 
     DpSettings *self = DP_SETTINGS(object);
 
     switch (property_id) {
-        case PROP_DATABASE_PATH:
-            g_value_set_string(value, self->database_path);
-            break;
         case PROP_SORT_ENTRIES:
             g_value_set_boolean(value, self->sort_entries);
             break;
@@ -156,10 +147,6 @@ static void dp_settings_class_init(DpSettingsClass *klass) {
     object_class->get_property = dp_settings_get_property;
     object_class->finalize = dp_settings_finalize;
 
-    obj_properties[PROP_DATABASE_PATH] =
-        g_param_spec_string("database-path", "Database Path", "Path to the dictionary database",
-                            NULL, G_PARAM_READWRITE);
-
     obj_properties[PROP_SORT_ENTRIES] =
         g_param_spec_boolean("sort-entries", "Sort Entries", "Whether to sort dictionary entries",
                              FALSE, G_PARAM_READWRITE);
@@ -205,8 +192,6 @@ static void dp_settings_class_init(DpSettingsClass *klass) {
 static void dp_settings_init(DpSettings *self) {
     self->settings = g_settings_new("com.github.Ajatt-Tools.dictpopup");
 
-    g_settings_bind(self->settings, "database-path", self, "database-path",
-                    G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "sort-entries", self, "sort-entries", G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "nuke-whitespace-lookup", self, "nuke-whitespace-lookup",
                     G_SETTINGS_BIND_DEFAULT);
@@ -224,23 +209,23 @@ static void dp_settings_init(DpSettings *self) {
     g_settings_bind(self->settings, "anki-fieldnames", self, "anki-fieldnames",
                     G_SETTINGS_BIND_DEFAULT);
 
-    self->anki_fieldentries = g_array_new (FALSE, FALSE, sizeof (AnkiFieldEntry));
-    GVariant *variant = g_settings_get_value (self->settings, "anki-fieldentries");
+    // TODO TODO refactor
+    self->anki_fieldentries = g_array_new(FALSE, FALSE, sizeof(AnkiFieldEntry));
+    GVariant *variant = g_settings_get_value(self->settings, "anki-fieldentries");
     if (variant) {
         gsize length;
-        const gint32 *array = g_variant_get_fixed_array (variant, &length, sizeof (gint32));
+        const gint32 *array = g_variant_get_fixed_array(variant, &length, sizeof(gint32));
         for (gsize i = 0; i < length; i++) {
             if (array[i] >= 0 && array[i] < DP_ANKI_N_FIELD_ENTRIES) {
                 AnkiFieldEntry field = (AnkiFieldEntry)array[i];
-                g_array_append_val (self->anki_fieldentries,  field);
-            }
-            else {
-                g_warning("Field entry No. %li is not a valid", i+1);
+                g_array_append_val(self->anki_fieldentries, field);
+            } else {
+                g_warning("Field entry No. %li is not a valid", i + 1);
                 AnkiFieldEntry empty_entry = DP_ANKI_EMPTY;
-                g_array_append_val (self->anki_fieldentries,  empty_entry);
+                g_array_append_val(self->anki_fieldentries, empty_entry);
             }
         }
-        g_variant_unref (variant);
+        g_variant_unref(variant);
     }
 }
 
@@ -249,13 +234,6 @@ DpSettings *dp_settings_new(void) {
 }
 
 /* Getter / Setter */
-
-// Getter functions
-const gchar *dp_settings_get_database_path(DpSettings *self) {
-    g_return_val_if_fail(DP_IS_SETTINGS(self), NULL);
-    return self->database_path;
-}
-
 gboolean dp_settings_get_sort_entries(DpSettings *self) {
     return self->sort_entries;
 }
@@ -277,35 +255,38 @@ const gchar *const *dp_settings_get_dict_sort_order(DpSettings *self) {
     return (const gchar *const *)self->dict_sort_order;
 }
 
+void dp_settings_set_dict_sort_order(DpSettings *self, char **dict_sort_order) {
+    g_return_if_fail(DP_IS_SETTINGS(self));
+    // TODO: Just keep a copy in GSettings? (No local)
+    g_strfreev(self->dict_sort_order);
+    self->dict_sort_order = dict_sort_order;
+    g_settings_set_strv(self->settings, "dict-sort-order", (const char *const *)dict_sort_order);
+}
+
 /* ------------ ANKI ------------------- */
-const gchar *dp_settings_get_anki_deck(DpSettings *self) {
+gchar *dp_settings_get_anki_deck(DpSettings *self) {
     g_return_val_if_fail(DP_IS_SETTINGS(self), NULL);
     return self->anki_deck;
 }
 
-const gchar *dp_settings_get_anki_notetype(DpSettings *self) {
+gchar *dp_settings_get_anki_notetype(DpSettings *self) {
     g_return_val_if_fail(DP_IS_SETTINGS(self), NULL);
     return self->anki_notetype;
 }
 
-const gchar *dp_settings_get_anki_search_field(DpSettings *self) {
+gchar *dp_settings_get_anki_search_field(DpSettings *self) {
     g_return_val_if_fail(DP_IS_SETTINGS(self), NULL);
     return self->anki_search_field;
 }
 
-const gchar * const *
-dp_settings_get_anki_fieldnames (DpSettings *self)
-{
-    g_return_val_if_fail (DP_IS_SETTINGS (self), NULL);
-    return (const gchar * const *)self->anki_fieldnames;
-}
+AnkiConfig dp_settings_get_anki_settings(DpSettings *self) {
+    g_return_val_if_fail(DP_IS_SETTINGS(self), (AnkiConfig){0});
 
-const gint *
-dp_settings_get_anki_fieldentries (DpSettings *self, gsize *length)
-{
-    g_return_val_if_fail (DP_IS_SETTINGS (self), NULL);
-    g_return_val_if_fail (length != NULL, NULL);
-
-    *length = self->anki_fieldentries->len;
-    return (const gint *)self->anki_fieldentries->data;
+    return (AnkiConfig){
+        .deck = self->anki_deck,
+        .notetype = self->anki_notetype,
+        .fieldnames = self->anki_fieldnames,
+        .fieldMapping = (u32 *)self->anki_fieldentries->data,
+        .numFields = self->anki_fieldentries->len,
+    };
 }

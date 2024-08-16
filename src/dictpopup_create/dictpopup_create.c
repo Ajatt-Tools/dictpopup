@@ -15,16 +15,12 @@
 #include "platformdep/file_operations.h"
 
 typedef struct {
-    s8 dbpath;
     s8 dictspath;
 } config;
 
 DEFINE_DROP_FUNC(FILE *, fclose)
 DEFINE_DROP_FUNC(DIR *, closedir)
 
-/*
- * Dialog which asks the user for confirmation (Yes/No)
- */
 static bool askyn(const char *prompt) {
     printf("%s [y/n] ", prompt);
     char resp = tolower(getchar());
@@ -49,9 +45,6 @@ static void parse_cmd_line(int argc, char **argv, config *cfg) {
 
     while ((c = getopt(argc, argv, "hd:i:")) != -1)
         switch (c) {
-            case 'd':
-                cfg->dbpath = s8dup(fromcstr_(optarg));
-                break;
             case 'i':
                 cfg->dictspath = s8dup(fromcstr_(optarg));
                 break;
@@ -67,13 +60,18 @@ static void parse_cmd_line(int argc, char **argv, config *cfg) {
 }
 
 static void set_default_values(config *cfg) {
-    if (!cfg->dbpath.len) {
-        cfg->dbpath = buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
-    }
-
     if (!cfg->dictspath.len) {
         cfg->dictspath = S(".");
     }
+}
+
+static ParserCallbacks get_callbacks(database_t *db) {
+    return (ParserCallbacks){.foreach_dictentry = (void (*)(void *, dictentry))db_put_dictent,
+                             .userdata_de = db,
+                             .forach_freqentry = (void (*)(void *, freqentry))db_put_freq,
+                             .userdata_fe = db,
+                             .foreach_dictname = (void (*)(void *, s8))db_put_dictname,
+                             .userdata_dn = db};
 }
 
 int main(int argc, char *argv[]) {
@@ -83,31 +81,39 @@ int main(int argc, char *argv[]) {
     parse_cmd_line(argc, argv, &cfg);
     set_default_values(&cfg);
 
+    _drop_(frees8) s8 dbpath = db_get_dbpath();
+
     msg("Using directory '%.*s' as dictionary path.", (int)cfg.dictspath.len,
         (char *)cfg.dictspath.s);
-    msg("Storing database in: %.*s", (int)cfg.dbpath.len, (char *)cfg.dbpath.s);
+    msg("Storing database in: %.*s", (int)dbpath.len, (char *)dbpath.s);
 
-    if (db_check_exists(cfg.dbpath)) {
+    if (db_check_exists(dbpath)) {
         if (askyn("A database file already exists. "
                   "Would you like to delete the old one?"))
-            db_remove(cfg.dbpath);
+            db_remove(dbpath);
         else
             exit(EXIT_FAILURE);
     } else
-        createdir((char *)cfg.dbpath.s);
+        createdir(dbpath);
 
-    _drop_(db_close) database_t *db = db_open((char *)cfg.dbpath.s, false);
+    _drop_(db_close) database_t *db = db_open(dbpath, false);
     _drop_(closedir) DIR *dir = opendir((char *)cfg.dictspath.s);
     die_on(!dir, "Error opening directory '%s': %s", (char *)cfg.dictspath.s, strerror(errno));
 
+    ParserCallbacks callbacks = get_callbacks(db);
+
     double startTime = (double)clock() / CLOCKS_PER_SEC;
+
     struct dirent *entry;
     while ((entry = readdir(dir)) && !sigint_received) {
         _drop_(frees8) s8 fn = buildpath(cfg.dictspath, fromcstr_(entry->d_name));
         if (endswith(fn, S(".zip")))
-            parse_yomichan_dict((char *)fn.s, (void (*)(void *, dictentry))db_put_dictent, db,
-                                (void (*)(void *, freqentry))db_put_freq, db);
+            parse_yomichan_dict((char *)fn.s, callbacks);
     }
+
     double endTime = (double)clock() / CLOCKS_PER_SEC;
     printf("Time taken: %.1fs\n", endTime - startTime);
+
+    s8Buf dictnames = db_get_dictnames(db);
+    s8_buf_print(dictnames);
 }

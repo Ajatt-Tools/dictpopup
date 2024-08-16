@@ -35,7 +35,7 @@ size_t num_of_dictentries(Dict dict);
 
 // Sorts @dict in place
 // Not thread safe
-void dict_sort(Dict dict, const char* const* sort_order);
+void dict_sort(Dict dict, const char *const *sort_order);
 
 void dict_free(Dict dict);
 dictentry dictentry_at_index(Dict dict, size_t index);
@@ -46,5 +46,8 @@ typedef struct {
 } DictLookup;
 
 void dict_lookup_free(DictLookup *dl);
+
+// For testing
+bool dict_contains(Dict dict, s8 word);
 
 #endif // DICT_H

@@ -47,7 +47,7 @@ static s8 get_default_database_path(void) {
 
 static void jppron_create(char *audio_dir_path, s8 dbpth) {
     jdb_remove(dbpth);
-    createdir((char *)dbpth.s);
+    createdir(dbpth);
 
     _drop_(closedir) DIR *audio_dir = opendir(audio_dir_path);
     err_ret_on(!audio_dir, "Failed to open audio directory '%s': %s", audio_dir_path,

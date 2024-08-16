@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
     <schema id="com.github.Ajatt-Tools.dictpopup" path="/com/github/Ajatt-Tools/dictpopup/">
-        <key name="database-path" type="s">
-            <default>''</default>
-            <summary>Database Path</summary>
-            <description>Path to the dictionary database</description>
-        </key>
         <key name="sort-entries" type="b">
             <default>false</default>
             <summary>Sort Dictionary Entries</summary>

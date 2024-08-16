@@ -65,10 +65,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
             -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align -Wpointer-arith
             -Wno-sign-conversion -Wno-unused-function -Wno-unused-parameter -Wno-discarded-qualifiers
             -Wno-overlength-strings -Wno-missing-field-initializers
-#            -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong
+            -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong
             -O0 -ggdb
     )
-#    target_link_options(project_options INTERFACE -fsanitize=address)
+    target_link_options(project_options INTERFACE -fsanitize=address)
 else ()
     target_compile_options(project_options INTERFACE
             -Oz -flto -march=native -mtune=native -g -fno-omit-frame-pointer
@@ -101,7 +101,8 @@ set(ANKI_SRCS
 set(DICTLOOKUP_SRCS
         src/dictionary_lookup.c
         src/deinflector/deinflector.c
-#        ${DEINFLECTION_RULES_C} # Doesn't get generated if put in here
+        src/db.c
+        #        ${DEINFLECTION_RULES_C} # Doesn't get generated if put in here
 )
 
 # ##############################################################################
@@ -183,7 +184,7 @@ add_custom_command(
         ${GRESOURCE_XML}
         MAIN_DEPENDENCY ${GRESOURCE_XML}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/main-window.ui
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/settings-window.ui
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/dp-preferences-window.ui
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/style.css
         VERBATIM
 )
@@ -227,7 +228,10 @@ add_custom_command(
 add_dictpopup_executable(dictpopup
         src/frontends/gtk3popup/dictpopup-application.c
         src/frontends/gtk3popup/dp-settings.c
-        src/db.c
+        src/frontends/gtk3popup/dp-preferences-window.c
+        src/frontends/gtk3popup/dict_state_manager.c
+        src/frontends/gtk3popup/callbacks.c
+        src/frontends/gtk3popup/main.c
         src/utils/util.c
         src/utils/utf8.c
         src/utils/str.c
@@ -243,9 +247,6 @@ add_dictpopup_executable(dictpopup
         ${GRESOURCE_C}
         ${DEINFLECTION_RULES_C}
         ${COMPILED_SETTINGS_SCHEMA}
-        src/frontends/gtk3popup/dict_state_manager.c
-        src/frontends/gtk3popup/callbacks.c
-        src/frontends/gtk3popup/main.c
 )
 target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD GTK3)
 target_link_libraries(dictpopup PRIVATE
@@ -256,20 +257,21 @@ target_link_libraries(dictpopup PRIVATE
         CURL::libcurl
         -rdynamic
 )
-if(X11_FOUND)
+if (X11_FOUND)
     target_link_libraries(dictpopup PRIVATE ${X11_LIBRARIES})
-endif()
+endif ()
 
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
 add_dictpopup_executable(dictpopup-create
-        src/dictpopup_create.c
+        src/dictpopup_create/dictpopup_create.c
+        src/dictpopup_create/objects.c
         src/utils/util.c
         lib/yyjson.c
         src/utils/str.c
         src/db.c
-        src/yomichan_parser.c
+        src/dictpopup_create/yomichan_parser.c
         src/platformdep/file_operations.c
         src/objects/dict.c
         src/objects/freqentry.c
@@ -336,8 +338,7 @@ target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES
 if (BUILD_TESTS)
     enable_testing()
     find_package(cgreen REQUIRED)
-    add_executable(
-            c_tests
+    add_dictpopup_executable(c_tests
             src/utils/util.c
             src/utils/utf8.c
             src/utils/str.c
@@ -353,6 +354,7 @@ if (BUILD_TESTS)
             tests/jppron_tests/jppron_tests.c
             ${DEINFLECTION_RULES_C}
             src/deinflector/deinflector.c
+            tests/anki_card_preparation_tests.c
     )
     target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
     target_include_directories(c_tests PRIVATE
@@ -363,13 +365,12 @@ if (BUILD_TESTS)
             src/
             src/jppron
     )
-    target_link_libraries(
-            c_tests
-            PRIVATE ${CGREEN_LIBRARIES}
-            ${GTK3_LIBRARIES}
-            ${NOTIFY_LIBRARIES}
-            ${CURL_LIBRARIES}
-            -lzip)
+    target_link_libraries(c_tests PRIVATE
+            ${CGREEN_LIBRARIES}
+            MECAB::MECAB
+            PkgConfig::GTK3
+            libzip::zip
+    )
     add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
 
     #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)

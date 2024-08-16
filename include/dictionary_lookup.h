@@ -5,12 +5,11 @@
 #include "utils/util.h"
 
 typedef struct {
-  const char *database_dir;
-  bool sort_dict_entries;
-  const char * const* dict_sort_order;
-  bool nuke_whitespace_of_lookup;
-  bool fallback_to_mecab_conversion;
-  bool lookup_longest_matching_prefix;
+    bool sort_dict_entries;
+    const char *const *dict_sort_order;
+    bool nuke_whitespace_of_lookup;
+    bool fallback_to_mecab_conversion;
+    bool lookup_longest_matching_prefix;
 } DictpopupConfig;
 
 /*

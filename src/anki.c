@@ -44,13 +44,10 @@ static s8 add_bold_tags_around_word(s8 sent, s8 word) {
 }
 
 static s8 create_furigana(s8 kanji, s8 reading) {
-    return (!kanji.len && !reading.len) ? S("")
-           // : !reading.len               ? S("") // Don't even try
-           : s8equals(kanji, reading) ? s8dup(reading)
-                                      : concat(kanji, S("["), reading,
-                                               S("]")); // TODO: Obviously not
-    // enough if kanji
-    // contains hiragana
+    return !kanji.len && !reading.len ? s8dup(S(""))
+           : !kanji.len               ? s8dup(reading)
+           : !reading.len             ? s8dup(kanji)
+                                      : concat(kanji, S("["), reading, S("]"));
 }
 
 // TODO: Improve maintainability?
@@ -70,7 +67,7 @@ static s8 map_entry(PossibleEntries p, int i) {
                     : S("");
 }
 
-static ankicard prepare_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config) {
+static AnkiCard prepare_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config) {
     PossibleEntries possible_entries = {0};
     possible_entries_fill_with(&possible_entries, lookup, sentence, de);
 
@@ -80,14 +77,14 @@ static ankicard prepare_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfi
         // TODO: fix
     }
 
-    return (ankicard){.deck = config.deck,
+    return (AnkiCard){.deck = config.deck,
                       .notetype = config.notetype,
                       .num_fields = config.numFields,
-                      .fieldnames = (char**)config.fieldnames,
+                      .fieldnames = (char **)config.fieldnames,
                       .fieldentries = fieldentries};
 }
 
-static void send_ankicard(ankicard ac) {
+static void send_ankicard(AnkiCard ac) {
     char *error = NULL;
     ac_addNote(ac, &error);
     if (error) {
@@ -98,7 +95,7 @@ static void send_ankicard(ankicard ac) {
 }
 
 void create_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config) {
-    ankicard ac = prepare_ankicard(lookup, sentence, de, config);
+    AnkiCard ac = prepare_ankicard(lookup, sentence, de, config);
     send_ankicard(ac);
     free(ac.fieldentries); // TODO
 }

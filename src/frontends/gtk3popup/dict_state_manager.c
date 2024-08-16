@@ -10,14 +10,15 @@ dictentry dm_get_currently_visible(const DictManager self) {
 }
 
 dictentry dm_increment(DictManager self[static 1]) {
-    self->index_visible =
-        (self->index_visible < num_of_dictentries(self->dictionary) - 1) ? self->index_visible + 1 : 0;
+    self->index_visible = (self->index_visible < num_of_dictentries(self->dictionary) - 1)
+                              ? self->index_visible + 1
+                              : 0;
     return dm_get_currently_visible(*self);
 }
 
 dictentry dm_decrement(DictManager self[static 1]) {
-    self->index_visible =
-        (self->index_visible > 0) ? self->index_visible - 1 : num_of_dictentries(self->dictionary) - 1;
+    self->index_visible = (self->index_visible > 0) ? self->index_visible - 1
+                                                    : num_of_dictentries(self->dictionary) - 1;
     return dm_get_currently_visible(*self);
 }
 

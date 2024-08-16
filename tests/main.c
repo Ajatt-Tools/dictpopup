@@ -7,6 +7,7 @@ TestSuite *yomichan_parser_tests(void);
 TestSuite *ajt_audio_index_parser_tests(void);
 TestSuite *s8_tests(void);
 TestSuite *jppron_tests(void);
+TestSuite *anki_card_creator_tests(void);
 
 int main(int argc, char **argv) {
     TestSuite *suite = create_test_suite();
@@ -17,6 +18,7 @@ int main(int argc, char **argv) {
     add_suite(suite, s8_tests());
     add_suite(suite, dictpopup_tests());
     add_suite(suite, jppron_tests());
+    add_suite(suite, anki_card_creator_tests());
 
     if (argc > 1) {
         return run_single_test(suite, argv[1], create_text_reporter());

@@ -54,7 +54,7 @@ Ensure(AnkiConnectC, sends_correct_addNote_request) {
         "白鯨同様、世界中が被害を被っている。騎士団も長く辛酸を味わわされてきた相手だ", "辛酸",
         "辛酸[しんさん]", "つらい思い。苦しみ。", "Re:Zero"};
     char *tags[] = {"someTag", NULL};
-    ankicard ac = (ankicard){.deck = "Japanese",
+    AnkiCard ac = (AnkiCard){.deck = "Japanese",
                              .notetype = "Japanese Sentences",
                              .num_fields = arrlen(fieldNames),
                              .fieldnames = fieldNames,
@@ -77,7 +77,7 @@ Ensure(AnkiConnectC, sends_correct_addNote_request) {
 
 Ensure(AnkiConnectC, json_escapes_ankicard) {
     char *str = "abcBack\\Slash\"A quote\"\b\f\n\r\t";
-    ankicard ac = {
+    AnkiCard ac = {
         .deck = str,
         .notetype = str,
         .num_fields = 2,
@@ -85,10 +85,10 @@ Ensure(AnkiConnectC, json_escapes_ankicard) {
         .fieldentries = (char *[]){str, str, NULL},
         .tags = (char *[]){str, str, str, NULL},
     };
-    _drop_(ankicard_free) ankicard ac_je = ankicard_dup_json_esc(ac);
+    _drop_(ankicard_free) AnkiCard ac_je = ankicard_dup_json_esc(ac);
 
     char *escstr = "abcBack\\\\Slash\\\"A quote\\\"\\b\\f<br>\\r&#9";
-    ankicard ac_expect = {
+    AnkiCard ac_expect = {
         .deck = escstr,
         .notetype = escstr,
         .num_fields = 2,

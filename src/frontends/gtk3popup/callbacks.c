@@ -15,25 +15,7 @@
 /* --------------- START CALLBACKS ------------------ */
 void on_settings_button_clicked(GtkButton *button, gpointer user_data) {
     DpApplication *dp = (DpApplication *)user_data;
-
-    if (dp->settings_window == NULL) {
-        GtkBuilder *builder =
-            gtk_builder_new_from_resource("/com/github/Ajatt-Tools/dictpopup/settings-window.ui");
-        dp->settings_window = GTK_WIDGET(gtk_builder_get_object(builder, "settings_window"));
-
-        if (dp->settings_window == NULL) {
-            g_print("Error: Failed to initialize settings window\n");
-            g_object_unref(builder);
-            return;
-        }
-
-        gtk_window_set_transient_for(GTK_WINDOW(dp->settings_window), GTK_WINDOW(dp->main_window));
-        g_signal_connect(dp->settings_window, "delete-event", G_CALLBACK(gtk_widget_destroy), NULL);
-
-        g_object_unref(builder);
-    }
-
-    gtk_widget_show_all(dp->settings_window);
+    gtk_widget_show_all(g_object_new(DP_TYPE_PREFERENCES_WINDOW, "settings", dp->settings, NULL));
 }
 
 void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
@@ -54,30 +36,27 @@ void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer u
 }
 
 /* -------------- START ANKI -------------------- */
-static bool anki_accessible(void) {
-    if (!ac_check_connection()) {
-        err("Cannot connect to Anki. Is Anki running?");
-        return false;
-    }
-    return true;
+static s8 get_text_selection(DpApplication *app) {
+    GtkTextIter start, end;
+    if (gtk_text_buffer_get_selection_bounds(app->definition_textbuffer, &start, &end))
+        return fromcstr_(gtk_text_buffer_get_text(app->definition_textbuffer, &start, &end, FALSE));
+    return (s8){0};
 }
 
-static void clipboard_changed(GtkClipboard *clipboard, GdkEvent *event, gpointer user_data) {
+static void sentence_selected(GtkClipboard *clipboard, GdkEvent *event, gpointer user_data) {
     DpApplication *app = user_data;
 
     s8 sentence = fromcstr_(gtk_clipboard_wait_for_text(clipboard));
-    // if (!sentence.len) // TODO: Handle?
     dictentry entry_to_add = dm_get_currently_visible(app->dict_manager);
-    s8 lookup = app->lookup_str;
 
-    // TODO: Put into dp-settings
-    AnkiConfig cfg = {0};
-    cfg.deck = dp_settings_get_anki_deck(app->settings);
-    cfg.notetype = dp_settings_get_anki_notetype(app->settings);
-    cfg.fieldnames = dp_settings_get_anki_fieldnames(app->settings);
-    cfg.fieldMapping = dp_settings_get_anki_fieldentries(app->settings, &cfg.numFields);
+    s8 text_selection = get_text_selection(app);
+    if (text_selection.len > 0) {
+        frees8(&entry_to_add.definition);
+        entry_to_add.definition = text_selection;
+    }
 
-    create_ankicard(lookup, sentence, entry_to_add, cfg);
+    AnkiConfig anki_cfg = dp_settings_get_anki_settings(app->settings);
+    create_ankicard(app->lookup_str, sentence, entry_to_add, anki_cfg);
 
     g_free(sentence.s);
     g_application_quit(G_APPLICATION(app));
@@ -88,15 +67,16 @@ static void show_copy_sentence_dialog(void) {
 }
 
 void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
-    if (!anki_accessible())
+    if (!ac_check_connection()) {
+        err("Cannot connect to Anki. Is Anki running?");
         return;
+    }
 
     DpApplication *app = data;
     gtk_widget_hide(GTK_WIDGET(app->main_window));
 
     GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-    g_signal_connect(clipboard, "owner-change", G_CALLBACK(clipboard_changed), app);
-
+    g_signal_connect(clipboard, "owner-change", G_CALLBACK(sentence_selected), app);
     show_copy_sentence_dialog();
 }
 /* -------------- END ANKI -------------------- */
@@ -187,7 +167,6 @@ void dict_lookup_async(DpApplication *app) {
         .app = app,
         // TODO: Put this into dp-settings
         .cfg = (DictpopupConfig){
-            .database_dir = dp_settings_get_database_path(app->settings),
             .sort_dict_entries = dp_settings_get_sort_entries(app->settings),
             .dict_sort_order = dp_settings_get_dict_sort_order(app->settings),
             .nuke_whitespace_of_lookup = dp_settings_get_nuke_whitespace_of_lookup(app->settings),

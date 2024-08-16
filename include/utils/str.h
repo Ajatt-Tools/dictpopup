@@ -15,7 +15,10 @@ typedef struct {
         .s = (u8[]){0xF8}, .len = 1                                                                \
     }
 #define lengthof(s) (arrlen("" s "") - 1)
-#define S(s) (s8){(u8 *)s, arrlen(s) - 1}
+#define S(s)                                                                                       \
+    (s8) {                                                                                         \
+        (u8 *)s, arrlen(s) - 1                                                                     \
+    }
 
 /*
  * Allocates a new s8 with length @len
@@ -82,6 +85,10 @@ s8 _nonnull_ concat_(s8 *strings);
 
 #define buildpath(...) buildpath_((s8[]){__VA_ARGS__, S8_STOPPER})
 s8 _nonnull_ buildpath_(s8 *pathcomps);
+
+#define concat_with_sep(sep, ...) _concat_with_sep((sep), (s8[]){__VA_ARGS__, S8_STOPPER})
+s8 _concat_with_sep(s8 sep, s8 *strings);
+
 s8 enclose_word_in_s8_with(s8 str, s8 word, s8 prefix, s8 suffix);
 
 /* --------------------------- string builder -----------------------_ */
@@ -103,5 +110,10 @@ void _nonnull_ sb_free(stringbuilder_s *sb);
 
 void substrremove(char *str, const s8 sub);
 void nuke_whitespace(s8 z[static 1]);
+
+typedef s8 *s8Buf;
+void s8_buf_free(s8Buf buf);
+size_t s8_buf_size(s8Buf buf);
+void s8_buf_print(s8Buf buf);
 
 #endif // S8_H

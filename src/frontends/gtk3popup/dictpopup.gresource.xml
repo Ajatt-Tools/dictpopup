@@ -4,6 +4,6 @@
         <file compressed="true">style.css</file>
 
         <file preprocess="xml-stripblanks">main-window.ui</file>
-        <file preprocess="xml-stripblanks">settings-window.ui</file>
+        <file preprocess="xml-stripblanks">dp-preferences-window.ui</file>
     </gresource>
 </gresources>

@@ -1,14 +1,14 @@
-#include "yomichan_parser.h"
-
-#include "objects/freqentry.h"
-
 #include <zip.h>
 
+#include "objects/dict.h"
+#include "objects/freqentry.h"
 #include "utils/messages.h"
 #include "utils/str.h"
 #include "utils/util.h"
+#include "yomichan_parser.h"
 #include "yyjson.h"
-#include <objects/dict.h>
+
+#include "dictpopup_create/objects.h"
 
 DEFINE_DROP_FUNC(struct zip_file *, zip_fclose)
 DEFINE_DROP_FUNC(yyjson_doc *, yyjson_doc_free)
@@ -265,9 +265,8 @@ static dictentry parse_dictionary_entry(yyjson_val *arr) {
     return de;
 }
 
-static _nonnull_n_(3) void parse_yomichan_dictentries_from_buffer(
-    const s8 buffer, const s8 dictname, void (*foreach_dictentry)(void *, dictentry),
-    void *userdata_de) {
+static void parse_yomichan_dictentries_from_buffer(const s8 buffer, const s8 dictname,
+                                                   ParserCallbacks callbacks) {
     _drop_(yyjson_doc_free) yyjson_doc *doc = yyjson_read((char *)buffer.s, buffer.len, 0);
     if (!doc)
         return;
@@ -286,7 +285,7 @@ static _nonnull_n_(3) void parse_yomichan_dictentries_from_buffer(
 
         dictentry de = parse_dictionary_entry(entry);
         de.dictname = dictname;
-        (*foreach_dictentry)(userdata_de, de);
+        callbacks.foreach_dictentry(callbacks.userdata_de, de);
         frees8(&de.definition);
     }
 }
@@ -332,8 +331,7 @@ static freqentry parse_single_frequency_entry(yyjson_val *arr) {
     return fe;
 }
 
-static _nonnull_n_(2) void parse_yomichan_freqentries_from_buffer(
-    const s8 buffer, void (*foreach_frequency_entry)(void *, freqentry), void *userdata_fe) {
+static void parse_yomichan_freqentries_from_buffer(const s8 buffer, ParserCallbacks callbacks) {
     _drop_(yyjson_doc_free) yyjson_doc *doc = yyjson_read((char *)buffer.s, buffer.len, 0);
     if (!doc)
         return;
@@ -351,7 +349,7 @@ static _nonnull_n_(2) void parse_yomichan_freqentries_from_buffer(
             dbg("Frequency entry is not an array. Skipping..");
 
         freqentry fe = parse_single_frequency_entry(entry);
-        (*foreach_frequency_entry)(userdata_fe, fe);
+        callbacks.forach_freqentry(callbacks.userdata_fe, fe);
     }
 }
 
@@ -393,15 +391,15 @@ static s8 _nonnull_ extract_dictname_from_zip(const char *zipfn, zip_t *zipfile)
     return dictname;
 }
 
-void parse_yomichan_dict(const char *zipfn, void (*foreach_dictentry)(void *, dictentry),
-                         void *userdata_de, void (*forach_freqentry)(void *, freqentry),
-                         void *userdata_fe) {
+void parse_yomichan_dict(const char *zipfn, ParserCallbacks callbacks) {
     zip_t *zipfile = open_zip(zipfn);
     return_on(!zipfile);
 
     _drop_(frees8) s8 dictname = extract_dictname_from_zip(zipfn, zipfile);
     return_on(!dictname.len);
-    printf("Processing dictionary: %s\n", (char *)dictname.s);
+
+    callbacks.foreach_dictname(callbacks.userdata_dn, dictname);
+    msg("Processing dictionary: %s\n", (char *)dictname.s);
 
     struct zip_stat finfo;
     zip_stat_init(&finfo);
@@ -410,12 +408,11 @@ void parse_yomichan_dict(const char *zipfn, void (*foreach_dictentry)(void *, di
         if (startswith(fn, S("term_bank_"))) {
             _drop_(frees8) s8 buffer = unzip_file(zipfile, finfo.name);
             if (buffer.len)
-                parse_yomichan_dictentries_from_buffer(buffer, dictname, foreach_dictentry,
-                                                       userdata_de);
+                parse_yomichan_dictentries_from_buffer(buffer, dictname, callbacks);
         } else if (startswith(fn, S("term_meta_bank"))) {
             _drop_(frees8) s8 buffer = unzip_file(zipfile, finfo.name);
             if (buffer.len)
-                parse_yomichan_freqentries_from_buffer(buffer, forach_freqentry, userdata_fe);
+                parse_yomichan_freqentries_from_buffer(buffer, callbacks);
         }
     }
 
