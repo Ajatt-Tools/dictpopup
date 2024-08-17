@@ -1,0 +1,7 @@
+##, c-format
+#msgid "No translation for %s was found."
+#msgstr "%s の翻訳が見つかりません。"
+
+#: src/dp-preferences-window.ui:6
+msgid "Preferences"
+msgstr "設定"

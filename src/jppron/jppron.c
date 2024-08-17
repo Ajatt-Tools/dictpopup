@@ -112,7 +112,7 @@ static void get_all_files_and_fileinfo_for(s8 word, s8 db_path, s8 *files[static
 }
 
 pronfile_s *get_pronfiles_for(s8 word, s8 reading, s8 db_path) {
-    _drop_(frees8buffer) s8 *files = 0;
+    _drop_(s8_buf_free) s8Buf files = 0;
     _drop_(free) fileinfo_s *fileinfo = 0;
     get_all_files_and_fileinfo_for(word, db_path, &files, &fileinfo);
 

@@ -22,6 +22,10 @@ static _nonnull_ void foreach_dictentry(void *userdata, dictentry de) {
     mock(de.definition.s, de.dictname.s, de.kanji.s, de.reading.s);
 }
 
+static _nonnull_ void foreach_dictname(void *userdata, s8 dictname) {
+    mock(dictname.s);
+}
+
 #define CHECK_NR(n)                                                                                \
     do {                                                                                           \
         s8 toparse = {0};                                                                          \
@@ -35,7 +39,11 @@ static _nonnull_ void foreach_dictentry(void *userdata, dictentry de) {
                                                                                                    \
         expect(foreach_dictentry, when(de.definition.s, is_equal_to_string((char *)expected.s)),   \
                when(de.dictname.s, is_equal_to_string("Test")));                                   \
-        parse_yomichan_dictentries_from_buffer(toparse, S("Test"), &foreach_dictentry, NULL);      \
+                                                                                                   \
+        ParserCallbacks callbacks = (ParserCallbacks){.foreach_dictentry = foreach_dictentry,      \
+                                                      .foreach_freqentry = foreach_freqentry,      \
+                                                      .foreach_dictname = foreach_dictname};       \
+        parse_yomichan_dictentries_from_buffer(toparse, S("Test"), callbacks);                     \
                                                                                                    \
         g_free(toparse.s);                                                                         \
         g_free(expected.s);                                                                        \
@@ -88,7 +96,9 @@ Ensure(Parser, correctly_parses_frequency_entry_with_reading) {
     expect(foreach_freqentry, when(fe.word.s, is_equal_to_string((char *)expected.word.s)),
            when(fe.reading.s, is_equal_to_string((char *)expected.reading.s)),
            when(fe.frequency, is_equal_to(expected.frequency)));
-    parse_yomichan_freqentries_from_buffer(toparse, &foreach_freqentry, NULL);
+
+    ParserCallbacks callbacks = (ParserCallbacks){.foreach_freqentry = foreach_freqentry};
+    parse_yomichan_freqentries_from_buffer(toparse, callbacks);
 }
 
 Ensure(Parser, correctly_parses_frequency_entry_without_reading) {
@@ -99,7 +109,9 @@ Ensure(Parser, correctly_parses_frequency_entry_without_reading) {
     expect(foreach_freqentry, when(fe.word.s, is_equal_to_string((char *)expected.word.s)),
            when(fe.reading.s, is_equal_to_string((char *)expected.reading.s)),
            when(fe.frequency, is_equal_to(expected.frequency)));
-    parse_yomichan_freqentries_from_buffer(toparse, &foreach_freqentry, NULL);
+
+    ParserCallbacks callbacks = (ParserCallbacks){.foreach_freqentry = foreach_freqentry};
+    parse_yomichan_freqentries_from_buffer(toparse, callbacks);
 }
 
 Ensure(Parser, correctly_extracts_dictionary_name) {

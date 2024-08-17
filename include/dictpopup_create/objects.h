@@ -7,7 +7,7 @@
 typedef struct {
     void (*foreach_dictentry)(void *, dictentry);
     void *userdata_de;
-    void (*forach_freqentry)(void *, freqentry);
+    void (*foreach_freqentry)(void *, freqentry);
     void *userdata_fe;
     void (*foreach_dictname)(void *, s8);
     void *userdata_dn;

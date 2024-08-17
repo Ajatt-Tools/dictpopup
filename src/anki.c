@@ -5,39 +5,43 @@
 #include <utils/messages.h>
 #include <utils/str.h>
 
-static s8 add_bold_tags_around_word(s8 sent, s8 word);
-static s8 create_furigana(s8 kanji, s8 reading);
-
-#define POSSIBLE_ENTRIES_S_NMEMB 9
-typedef struct possible_entries_s {
-    s8 sent;
-    s8 boldsent;
-    s8 dictkanji;
-    s8 dictreading;
-    s8 dictdefinition;
-    s8 furigana;
-    s8 windowname;
-    s8 dictname;
-} PossibleEntries;
-
-static void _nonnull_ possible_entries_fill_with(PossibleEntries *pe, s8 lookup, s8 sent,
-                                                 dictentry de) {
-    pe->sent = sent;
-    pe->boldsent = add_bold_tags_around_word(pe->sent, lookup);
-
-    pe->dictdefinition = de.definition;
-    pe->dictkanji = de.kanji.len > 0 ? de.kanji : de.reading;
-    pe->dictreading = de.reading;
-    pe->furigana = create_furigana(de.kanji, de.reading);
-    pe->dictname = de.dictname;
-
-    // TODO TODO
-    // pe->windowname = focused_window_title;
+AnkiFieldEntry anki_get_entry_of_field(AnkiFieldMapping field_mapping, const char *field_name) {
+    for (u32 i = 0; i < field_mapping.num_fields; i++) {
+        if (strcmp(field_mapping.field_names[i], field_name) == 0) {
+            return field_mapping.field_content[i];
+        }
+    }
+    return DP_ANKI_EMPTY;
 }
 
-// static void possible_entries_free(PossibleEntries pe) {
-// frees8(&pe.boldsent);
-// }
+void anki_set_entry_of_field(AnkiFieldMapping *field_mapping, const char *field_name, AnkiFieldEntry entry) {
+    // TODO
+}
+
+const char *anki_field_entry_to_str(AnkiFieldEntry entry) {
+    switch (entry) {
+        case DP_ANKI_EMPTY:
+            return "Empty";
+        case DP_ANKI_LOOKUP_STRING:
+            return "Lookup String";
+        case DP_ANKI_COPIED_SENTENCE:
+            return "Copied Sentence";
+        case DP_ANKI_BOLD_COPIED_SENTENCE:
+            return "Copied Sentence (Bold Target)";
+        case DP_ANKI_DICTIONARY_KANJI:
+            return "Dictionary Kanji";
+        case DP_ANKI_DICTIONARY_READING:
+            return "Dictionary Reading";
+        case DP_ANKI_DICTIONARY_DEFINITION:
+            return "Dictionary Definition";
+        case DP_ANKI_FURIGANA:
+            return "Furigana";
+        case DP_ANKI_FOCUSED_WINDOW_NAME:
+            return "Focused Window Name";
+        default:
+            return "Unknown";
+    }
+}
 
 static s8 add_bold_tags_around_word(s8 sent, s8 word) {
     return enclose_word_in_s8_with(sent, word, S("<b>"), S("</b>"));
@@ -51,37 +55,62 @@ static s8 create_furigana(s8 kanji, s8 reading) {
 }
 
 // TODO: Improve maintainability?
-static s8 map_entry(PossibleEntries p, int i) {
+static s8 map_entry(s8 lookup, s8 sent, dictentry de, int i) {
     if (i < 0 || i > 9)
         err("Anki field mapping number %i is out of bounds.", i);
 
-    return i == 0   ? S("")
-           : i == 2 ? p.sent
-           : i == 3 ? p.boldsent
-           : i == 4 ? p.dictkanji
-           : i == 5 ? p.dictreading
-           : i == 6 ? p.dictdefinition
-           : i == 7 ? p.furigana
-           : i == 8 ? p.windowname
-           : i == 9 ? p.dictname
-                    : S("");
+    if (i == 0) {
+        return s8dup(S(""));
+    } else if (i == 2) {
+        return s8dup(sent);
+    }
+    else if (i == 3) {
+        return add_bold_tags_around_word(sent, lookup);
+    }
+    else if (i == 4) {
+        return s8dup(de.kanji);
+    }
+    else if (i == 5) {
+        return s8dup(de.reading);
+    }
+    else if (i == 6) {
+        return s8dup(de.definition);
+    }
+    else if (i == 7) {
+        return create_furigana(de.kanji, de.reading);
+    }
+    else if (i == 8) {
+        // TODO: Return windowtitle
+        return s8dup(S(""));
+    }
+    else if (i == 9) {
+        return s8dup(de.dictname);
+    }
+    else {
+        err("Anki field mapping number %i is out of bounds.", i);
+        return s8dup(S(""));
+    }
 }
 
 static AnkiCard prepare_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config) {
-    PossibleEntries possible_entries = {0};
-    possible_entries_fill_with(&possible_entries, lookup, sentence, de);
-
-    char **fieldentries = new (char *, config.numFields);
-    for (size_t i = 0; i < config.numFields; i++) {
-        fieldentries[i] = (char *)map_entry(possible_entries, config.fieldMapping[i]).s;
+    char **fieldentries = new (char *, config.fieldmapping.num_fields);
+    for (size_t i = 0; i < config.fieldmapping.num_fields; i++) {
         // TODO: fix
+        fieldentries[i] = (char *)map_entry(lookup, sentence, de, config.fieldmapping.field_content[i]).s;
     }
 
     return (AnkiCard){.deck = config.deck,
                       .notetype = config.notetype,
-                      .num_fields = config.numFields,
-                      .fieldnames = (char **)config.fieldnames,
+                      .num_fields = config.fieldmapping.num_fields,
+                      .fieldnames = (char **)config.fieldmapping.field_names,
                       .fieldentries = fieldentries};
+}
+
+static void free_prepared_ankicard(AnkiCard ac) {
+    // TODO
+    for (size_t i = 0; i < ac.num_fields; i++)
+        free(ac.fieldentries[i]);
+    free(ac.fieldentries);
 }
 
 static void send_ankicard(AnkiCard ac) {
@@ -97,5 +126,5 @@ static void send_ankicard(AnkiCard ac) {
 void create_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config) {
     AnkiCard ac = prepare_ankicard(lookup, sentence, de, config);
     send_ankicard(ac);
-    free(ac.fieldentries); // TODO
+    free_prepared_ankicard(ac);
 }

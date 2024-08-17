@@ -26,7 +26,7 @@
 s8 focused_window_title = {0};
 
 static void _nonnull_ appendDeinflections(const database_t *db, s8 word, Dict dict[static 1]) {
-    _drop_(frees8buffer) s8 *deinfs_b = deinflect(word);
+    _drop_(s8_buf_free) s8Buf deinfs_b = deinflect(word);
 
     if (deinfs_b == NULL)
         return;
@@ -82,7 +82,7 @@ DictLookup _nonnull_ dictionary_lookup(s8 word, DictpopupConfig cfg) {
 
     DictLookup dict_lookup = lookup(word, cfg);
 
-    if (cfg.sort_dict_entries)
+    if (cfg.dict_sort_order)
         dict_sort(dict_lookup.dict, cfg.dict_sort_order);
 
     return dict_lookup;

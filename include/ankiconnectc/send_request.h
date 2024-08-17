@@ -12,6 +12,7 @@ typedef size_t (*ResponseFunc)(char *ptr, size_t len, size_t nmemb, void *userda
 typedef struct {
     union {
         char *string;
+        char **strv;
         _Bool boolean;
     } data;
     _Bool ok; // Signalizes if there was an error on not. The error msg is

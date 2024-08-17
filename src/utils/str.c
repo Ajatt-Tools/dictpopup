@@ -225,12 +225,6 @@ void frees8(s8 *z) {
     free(z->s);
 }
 
-void frees8buffer(s8 *buf) {
-    while (buf_size(buf) > 0)
-        free(buf_pop(buf).s);
-    buf_free(buf);
-}
-
 /* --------------- Start stringbuilder --------------- */
 
 stringbuilder_s sb_init(size_t init_cap) {
@@ -316,6 +310,8 @@ void nuke_whitespace(s8 z[static 1]) {
 }
 
 void s8_buf_free(s8Buf buf) {
+    while (buf_size(buf) > 0)
+        free(buf_pop(buf).s);
     buf_free(buf);
 }
 

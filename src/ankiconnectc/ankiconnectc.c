@@ -8,6 +8,14 @@
 
 #include "ankiconnectc/send_request.h"
 
+#include <yyjson.h>
+
+void ac_retval_free(retval_s ret) {
+    if (!ret.ok) {
+        free(ret.data.string);
+    }
+}
+
 static int get_array_len(char *array[static 1]) {
     int n = 0;
     while (*array++)
@@ -100,8 +108,8 @@ static size_t search_checker(char *ptr, size_t size, size_t nmemb, void *userdat
 }
 
 static size_t check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    assert(userdata);
     retval_s *ret = userdata;
+    assert(ret);
     s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
 
     if (endswith(resp, S("\"error\": null}")))
@@ -111,6 +119,62 @@ static size_t check_add_response(char *ptr, size_t size, size_t nmemb, void *use
         *ret = (retval_s){.data.string = err, .ok = false};
     }
 
+    return size * nmemb;
+}
+
+static size_t parse_result_array(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    retval_s *ret = userdata;
+    assert(ret);
+    s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
+
+    yyjson_doc *doc = yyjson_read((const char *)resp.s, resp.len, 0);
+    if (!doc) {
+        ret->ok = false;
+        ret->data.string = strdup("Failed to parse JSON response");
+        return size * nmemb;
+    }
+
+    yyjson_val *root = yyjson_doc_get_root(doc);
+
+    yyjson_val *error = yyjson_obj_get(root, "error");
+    if (!yyjson_is_null(error)) {
+        ret->ok = false;
+        const char *error_msg = yyjson_get_str(error);
+        ret->data.string = error_msg ? strdup(error_msg) : strdup("Unknown error occurred");
+        goto cleanup;
+    }
+
+    yyjson_val *result = yyjson_obj_get(root, "result");
+    if (!yyjson_is_arr(result)) {
+        ret->ok = false;
+        ret->data.string = strdup("Result is not an array");
+        goto cleanup;
+    }
+
+    size_t array_size = yyjson_arr_size(result);
+    char **notetypes = new (char *, array_size + 1);
+
+    size_t idx, max;
+    yyjson_val *val;
+    yyjson_arr_foreach(result, idx, max, val) {
+        if (!yyjson_is_str(val)) {
+            ret->ok = false;
+            ret->data.string = strdup("Array element is not a string");
+            for (size_t j = 0; j < idx; j++) {
+                free(notetypes[j]);
+            }
+            free(notetypes);
+            goto cleanup;
+        }
+        notetypes[idx] = strdup(yyjson_get_str(val));
+    }
+    notetypes[array_size] = NULL;
+
+    ret->ok = true;
+    ret->data.strv = notetypes;
+
+cleanup:
+    yyjson_doc_free(doc);
     return size * nmemb;
 }
 /* ------- End Callback functions ----------- */
@@ -212,9 +276,42 @@ void ac_gui_search(char *deck, char *field, char *entry, char **error) {
         *error = r.data.string;
 }
 
-s8 *ac_get_notetypes(char **error) {
-    // TODO: Implement
-    return 0;
+char **ac_get_notetypes(char **error) {
+    s8 req = S("{\"action\": \"modelNames\", \"version\": 6}");
+    retval_s ret = sendRequest(req, parse_result_array);
+
+    if (!ret.ok) {
+        if (error)
+            *error = ret.data.string;
+        return NULL;
+    }
+
+    return ret.data.strv;
+}
+
+char **ac_get_fields_for_notetype(const char *notetype, char **error) {
+    if (!notetype) {
+        if (error)
+            *error = strdup("Notetype is NULL");
+        return NULL;
+    }
+
+    // TODO?
+    // char *escaped_notetype = json_escape_str((char *)notetype);
+
+    _drop_(frees8) s8 req = concat(
+        S("{\"action\": \"modelFieldNames\", \"version\": 6, \"params\": {\"modelName\": \""),
+        fromcstr_((char *)notetype), S("\"}}"));
+
+    retval_s ret = sendRequest(req, parse_result_array);
+
+    if (!ret.ok) {
+        if (error)
+            *error = ret.data.string;
+        return NULL;
+    }
+
+    return ret.data.strv;
 }
 
 static s8 form_store_file_req(char *filename, char *path) {

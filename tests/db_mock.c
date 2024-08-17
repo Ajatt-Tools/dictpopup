@@ -8,7 +8,7 @@ struct database_s {
     int dummy;
 };
 
-database_t *db_open(const char *dbpath, bool readonly) {
+database_t *db_open(s8 dbdir, bool readonly) {
     return new(database_t, 1);
 }
 
@@ -27,7 +27,7 @@ void _nonnull_ db_append_lookup(const database_t *db, s8 headword, Dict dict[sta
     }
 }
 
-void db_put_freq(const database_t *db, freqentry fe) {
+void db_put_freq(database_t *db, freqentry fe) {
     mock(db, fe.frequency, fe.reading.s, fe.word.s);
 }
 
@@ -37,4 +37,8 @@ bool db_check_exists(s8 dbpath) {
 
 void db_remove(s8 dbpath) {
     mock(dbpath.s);
+}
+
+s8 db_get_dbpath(void) {
+    return (s8){0};
 }

@@ -1,5 +1,6 @@
 #include "dp-preferences-window.h"
 
+#include <ankiconnectc.h>
 #include <db.h>
 
 struct _DpPreferencesWindow {
@@ -7,11 +8,13 @@ struct _DpPreferencesWindow {
 
     DpSettings *settings;
 
-    GtkWidget *sort_entries_switch;
     GtkWidget *nuke_whitespace_switch;
     GtkWidget *mecab_conversion_switch;
     GtkWidget *substring_search_switch;
     GtkWidget *dict_order_listbox;
+
+    GtkWidget *anki_notetype_combo;
+    GtkWidget *anki_fields_list;
 };
 
 G_DEFINE_TYPE(DpPreferencesWindow, dp_preferences_window, GTK_TYPE_WINDOW)
@@ -27,6 +30,15 @@ static void on_drag_data_received(GtkWidget *widget, GdkDragContext *context, gi
                                   gpointer user_data);
 void dp_preferences_window_populate_dict_order(DpPreferencesWindow *self);
 void dp_preferences_window_save_dict_order(DpPreferencesWindow *self);
+static void populate_anki_notetypes(DpPreferencesWindow *self);
+static void on_notetype_changed(GtkComboBox *combo_box, gpointer user_data);
+static void update_anki_fields(DpPreferencesWindow *self);
+
+/* ------------ CALLBACKS ---------------- */
+static void on_preferences_close_button_clicked(GtkButton *button, DpPreferencesWindow *self) {
+    gtk_widget_destroy(GTK_WIDGET(self));
+}
+/* ----------------------------------------- */
 
 static void dp_preferences_window_dispose(GObject *object) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(object);
@@ -69,8 +81,6 @@ static void dp_preferences_window_get_property(GObject *object, guint property_i
 static void dp_preferences_window_constructed(GObject *object) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(object);
 
-    g_object_bind_property(self->settings, "sort-entries", self->sort_entries_switch, "active",
-                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
     g_object_bind_property(self->settings, "nuke-whitespace-lookup", self->nuke_whitespace_switch,
                            "active", G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
     g_object_bind_property(self->settings, "mecab-conversion", self->mecab_conversion_switch,
@@ -79,6 +89,9 @@ static void dp_preferences_window_constructed(GObject *object) {
                            "active", G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
     dp_preferences_window_populate_dict_order(self);
+    populate_anki_notetypes(self);
+    g_signal_connect(self->anki_notetype_combo, "changed", G_CALLBACK(on_notetype_changed), self);
+    update_anki_fields(self);
 }
 
 static void dp_preferences_window_class_init(DpPreferencesWindowClass *klass) {
@@ -99,17 +112,135 @@ static void dp_preferences_window_class_init(DpPreferencesWindowClass *klass) {
     gtk_widget_class_set_template_from_resource(
         widget_class, "/com/github/Ajatt-Tools/dictpopup/dp-preferences-window.ui");
 
-    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, sort_entries_switch);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, nuke_whitespace_switch);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
                                          mecab_conversion_switch);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
                                          substring_search_switch);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, dict_order_listbox);
+    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_notetype_combo);
+    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_fields_list);
+
+    gtk_widget_class_bind_template_callback(GTK_WIDGET_CLASS(klass),
+                                            on_preferences_close_button_clicked);
 }
 
 static void dp_preferences_window_init(DpPreferencesWindow *self) {
     gtk_widget_init_template(GTK_WIDGET(self));
+}
+
+/* -------- START NOTETYPE ----------- */
+static void populate_anki_notetypes(DpPreferencesWindow *self) {
+    char *error = NULL;
+    char **notetypes = ac_get_notetypes(&error);
+
+    const char *current_notetype = dp_settings_get_anki_notetype(self->settings);
+    int index_current_notetype = -1;
+
+    if (notetypes) {
+        for (int i = 0; notetypes[i] != NULL; i++) {
+            gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(self->anki_notetype_combo),
+                                           notetypes[i]);
+
+            if (current_notetype && strcmp(current_notetype, notetypes[i]) == 0) {
+                index_current_notetype = i;
+            }
+
+            free(notetypes[i]);
+        }
+        free(notetypes);
+    }
+
+    if (index_current_notetype >= 0) {
+        gtk_combo_box_set_active(GTK_COMBO_BOX(self->anki_notetype_combo), index_current_notetype);
+    }
+}
+
+static void on_notetype_changed(GtkComboBox *combo_box, gpointer user_data) {
+    DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
+
+    char *selected_notetype =
+        gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_box));
+
+    dp_settings_set_anki_notetype(self->settings, selected_notetype);
+    update_anki_fields(self);
+}
+
+/* ----------- START FIELD MAPPING ---------------- */
+static void populate_anki_field_combo_box(GtkComboBoxText *combo) {
+    gtk_combo_box_text_remove_all(combo);
+    for (int i = 0; i < DP_ANKI_N_FIELD_ENTRIES; i++) {
+        const char *entry_name = anki_field_entry_to_str(i);
+        gtk_combo_box_text_append_text(combo, entry_name);
+    }
+}
+
+static void on_field_entry_changed(GtkComboBox *combo, gpointer user_data) {
+    DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
+    const char *field_name = g_object_get_data(G_OBJECT(combo), "field_name");
+    AnkiFieldEntry new_entry = gtk_combo_box_get_active(combo); // 危ないかも
+
+    AnkiFieldMapping field_mapping = dp_settings_get_anki_field_mappings(self->settings);
+    anki_set_entry_of_field(&field_mapping, field_name, new_entry);
+
+    // dp_settings_set_anki_field_mappings(self->settings, field_mapping);
+}
+
+static void clear_current_fields(DpPreferencesWindow *self) {
+    GList *children = gtk_container_get_children(GTK_CONTAINER(self->anki_fields_list));
+    for (GList *iter = children; iter != NULL; iter = g_list_next(iter)) {
+        gtk_widget_destroy(GTK_WIDGET(iter->data));
+    }
+    g_list_free(children);
+}
+
+static GtkWidget *create_anki_field_row(DpPreferencesWindow *self, char *field_name,
+                                        AnkiFieldEntry current_entry) {
+    GtkWidget *row = gtk_list_box_row_new();
+    GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget *label = gtk_label_new(field_name);
+    GtkWidget *combo = gtk_combo_box_text_new();
+
+    gtk_widget_set_size_request(combo, 50, -1);
+
+    gtk_container_add(GTK_CONTAINER(row), hbox);
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+    gtk_box_pack_end(GTK_BOX(hbox), combo, FALSE, FALSE, 0);
+    gtk_widget_set_size_request(combo, 100, -1);
+
+    g_object_set_data_full(G_OBJECT(combo), "field_name", g_strdup(field_name), g_free);
+    populate_anki_field_combo_box(GTK_COMBO_BOX_TEXT(combo));
+
+    gtk_combo_box_set_active(GTK_COMBO_BOX(combo), current_entry);
+
+    g_signal_connect(combo, "changed", G_CALLBACK(on_field_entry_changed), self);
+    return row;
+}
+
+static void update_anki_fields(DpPreferencesWindow *self) {
+    const char *selected_notetype =
+        gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(self->anki_notetype_combo));
+    char *error = NULL;
+    char **fields = ac_get_fields_for_notetype(selected_notetype, &error);
+
+    clear_current_fields(self);
+
+    AnkiFieldMapping current_field_mapping = dp_settings_get_anki_field_mappings(self->settings);
+
+    if (fields) {
+        for (int i = 0; fields[i] != NULL; i++) {
+            AnkiFieldEntry current_entry =
+                anki_get_entry_of_field(current_field_mapping, fields[i]);
+
+            GtkWidget *row = create_anki_field_row(self, fields[i], current_entry);
+            gtk_list_box_insert(GTK_LIST_BOX(self->anki_fields_list), row, -1);
+
+            free(fields[i]);
+        }
+        free(fields);
+    }
+
+    gtk_widget_show_all(self->anki_fields_list);
 }
 
 /* ----------- START DRAG LIST ---------------- */

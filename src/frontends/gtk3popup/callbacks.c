@@ -167,7 +167,6 @@ void dict_lookup_async(DpApplication *app) {
         .app = app,
         // TODO: Put this into dp-settings
         .cfg = (DictpopupConfig){
-            .sort_dict_entries = dp_settings_get_sort_entries(app->settings),
             .dict_sort_order = dp_settings_get_dict_sort_order(app->settings),
             .nuke_whitespace_of_lookup = dp_settings_get_nuke_whitespace_of_lookup(app->settings),
             .fallback_to_mecab_conversion = dp_settings_get_mecab_conversion(app->settings),

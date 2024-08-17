@@ -54,9 +54,7 @@ Ensure(AnkiCardCreator, properly_prepares_full_ankicard) {
                          .deck = "Japanese",
                          .notetype = "Japanese Sentences"};
 
-    AnkiCard actual = prepare_ankicard(lookup, sent, de, config);
-
-    char *expected_field_entries[] = {"白鯨同様、世界中が被害を被っている。騎士団も長く<b>辛酸</b>を味わわされてきた相手だ", "辛酸", "辛酸[しんさん]", "つらい思い。苦しみ。", NULL};
+    char *expected_field_entries[] = {"白鯨同様、世界中が被害を被っている。騎士団も長く<b>辛酸</b>を味わわされてきた相手だ", "辛酸", "辛酸[しんさん]", "つらい思い。苦しみ。", ""};
     AnkiCard expected = (AnkiCard) {
         .deck = "Japanese",
         .notetype = "Japanese Sentences",
@@ -65,9 +63,11 @@ Ensure(AnkiCardCreator, properly_prepares_full_ankicard) {
         .fieldentries = expected_field_entries,
     };
 
+    AnkiCard actual = prepare_ankicard(lookup, sent, de, config);
+
     ankicard_assert_equal(actual, expected);
 
-    free(actual.fieldentries);
+    free_prepared_ankicard(actual);
 }
 
 TestSuite *anki_card_creator_tests(void) {

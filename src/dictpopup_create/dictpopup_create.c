@@ -68,7 +68,7 @@ static void set_default_values(config *cfg) {
 static ParserCallbacks get_callbacks(database_t *db) {
     return (ParserCallbacks){.foreach_dictentry = (void (*)(void *, dictentry))db_put_dictent,
                              .userdata_de = db,
-                             .forach_freqentry = (void (*)(void *, freqentry))db_put_freq,
+                             .foreach_freqentry = (void (*)(void *, freqentry))db_put_freq,
                              .userdata_fe = db,
                              .foreach_dictname = (void (*)(void *, s8))db_put_dictname,
                              .userdata_dn = db};

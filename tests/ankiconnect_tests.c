@@ -2,6 +2,7 @@
 
 #include "ankiconnectc/ankiconnectc.c"
 #include "utils/util.h"
+#include <utils/str.h>
 
 #include <cgreen/mocks.h>
 
@@ -102,6 +103,32 @@ Ensure(AnkiConnectC, json_escapes_ankicard) {
     // TODO: Finish check
 }
 
+Ensure(AnkiConnectC, properly_parses_string_array_response) {
+    s8 response = S("{\"result\": [\"Basic\", \"Basic (and reversed card)\"], \"error\": null}");
+
+    retval_s ret = {0};
+    parse_result_array((char*)response.s, 0, response.len, &ret);
+
+    char **parsed = ret.data.strv;
+    assert_that(ret.ok, is_true);
+    assert_that(parsed[0], is_equal_to_string("Basic"));
+    assert_that(parsed[1], is_equal_to_string("Basic (and reversed card)"));
+
+    g_strfreev(ret.data.strv);
+}
+
+Ensure(AnkiConnectC, properly_handles_error_in_response) {
+    s8 response = S("{\"result\": null, \"error\": \"unsupported action\"}");
+
+    retval_s ret = {0};
+    parse_result_array((char*)response.s, 0, response.len, &ret);
+
+    assert_that(ret.ok, is_false);
+    assert_that(ret.data.string, is_equal_to_string("unsupported action"));
+
+    ac_retval_free(ret);
+}
+
 TestSuite *ankiconnect_tests(void) {
     TestSuite *suite = create_test_suite();
     add_test_with_context(suite, AnkiConnectC, sends_correct_guiBrowse_request);
@@ -110,5 +137,7 @@ TestSuite *ankiconnect_tests(void) {
     add_test_with_context(suite, AnkiConnectC, sends_correct_search_request_without_new_and_suspended);
     add_test_with_context(suite, AnkiConnectC, sends_correct_addNote_request);
     add_test_with_context(suite, AnkiConnectC, json_escapes_ankicard);
+    add_test_with_context(suite, AnkiConnectC, properly_parses_string_array_response);
+    add_test_with_context(suite, AnkiConnectC, properly_handles_error_in_response);
     return suite;
 }

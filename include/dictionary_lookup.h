@@ -5,7 +5,6 @@
 #include "utils/util.h"
 
 typedef struct {
-    bool sort_dict_entries;
     const char *const *dict_sort_order;
     bool nuke_whitespace_of_lookup;
     bool fallback_to_mecab_conversion;

@@ -4,6 +4,7 @@
 #include "utils/util.h"
 #include <stdbool.h>
 #include <utils/str.h>
+#include "ankiconnectc/send_request.h"
 
 typedef struct {
     char *deck;
@@ -19,7 +20,8 @@ void ankicard_free(AnkiCard *ac);
 
 bool ac_check_connection(void);
 s8 *ac_get_decks(char **error);
-s8 *ac_get_notetypes(char **error);
+char **ac_get_notetypes(char **error);
+char **ac_get_fields_for_notetype(const char *notetype, char **error);
 
 typedef enum {
     AC_ERROR,
@@ -38,5 +40,7 @@ void _nonnull_ ac_addNote(AnkiCard ac, char **error);
  * @filename. Doesn't overwrite existing files.
  */
 void ac_store_file(char *filename, char *path, char **error);
+
+void ac_retval_free(retval_s ret);
 
 #endif

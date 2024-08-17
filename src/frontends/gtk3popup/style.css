@@ -1,4 +1,4 @@
-button {
+.main-window button {
     padding-top: 1px;
     padding-bottom: 1px;
     min-height: 20px;
@@ -36,12 +36,4 @@ textview {
 
 #dict_order_listbox row:hover {
     background-color: alpha(@theme_selected_bg_color, 0.05);
-}
-
-switch {
-    margin: 4px 0;
-}
-
-label {
-    margin: 4px 0;
 }

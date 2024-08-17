@@ -8,7 +8,6 @@ struct _DpSettings {
 
     GSettings *settings;
 
-    gboolean sort_entries;
     gchar **dict_sort_order;
     gboolean nuke_whitespace_of_lookup;
     gboolean mecab_conversion;
@@ -25,7 +24,6 @@ G_DEFINE_TYPE(DpSettings, dp_settings, G_TYPE_OBJECT)
 
 enum {
     PROP_0,
-    PROP_SORT_ENTRIES,
     PROP_NUKE_WHITESPACE_LOOKUP,
     PROP_MECAB_CONVERSION,
     PROP_SUBSTRING_SEARCH,
@@ -33,12 +31,10 @@ enum {
     PROP_ANKI_DECK,
     PROP_ANKI_NOTETYPE,
     PROP_ANKI_SEARCH_FIELD,
-    PROP_ANKI_FIELDNAMES,
-    PROP_ANKI_FIELDENTRIES,
     N_PROPERTIES
 };
 
-static GParamSpec *obj_properties[N_PROPERTIES] = {
+static GParamSpec *pspecs[N_PROPERTIES] = {
     NULL,
 };
 
@@ -47,9 +43,6 @@ static void dp_settings_set_property(GObject *object, guint property_id, const G
     DpSettings *self = DP_SETTINGS(object);
 
     switch (property_id) {
-        case PROP_SORT_ENTRIES:
-            self->sort_entries = g_value_get_boolean(value);
-            break;
         case PROP_NUKE_WHITESPACE_LOOKUP:
             self->nuke_whitespace_of_lookup = g_value_get_boolean(value);
             break;
@@ -74,15 +67,6 @@ static void dp_settings_set_property(GObject *object, guint property_id, const G
             g_free(self->anki_search_field);
             self->anki_search_field = g_value_dup_string(value);
             break;
-        case PROP_ANKI_FIELDNAMES:
-            g_strfreev(self->anki_fieldnames);
-            self->anki_fieldnames = g_value_dup_boxed(value);
-            break;
-        case PROP_ANKI_FIELDENTRIES:
-            if (self->anki_fieldentries)
-                g_array_free(self->anki_fieldentries, TRUE);
-            self->anki_fieldentries = g_array_ref(g_value_get_boxed(value));
-            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -94,9 +78,6 @@ static void dp_settings_get_property(GObject *object, guint property_id, GValue 
     DpSettings *self = DP_SETTINGS(object);
 
     switch (property_id) {
-        case PROP_SORT_ENTRIES:
-            g_value_set_boolean(value, self->sort_entries);
-            break;
         case PROP_NUKE_WHITESPACE_LOOKUP:
             g_value_set_boolean(value, self->nuke_whitespace_of_lookup);
             break;
@@ -117,12 +98,6 @@ static void dp_settings_get_property(GObject *object, guint property_id, GValue 
             break;
         case PROP_ANKI_SEARCH_FIELD:
             g_value_set_string(value, self->anki_search_field);
-            break;
-        case PROP_ANKI_FIELDNAMES:
-            g_value_set_boxed(value, self->anki_fieldnames);
-            break;
-        case PROP_ANKI_FIELDENTRIES:
-            g_value_set_boxed(value, self->anki_fieldentries);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -147,52 +122,39 @@ static void dp_settings_class_init(DpSettingsClass *klass) {
     object_class->get_property = dp_settings_get_property;
     object_class->finalize = dp_settings_finalize;
 
-    obj_properties[PROP_SORT_ENTRIES] =
-        g_param_spec_boolean("sort-entries", "Sort Entries", "Whether to sort dictionary entries",
-                             FALSE, G_PARAM_READWRITE);
-
-    obj_properties[PROP_NUKE_WHITESPACE_LOOKUP] = g_param_spec_boolean(
+    pspecs[PROP_NUKE_WHITESPACE_LOOKUP] = g_param_spec_boolean(
         "nuke-whitespace-lookup", "Nuke Whitespace Lookup",
         "Whether to remove whitespace from lookup strings", TRUE, G_PARAM_READWRITE);
 
-    obj_properties[PROP_MECAB_CONVERSION] = g_param_spec_boolean(
+    pspecs[PROP_MECAB_CONVERSION] = g_param_spec_boolean(
         "mecab-conversion", "MeCab Conversion", "Whether to use MeCab for hiragana conversion",
         FALSE, G_PARAM_READWRITE);
 
-    obj_properties[PROP_SUBSTRING_SEARCH] =
+    pspecs[PROP_SUBSTRING_SEARCH] =
         g_param_spec_boolean("substring-search", "Substring Search",
                              "Whether to enable substring search", TRUE, G_PARAM_READWRITE);
 
-    obj_properties[PROP_SORT_ORDER] =
+    pspecs[PROP_SORT_ORDER] =
         g_param_spec_boxed("dict-sort-order", "Dictionary Sort Order",
                            "Order of dictionaries for sorting", G_TYPE_STRV, G_PARAM_READWRITE);
 
-    obj_properties[PROP_ANKI_DECK] = g_param_spec_string(
+    pspecs[PROP_ANKI_DECK] = g_param_spec_string(
         "anki-deck", "Anki Deck", "Name of the Anki deck to use", NULL, G_PARAM_READWRITE);
 
-    obj_properties[PROP_ANKI_NOTETYPE] =
+    pspecs[PROP_ANKI_NOTETYPE] =
         g_param_spec_string("anki-notetype", "Anki Note Type", "Name of the Anki note type to use",
                             NULL, G_PARAM_READWRITE);
 
-    obj_properties[PROP_ANKI_SEARCH_FIELD] =
+    pspecs[PROP_ANKI_SEARCH_FIELD] =
         g_param_spec_string("anki-search-field", "Anki Search Field",
                             "Name of the Anki field to search in", NULL, G_PARAM_READWRITE);
 
-    obj_properties[PROP_ANKI_FIELDNAMES] =
-        g_param_spec_boxed("anki-fieldnames", "Anki Field Names", "Names of the Anki note fields",
-                           G_TYPE_STRV, G_PARAM_READWRITE);
-
-    obj_properties[PROP_ANKI_FIELDENTRIES] = g_param_spec_boxed(
-        "anki-fieldentries", "Anki Field Entries",
-        "Integer values corresponding to the Anki field entries", G_TYPE_ARRAY, G_PARAM_READWRITE);
-
-    g_object_class_install_properties(object_class, N_PROPERTIES, obj_properties);
+    g_object_class_install_properties(object_class, N_PROPERTIES, pspecs);
 }
 
 static void dp_settings_init(DpSettings *self) {
     self->settings = g_settings_new("com.github.Ajatt-Tools.dictpopup");
 
-    g_settings_bind(self->settings, "sort-entries", self, "sort-entries", G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "nuke-whitespace-lookup", self, "nuke-whitespace-lookup",
                     G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "mecab-conversion", self, "mecab-conversion",
@@ -206,27 +168,6 @@ static void dp_settings_init(DpSettings *self) {
                     G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "anki-search-field", self, "anki-search-field",
                     G_SETTINGS_BIND_DEFAULT);
-    g_settings_bind(self->settings, "anki-fieldnames", self, "anki-fieldnames",
-                    G_SETTINGS_BIND_DEFAULT);
-
-    // TODO TODO refactor
-    self->anki_fieldentries = g_array_new(FALSE, FALSE, sizeof(AnkiFieldEntry));
-    GVariant *variant = g_settings_get_value(self->settings, "anki-fieldentries");
-    if (variant) {
-        gsize length;
-        const gint32 *array = g_variant_get_fixed_array(variant, &length, sizeof(gint32));
-        for (gsize i = 0; i < length; i++) {
-            if (array[i] >= 0 && array[i] < DP_ANKI_N_FIELD_ENTRIES) {
-                AnkiFieldEntry field = (AnkiFieldEntry)array[i];
-                g_array_append_val(self->anki_fieldentries, field);
-            } else {
-                g_warning("Field entry No. %li is not a valid", i + 1);
-                AnkiFieldEntry empty_entry = DP_ANKI_EMPTY;
-                g_array_append_val(self->anki_fieldentries, empty_entry);
-            }
-        }
-        g_variant_unref(variant);
-    }
 }
 
 DpSettings *dp_settings_new(void) {
@@ -234,10 +175,6 @@ DpSettings *dp_settings_new(void) {
 }
 
 /* Getter / Setter */
-gboolean dp_settings_get_sort_entries(DpSettings *self) {
-    return self->sort_entries;
-}
-
 gboolean dp_settings_get_nuke_whitespace_of_lookup(DpSettings *self) {
     return self->nuke_whitespace_of_lookup;
 }
@@ -269,6 +206,18 @@ gchar *dp_settings_get_anki_deck(DpSettings *self) {
     return self->anki_deck;
 }
 
+void dp_settings_set_anki_notetype(DpSettings *self, char *new_anki_notetype) {
+    g_return_if_fail(DP_IS_SETTINGS(self));
+
+    if (strcmp(new_anki_notetype, self->anki_notetype) == 0)
+        return;
+
+    g_clear_pointer(&self->anki_notetype, g_free);
+    self->anki_notetype = new_anki_notetype;
+
+    g_object_notify_by_pspec(G_OBJECT(self), pspecs[PROP_ANKI_NOTETYPE]);
+}
+
 gchar *dp_settings_get_anki_notetype(DpSettings *self) {
     g_return_val_if_fail(DP_IS_SETTINGS(self), NULL);
     return self->anki_notetype;
@@ -282,11 +231,37 @@ gchar *dp_settings_get_anki_search_field(DpSettings *self) {
 AnkiConfig dp_settings_get_anki_settings(DpSettings *self) {
     g_return_val_if_fail(DP_IS_SETTINGS(self), (AnkiConfig){0});
 
-    return (AnkiConfig){
-        .deck = self->anki_deck,
-        .notetype = self->anki_notetype,
-        .fieldnames = self->anki_fieldnames,
-        .fieldMapping = (u32 *)self->anki_fieldentries->data,
-        .numFields = self->anki_fieldentries->len,
-    };
+    return (AnkiConfig){.deck = self->anki_deck,
+                        .notetype = self->anki_notetype,
+                        .fieldmapping = dp_settings_get_anki_field_mappings(self)};
+}
+
+void dp_settings_set_anki_field_mappings(DpSettings *self, AnkiFieldMapping field_mapping) {
+    g_settings_set_strv(self->settings, "anki-field-names", (const char*const*)field_mapping.field_names);
+
+    GVariantBuilder builder;
+    g_variant_builder_init(&builder, G_VARIANT_TYPE("ai"));
+    for (gsize i = 0; i < field_mapping.num_fields; i++) {
+        g_variant_builder_add(&builder, "i", (gint32)field_mapping.field_content[i]);
+    }
+    g_settings_set_value(self->settings, "anki-field-entries", g_variant_builder_end(&builder));
+}
+
+AnkiFieldMapping dp_settings_get_anki_field_mappings(DpSettings *self) {
+    AnkiFieldMapping field_mapping = {0};
+    field_mapping.field_names = g_settings_get_strv(self->settings, "anki-field-names");
+
+    GVariant *variant = g_settings_get_value(self->settings, "anki-field-entries");
+    field_mapping.num_fields = g_variant_n_children(variant);
+    field_mapping.field_content = g_new(AnkiFieldEntry, field_mapping.num_fields);
+
+    for (gsize i = 0; i < field_mapping.num_fields; i++) {
+        gint32 value;
+        g_variant_get_child(variant, i, "i", &value);
+        field_mapping.field_content[i] = (AnkiFieldEntry)value;
+    }
+
+    g_variant_unref(variant);
+
+    return field_mapping;
 }

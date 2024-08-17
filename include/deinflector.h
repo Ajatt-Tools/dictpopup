@@ -11,7 +11,7 @@
  * Returns: An s8* buffer (see buf.h) containing the deinflections.
  * The caller of the function takes ownership of the data, and is responsible for freeing it.
  */
-_deallocator_(frees8buffer) s8 *deinflect(s8 word);
+_deallocator_(s8_buf_free) s8Buf deinflect(s8 word);
 
 /*
  * Tries to give a hiragana conversion of @input using MeCab.

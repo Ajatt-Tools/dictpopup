@@ -349,7 +349,7 @@ static void parse_yomichan_freqentries_from_buffer(const s8 buffer, ParserCallba
             dbg("Frequency entry is not an array. Skipping..");
 
         freqentry fe = parse_single_frequency_entry(entry);
-        callbacks.forach_freqentry(callbacks.userdata_fe, fe);
+        callbacks.foreach_freqentry(callbacks.userdata_fe, fe);
     }
 }
 

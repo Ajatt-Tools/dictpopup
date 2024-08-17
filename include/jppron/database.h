@@ -16,7 +16,7 @@ void jdb_close(database *);
 void jdb_add_headword_with_file(database *db, s8 headword, s8 filepath);
 void jdb_add_file_with_fileinfo(database *db, s8 filepath, fileinfo_s fi);
 
-_deallocator_(frees8buffer) s8 *jdb_get_files(database *db, s8 key);
+_deallocator_(s8_buf_free) s8Buf jdb_get_files(database *db, s8 key);
 fileinfo_s jdb_get_fileinfo(database *db, s8 fullpath);
 
 i32 jdb_check_exists(s8 dbpath);

@@ -35,7 +35,7 @@ AfterEach(DictPopup) {
 
 Ensure(DictPopup, looks_up_substrings_as_expected) {
     _drop_(frees8) s8 lookup = s8dup(S("世界からはいつの間にか風の音が、虫の鳴き声が消失していた"));
-    _drop_(db_close) database_t *db = db_open("dummy", true);
+    _drop_(db_close) database_t *db = db_open(S("dummy"), true);
 
     Dict dict = lookup_first_matching_prefix(&lookup, db);
 
