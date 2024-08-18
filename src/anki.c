@@ -2,8 +2,15 @@
 
 #include <ankiconnectc.h>
 #include <objects/dict.h>
+#include <platformdep/windowtitle.h>
 #include <utils/messages.h>
 #include <utils/str.h>
+
+s8 focused_window_title = {0};
+
+void safe_focused_window_title(void) {
+    focused_window_title = get_windowname();
+}
 
 AnkiFieldEntry anki_get_entry_of_field(AnkiFieldMapping field_mapping, const char *field_name) {
     for (u32 i = 0; i < field_mapping.num_fields; i++) {
