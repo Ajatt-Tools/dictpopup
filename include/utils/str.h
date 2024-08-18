@@ -108,10 +108,9 @@ void _nonnull_ sb_free(stringbuilder_s *sb);
 void substrremove(char *str, const s8 sub);
 void nuke_whitespace(s8 z[static 1]);
 
-typedef s8* s8Buf;
+typedef s8 *s8Buf;
 void s8_buf_free(s8Buf buf);
 DEFINE_DROP_FUNC(s8Buf, s8_buf_free)
-
 
 size_t s8_buf_size(s8Buf buf);
 void s8_buf_print(s8Buf buf);

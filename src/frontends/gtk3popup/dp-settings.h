@@ -20,7 +20,6 @@ gboolean dp_settings_get_lookup_longest_matching_prefix(DpSettings *self);
 const gchar *const *dp_settings_get_dict_sort_order(DpSettings *self);
 void dp_settings_set_dict_sort_order(DpSettings *self, char **sort_order);
 
-
 gchar *dp_settings_get_anki_deck(DpSettings *self);
 
 void dp_settings_set_anki_notetype(DpSettings *self, char *new_anki_notetype);

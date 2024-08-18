@@ -237,7 +237,8 @@ AnkiConfig dp_settings_get_anki_settings(DpSettings *self) {
 }
 
 void dp_settings_set_anki_field_mappings(DpSettings *self, AnkiFieldMapping field_mapping) {
-    g_settings_set_strv(self->settings, "anki-field-names", (const char*const*)field_mapping.field_names);
+    g_settings_set_strv(self->settings, "anki-field-names",
+                        (const char *const *)field_mapping.field_names);
 
     GVariantBuilder builder;
     g_variant_builder_init(&builder, G_VARIANT_TYPE("ai"));

@@ -1,10 +1,10 @@
 #ifndef ANKICONNECTC_H
 #define ANKICONNECTC_H
 
+#include "ankiconnectc/send_request.h"
 #include "utils/util.h"
 #include <stdbool.h>
 #include <utils/str.h>
-#include "ankiconnectc/send_request.h"
 
 typedef struct {
     char *deck;

@@ -159,8 +159,7 @@ static void populate_anki_notetypes(DpPreferencesWindow *self) {
 static void on_notetype_changed(GtkComboBox *combo_box, gpointer user_data) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
 
-    char *selected_notetype =
-        gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_box));
+    char *selected_notetype = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_box));
 
     dp_settings_set_anki_notetype(self->settings, selected_notetype);
     update_anki_fields(self);
