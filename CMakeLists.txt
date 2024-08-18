@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
-project(dictpopup C)
+
+project(dictpopup 
+  VERSION 0.3
+  HOMEPAGE_URL "https://github.com/Ajatt-Tools/dictpopup"
+  LANGUAGES C
+)
 
 include(GNUInstallDirs)
 include(CTest)

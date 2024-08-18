@@ -177,13 +177,13 @@ static void populate_anki_field_combo_box(GtkComboBoxText *combo) {
 
 static void on_field_entry_changed(GtkComboBox *combo, gpointer user_data) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
-    const char *field_name = g_object_get_data(G_OBJECT(combo), "field_name");
+    char *field_name = g_object_get_data(G_OBJECT(combo), "field_name");
     AnkiFieldEntry new_entry = gtk_combo_box_get_active(combo); // 危ないかも
 
     AnkiFieldMapping field_mapping = dp_settings_get_anki_field_mappings(self->settings);
     anki_set_entry_of_field(&field_mapping, field_name, new_entry);
 
-    // dp_settings_set_anki_field_mappings(self->settings, field_mapping);
+    dp_settings_set_anki_field_mappings(self->settings, field_mapping);
 }
 
 static void clear_current_fields(DpPreferencesWindow *self) {

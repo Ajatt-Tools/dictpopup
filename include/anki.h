@@ -25,7 +25,8 @@ typedef struct {
 } AnkiFieldMapping;
 
 AnkiFieldEntry anki_get_entry_of_field(AnkiFieldMapping field_mapping, const char *field_name);
-void anki_set_entry_of_field(AnkiFieldMapping *field_mapping, const char *field_name, AnkiFieldEntry entry);
+void anki_set_entry_of_field(AnkiFieldMapping *field_mapping, char *field_name,
+                             AnkiFieldEntry entry);
 
 typedef struct {
     char *deck;

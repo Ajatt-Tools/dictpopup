@@ -23,9 +23,7 @@
 // 60 are 20 Japanese characters
 #define MAX_LOOKUP_LEN 60 // in bytes
 
-s8 focused_window_title = {0};
-
-static void _nonnull_ appendDeinflections(const database_t *db, s8 word, Dict dict[static 1]) {
+static void _nonnull_ append_deinflections(const database_t *db, s8 word, Dict dict[static 1]) {
     _drop_(s8_buf_free) s8Buf deinfs_b = deinflect(word);
 
     if (deinfs_b == NULL)
@@ -38,7 +36,7 @@ static void _nonnull_ appendDeinflections(const database_t *db, s8 word, Dict di
 static Dict _nonnull_ lookup_word(s8 word, database_t *db) {
     Dict dict = newDict();
     db_append_lookup(db, word, &dict, false);
-    appendDeinflections(db, word, &dict);
+    append_deinflections(db, word, &dict);
     return dict;
 }
 
