@@ -2,6 +2,7 @@
 
 #include <ankiconnectc.h>
 #include <db.h>
+#include <jppron/jppron.h>
 
 struct _DpPreferencesWindow {
     GtkWindow parent_instance;
@@ -15,6 +16,8 @@ struct _DpPreferencesWindow {
 
     GtkWidget *anki_notetype_combo;
     GtkWidget *anki_fields_list;
+
+    GtkWidget *pronunciation_path_chooser;
 };
 
 G_DEFINE_TYPE(DpPreferencesWindow, dp_preferences_window, GTK_TYPE_WINDOW)
@@ -37,6 +40,14 @@ static void update_anki_fields(DpPreferencesWindow *self);
 /* ------------ CALLBACKS ---------------- */
 static void on_preferences_close_button_clicked(GtkButton *button, DpPreferencesWindow *self) {
     gtk_widget_destroy(GTK_WIDGET(self));
+}
+
+static void on_pronunciation_create_button_clicked(GtkButton *button, DpPreferencesWindow *self) {
+    char *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self->pronunciation_path_chooser));
+
+    jppron_create_index(path);
+
+    g_free(path);
 }
 /* ----------------------------------------- */
 
@@ -121,8 +132,12 @@ static void dp_preferences_window_class_init(DpPreferencesWindowClass *klass) {
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_notetype_combo);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_fields_list);
 
+    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
+                                         pronunciation_path_chooser);
+
     gtk_widget_class_bind_template_callback(GTK_WIDGET_CLASS(klass),
                                             on_preferences_close_button_clicked);
+    gtk_widget_class_bind_template_callback(widget_class, on_pronunciation_create_button_clicked);
 }
 
 static void dp_preferences_window_init(DpPreferencesWindow *self) {

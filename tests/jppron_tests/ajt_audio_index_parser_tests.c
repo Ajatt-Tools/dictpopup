@@ -22,7 +22,7 @@ static void foreach_headword(void *userdata, s8 headword, s8 fullpath) {
     mock(headword.s, fullpath.s);
 }
 
-static void foreach_file(void *userdata, s8 fullpath, fileinfo_s fi) {
+static void foreach_file(void *userdata, s8 fullpath, FileInfo fi) {
     mock(fullpath.s, fi.origin.s, fi.hira_reading.s, fi.pitch_number.s, fi.pitch_pattern.s);
 }
 

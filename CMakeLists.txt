@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(dictpopup 
-  VERSION 0.3
-  HOMEPAGE_URL "https://github.com/Ajatt-Tools/dictpopup"
-  LANGUAGES C
+project(dictpopup
+        VERSION 0.3
+        HOMEPAGE_URL "https://github.com/Ajatt-Tools/dictpopup"
+        LANGUAGES C
 )
 
 include(GNUInstallDirs)
@@ -90,8 +90,9 @@ add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER} ${LIBZIP_DEFINITIONS
 
 set(JPPRON_SRCS
         src/jppron/jppron.c
-        src/jppron/database.c
+        src/jppron/jppron_database.c
         src/jppron/ajt_audio_index_parser.c
+        src/jppron/jppron_objects.c
         lib/yyjson.c
         src/objects/dict.c
         include/objects/freqentry.h
@@ -344,6 +345,7 @@ if (BUILD_TESTS)
     enable_testing()
     find_package(cgreen REQUIRED)
     add_dictpopup_executable(c_tests
+            tests/dp_application_tests.c
             src/utils/util.c
             src/utils/utf8.c
             src/utils/str.c
@@ -380,6 +382,49 @@ if (BUILD_TESTS)
 
     #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 endif ()
+
+#add_dictpopup_executable(gui_tests
+#        tests/dp_application_tests.c
+#        src/frontends/gtk3popup/dictpopup-application.c
+#        src/frontends/gtk3popup/dp-settings.c
+#        src/frontends/gtk3popup/dp-preferences-window.c
+#        src/frontends/gtk3popup/dict_state_manager.c
+#        src/frontends/gtk3popup/callbacks.c
+#        src/utils/util.c
+#        src/utils/utf8.c
+#        src/utils/str.c
+#        src/platformdep/audio.c
+#        src/platformdep/notifications.c
+#        src/platformdep/clipboard.c
+#        src/platformdep/file_operations.c
+#        src/platformdep/windowtitle.c
+#        src/objects/freqentry.c
+#        ${JPPRON_SRCS}
+#        ${ANKI_SRCS}
+#        ${DICTLOOKUP_SRCS}
+#        ${GRESOURCE_C}
+#        ${DEINFLECTION_RULES_C}
+#        ${COMPILED_SETTINGS_SCHEMA}
+#)
+#target_compile_definitions(gui_tests PRIVATE UNIT_TEST CLIPBOARD)
+#target_include_directories(gui_tests PRIVATE
+#        ${GTK3_INCLUDE_DIRS}
+#        ${CGREEN_INCLUDE_DIRS}
+#        lib/
+#        include/
+#        src/
+#        src/jppron
+#)
+#target_link_libraries(gui_tests PRIVATE
+#        ${CGREEN_LIBRARIES}
+#        MECAB::MECAB
+#        PkgConfig::GTK3
+#        libzip::zip
+#        LMDB::LMDB
+#        CURL::libcurl
+#        PkgConfig::NOTIFY
+#)
+#add_test(NAME run_gui_tests COMMAND $<TARGET_FILE:gui_tests>)
 
 # ##############################################################################
 # Install

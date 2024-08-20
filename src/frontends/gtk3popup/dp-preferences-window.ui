@@ -287,7 +287,6 @@
                 <property name="orientation">vertical</property>
                 <property name="spacing">6</property>
                 <property name="margin">12</property>
-                <!-- Add your pronunciation settings widgets here -->
                 <child>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
@@ -298,7 +297,32 @@
                     </attributes>
                   </object>
                 </child>
-                <!-- Add more pronunciation settings here -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkFileChooserButton" id="pronunciation_path_chooser">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="title" translatable="yes">Select path to pronunciation directories</property>
+                        <property name="action">select-folder</property>
+                        <property name="width_chars">40</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="pronunciation_create_button">
+                        <property name="label" translatable="yes">Generate Index</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <signal name="clicked" handler="on_pronunciation_create_button_clicked" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
             </child>
             <child type="tab">

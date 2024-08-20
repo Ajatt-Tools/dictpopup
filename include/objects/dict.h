@@ -9,7 +9,8 @@ typedef struct {
 } Word;
 
 Word word_dup(Word word);
-void word_ptr_free(Word *word);
+void word_free(Word word);
+DEFINE_DROP_FUNC(Word, word_free)
 
 typedef struct {
     s8 dictname;
@@ -31,7 +32,7 @@ typedef struct {
 Dict newDict(void);
 bool isEmpty(Dict dict);
 void _nonnull_ dictionary_add(Dict *dict, dictentry de);
-size_t num_of_dictentries(Dict dict);
+size_t num_entries(Dict dict);
 
 // Sorts @dict in place
 // Not thread safe

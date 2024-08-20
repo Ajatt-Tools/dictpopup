@@ -28,7 +28,7 @@ struct database_s {
     bool readonly;
 };
 
-#define DB_TRY(call)                                                                               \
+#define MDB_CHECK(call)                                                                               \
     do {                                                                                           \
         int _rc = (call);                                                                          \
         die_on(_rc != MDB_SUCCESS, "Database error: %s", mdb_strerror(_rc));                       \
@@ -44,7 +44,7 @@ database_t *db_open(s8 dbdir, bool readonly) {
     database_t *db = new (database_t, 1);
     db->readonly = readonly;
 
-    DB_TRY(mdb_env_create(&db->env));
+    MDB_CHECK(mdb_env_create(&db->env));
     mdb_env_set_maxdbs(db->env, DB_MAX_DBS);
 
     if (readonly) {
@@ -52,29 +52,29 @@ database_t *db_open(s8 dbdir, bool readonly) {
                "There is no database in '%s'. You must create one first with dictpopup-create.",
                (char *)dbdir.s);
 
-        DB_TRY(
+        MDB_CHECK(
             mdb_env_open(db->env, (char *)dbdir.s, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
-        DB_TRY(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
+        MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
 
-        DB_TRY(
+        MDB_CHECK(
             mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED, &db->db_words_to_id));
-        DB_TRY(
+        MDB_CHECK(
             mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY, &db->db_id_to_definition));
-        DB_TRY(mdb_dbi_open(db->txn, DB_FREQUENCIES, 0, &db->db_frequencies));
-        DB_TRY(mdb_dbi_open(db->txn, DB_METADATA, 0, &db->db_metadata));
+        MDB_CHECK(mdb_dbi_open(db->txn, DB_FREQUENCIES, 0, &db->db_frequencies));
+        MDB_CHECK(mdb_dbi_open(db->txn, DB_METADATA, 0, &db->db_metadata));
     } else {
         unsigned int mapsize = 2097152000; // 2Gb
-        DB_TRY(mdb_env_set_mapsize(db->env, mapsize));
+        MDB_CHECK(mdb_env_set_mapsize(db->env, mapsize));
 
-        DB_TRY(mdb_env_open(db->env, (char *)dbdir.s, 0, 0664));
-        DB_TRY(mdb_txn_begin(db->env, NULL, 0, &db->txn));
+        MDB_CHECK(mdb_env_open(db->env, (char *)dbdir.s, 0, 0664));
+        MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
 
-        DB_TRY(mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE,
+        MDB_CHECK(mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE,
                             &db->db_words_to_id));
-        DB_TRY(mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY | MDB_CREATE,
+        MDB_CHECK(mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY | MDB_CREATE,
                             &db->db_id_to_definition));
-        DB_TRY(mdb_dbi_open(db->txn, DB_FREQUENCIES, MDB_CREATE, &db->db_frequencies));
-        DB_TRY(mdb_dbi_open(db->txn, DB_METADATA, MDB_CREATE, &db->db_metadata));
+        MDB_CHECK(mdb_dbi_open(db->txn, DB_FREQUENCIES, MDB_CREATE, &db->db_frequencies));
+        MDB_CHECK(mdb_dbi_open(db->txn, DB_METADATA, MDB_CREATE, &db->db_metadata));
 
         db->datastr = sb_init(200);
         db->lastdatastr = sb_init(200);
@@ -87,7 +87,7 @@ void db_close(database_t *db) {
     if (db->readonly) {
         mdb_txn_abort(db->txn);
     } else {
-        DB_TRY(mdb_txn_commit(db->txn));
+        MDB_CHECK(mdb_txn_commit(db->txn));
 
         sb_free(&db->datastr);
         sb_free(&db->lastdatastr);
@@ -123,7 +123,7 @@ static void put_de_if_new(database_t *db, dictentry de) {
         s8 datastr = sb_gets8(db->datastr);
         db->last_id++; // Note: The above id struct updates too
         MDB_val val_mdb = {.mv_data = datastr.s, .mv_size = datastr.len};
-        DB_TRY(mdb_put(db->txn, db->db_id_to_definition, &id_mdb, &val_mdb,
+        MDB_CHECK(mdb_put(db->txn, db->db_id_to_definition, &id_mdb, &val_mdb,
                        MDB_NOOVERWRITE | MDB_APPEND));
 
         stringbuilder_s tmp = db->lastdatastr;
@@ -161,14 +161,14 @@ static u32 *get_ids(const database_t *db, s8 word, size_t *num) {
     MDB_val val_mdb = {0};
 
     _drop_(mdb_cursor_close) MDB_cursor *cursor;
-    DB_TRY(mdb_cursor_open(db->txn, db->db_words_to_id, &cursor));
+    MDB_CHECK(mdb_cursor_open(db->txn, db->db_words_to_id, &cursor));
 
     int rc = mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_SET);
     if (rc == MDB_NOTFOUND)
         return NULL;
-    DB_TRY(rc);
+    MDB_CHECK(rc);
     // This reads up to a page, i.e. max 1024 entries, which should be enough
-    DB_TRY(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE));
+    MDB_CHECK(mdb_cursor_get(cursor, &key_mdb, &val_mdb, MDB_GET_MULTIPLE));
 
     *num = val_mdb.mv_size / sizeof(u32);
     assume(*num * sizeof(u32) == val_mdb.mv_size); // divides cleanly
@@ -184,7 +184,7 @@ void db_put_freq(database_t *db, freqentry fe) {
     MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
     MDB_val val_mdb = {.mv_data = &fe.frequency, .mv_size = sizeof(fe.frequency)};
 
-    DB_TRY(mdb_put(db->txn, db->db_frequencies, &key_mdb, &val_mdb, MDB_NODUPDATA));
+    MDB_CHECK(mdb_put(db->txn, db->db_frequencies, &key_mdb, &val_mdb, MDB_NODUPDATA));
 }
 
 static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
@@ -195,7 +195,7 @@ static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
     int rc = mdb_get(db->txn, db->db_frequencies, &key_m, &val_m);
     if (rc == MDB_NOTFOUND)
         return 0;
-    DB_TRY(rc);
+    MDB_CHECK(rc);
 
     u32 freq;
     assume(sizeof(freq) == val_m.mv_size);
@@ -240,7 +240,7 @@ static dictentry data_to_dictent(const database_t *db, s8 data) {
 static s8 getdata(const database_t *db, u32 id) {
     MDB_val key = (MDB_val){.mv_data = &id, .mv_size = sizeof(id)};
     MDB_val data = {0};
-    DB_TRY(mdb_get(db->txn, db->db_id_to_definition, &key, &data));
+    MDB_CHECK(mdb_get(db->txn, db->db_id_to_definition, &key, &data));
     return (s8){.s = data.mv_data, .len = data.mv_size};
 }
 
@@ -279,10 +279,10 @@ void _nonnull_ db_put_dictname(database_t *db, s8 dictname) {
         data.mv_size = new_value.len;
         data.mv_data = new_value.s;
     } else {
-        DB_TRY(rc);
+        MDB_CHECK(rc);
     }
 
-    DB_TRY(mdb_put(db->txn, db->db_metadata, &key, &data, 0));
+    MDB_CHECK(mdb_put(db->txn, db->db_metadata, &key, &data, 0));
 
     if (data.mv_data != dictname.s) {
         free(data.mv_data);
@@ -298,7 +298,7 @@ s8Buf db_get_dictnames(database_t *db) {
     if (rc == MDB_NOTFOUND) {
         return NULL;
     }
-    DB_TRY(rc);
+    MDB_CHECK(rc);
 
     s8 all_names = {.s = data.mv_data, .len = data.mv_size};
     s8 *names = NULL;

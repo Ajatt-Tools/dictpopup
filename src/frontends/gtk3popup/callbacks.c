@@ -115,19 +115,20 @@ static void show_anki_button_right_click_menu(DpApplication *self) {
 /* --------------- START JPPRON --------------- */
 static void *jppron_thread(void *arg) {
     Word *word = (Word *)arg;
-    jppron(word->kanji, word->reading, 0);
-    word_ptr_free(word);
+    jppron(*word, 0);
+    word_free(*word);
     return NULL;
 }
 
 void pronounce_current_word(DpApplication *app) {
 
-    Word *word = dp_get_copy_of_current_word(app);
+    Word *word = new (Word, 1);
+    *word = dp_get_copy_of_current_word(app);
 
     pthread_t thread_id;
     if (pthread_create(&thread_id, NULL, jppron_thread, word) != 0) {
         dbg("Failed to create pronunciation thread");
-        word_ptr_free(word);
+        word_free(*word);
     } else {
         pthread_detach(thread_id);
     }
@@ -141,14 +142,14 @@ void pronounce_activated(GSimpleAction *action, GVariant *parameter, gpointer da
 
 void next_definition_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = data;
-    dm_increment(&app->dict_manager);
-    refresh_ui(app);
+    if (dm_increment(&app->dict_manager))
+        refresh_ui(app);
 }
 
 void previous_definition_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = data;
-    dm_decrement(&app->dict_manager);
-    refresh_ui(app);
+    if (dm_decrement(&app->dict_manager))
+        refresh_ui(app);
 }
 
 void quit_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
@@ -179,14 +180,24 @@ struct DictLookupArgs {
     DictpopupConfig cfg;
 };
 
+static gboolean enable_buttons_idle(gpointer user_data) {
+    DpApplication *app = (DpApplication *)user_data;
+    enable_dictionary_buttons(app);
+    return G_SOURCE_REMOVE;
+}
+
 static void *dict_lookup_thread(void *voidarg) {
     struct DictLookupArgs *args = (struct DictLookupArgs *)voidarg;
 
-    s8 *lookup = dp_get_lookup_str(args->app);
+    s8 lookup = dp_get_lookup_str(args->app);
+    DictLookup dict_lookup = dictionary_lookup(lookup, args->cfg);
 
-    assert(lookup);
-    DictLookup dict_lookup = dictionary_lookup(*lookup, args->cfg);
-    dp_swap_dict_lookup(args->app, dict_lookup);
+    if (isEmpty(dict_lookup.dict)) {
+        set_no_dictentry_found(args->app);
+    } else {
+        dp_swap_dict_lookup(args->app, dict_lookup);
+        gdk_threads_add_idle(enable_buttons_idle, args->app);
+    }
 
     free(args);
     return NULL;

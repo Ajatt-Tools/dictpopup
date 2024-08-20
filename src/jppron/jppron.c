@@ -27,7 +27,6 @@ DEFINE_DROP_FUNC(DIR *, closedir)
         }                                                                                          \
     } while (0)
 
-
 static s8 get_default_database_path(void) {
     return buildpath(fromcstr_((char *)get_user_data_dir()), S("jppron"));
 }
@@ -45,7 +44,7 @@ static void process_audio_subdirectory(char *audio_dir_path, char *subdir_name, 
         dbg("Index file of folder '%s' not existing or not accessible", subdir_name);
 }
 
-static void jppron_create_database(char *audio_dir_path, s8 dbpth) {
+static void jppron_create_database(const char *audio_dir_path, s8 dbpth) {
     jdb_remove(dbpth);
     createdir(dbpth);
 
@@ -151,15 +150,16 @@ static void play_pronfiles(Pronfile *pronfiles) {
     }
 }
 
-void jppron_create_if_not_existing(char *audio_folders_path) {
+void jppron_create_index(const char *audio_folders_path) {
     _drop_(frees8) s8 dbpath = get_default_database_path();
 
-    if (!jdb_check_exists(dbpath)) {
-        if (audio_folders_path) {
-            msg("Indexing files..");
-            jppron_create_database(audio_folders_path, dbpath); // TODO: エラー処理
-            msg("Index completed.");
-        }
+    if (audio_folders_path) {
+        msg("Indexing files..");
+        jppron_create_database(audio_folders_path, dbpath); // TODO: エラー処理
+        msg("Index completed.");
+    }
+    else {
+        err("No path provided.");
     }
 }
 

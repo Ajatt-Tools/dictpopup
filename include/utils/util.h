@@ -40,8 +40,8 @@ typedef __PTRDIFF_TYPE__ isize;
 /**
  * Memory allocation wrapper which abort on failure
  */
-__attribute__((malloc, returns_nonnull)) _deallocator_(free) void *xcalloc(size_t nmemb,
-                                                                           size_t size);
+__attribute__((malloc, returns_nonnull))
+_deallocator_(free) void *xcalloc(size_t nmemb, size_t size);
 __attribute__((malloc, returns_nonnull)) _deallocator_(free) void *xrealloc(void *ptr, size_t size);
 // clang-format off
 #define new(type, num) xcalloc(num, sizeof(type))
@@ -58,8 +58,7 @@ size_t _printf_(3, 4) snprintf_safe(char *buf, size_t len, const char *fmt, ...)
     }
 #define DEFINE_DROP_FUNC(type, func)                                                               \
     static inline void drop_##func(type *p) {                                                      \
-        if (*p)                                                                                    \
-            func(*p);                                                                              \
+        func(*p);                                                                                  \
     }
 #define DEFINE_DROP_FUNC_VOID(func)                                                                \
     static inline void drop_##func(void *p) {                                                      \

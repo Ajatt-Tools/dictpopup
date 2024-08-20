@@ -9,9 +9,9 @@ typedef struct {
 
 void dict_manager_init(DictManager *self);
 dictentry dm_get_currently_visible(const DictManager self);
-dictentry dm_increment(DictManager self[static 1]);
-dictentry dm_decrement(DictManager self[static 1]);
-void dm_replace_dict(DictManager self[static 1], Dict new_dict);
+bool dm_increment(DictManager self[static 1]);
+bool dm_decrement(DictManager self[static 1]);
+void dm_swap_dict(DictManager self[static 1], Dict new_dict);
 
 /* getter */
 size_t dm_get_current_index(const DictManager self);

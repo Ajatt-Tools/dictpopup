@@ -8,10 +8,9 @@ Word word_dup(Word word) {
     return (Word){.kanji = s8dup(word.kanji), .reading = s8dup(word.reading)};
 }
 
-void word_ptr_free(Word *word) {
-    frees8(&word->kanji);
-    frees8(&word->reading);
-    free(word);
+void word_free(Word word) {
+    frees8(&word.kanji);
+    frees8(&word.reading);
 }
 
 dictentry dictentry_dup(dictentry de) {
@@ -42,7 +41,7 @@ void dictionary_add(Dict *dict, dictentry de) {
     buf_push(dict->entries, de);
 }
 
-size_t num_of_dictentries(Dict dict) {
+size_t num_entries(Dict dict) {
     return buf_size(dict.entries);
 }
 
@@ -82,7 +81,7 @@ static int _nonnull_ dictentry_comparer(const dictentry *a, const dictentry *b) 
 void dict_sort(Dict dict, const char *const *sort_order) {
     SORT_ORDER = sort_order;
     if (!isEmpty(dict))
-        qsort(dict.entries, num_of_dictentries(dict), sizeof(dictentry),
+        qsort(dict.entries, num_entries(dict), sizeof(dictentry),
               (int (*)(const void *, const void *))dictentry_comparer);
     SORT_ORDER = 0;
 }
@@ -106,7 +105,7 @@ dictentry dictentry_at_index(Dict dict, size_t index) {
 }
 
 bool dict_contains(Dict dict, s8 word) {
-    for (size_t i = 0; i < num_of_dictentries(dict); i++) {
+    for (size_t i = 0; i < num_entries(dict); i++) {
         if (s8equals(dict.entries[i].kanji, word)) {
             return true;
         }

@@ -1,13 +1,26 @@
 ## dictpopup
-- Implement 'anki_set_entry_of_field'
-- Save selected mappings to GSettings
-- When no entries -> Show "No entries" in definition instead of notification
-  - Allows changing settings when no dictionaries yet
-- Disable pronunciation button if nothing found
+
+- Add Anki button right click menu
+
+- Create pronounce button right click menu only when needed
+- Cache pronfiles per kanji/reading pair
+
+- What happens if jppron create gets called twice?
+    -> Move to preferences
+
+- Suspended + new cards indicator?
 
 - Proper error handling on faulty Anki settings
+- Allow creating dictpopup db from preferences window
+
+- Add version to database
+
+- What happens if some random folder was selected for pronunciation index?
+  -> Proper error message
 
 Mid priority
+- Move pronunciation button initialization to a different thread?
+- Settings should work without a database
 - Check if sentence is mapped to some field and only prompt for it in that case
 - Implement the reading label as a text view to allow for editing -> initiate new search on Enter press
 - Group terms by reading, allow for switching between different readings

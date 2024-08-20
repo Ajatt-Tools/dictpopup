@@ -15,6 +15,6 @@ void jppron(Word word, char *audio_folders_path);
 /* _deallocator_(free_pronfile_buffer) */ // TODO: Check why this gives compiler errors
 Pronfile *get_pronfiles_for(Word word);
 
-void jppron_create_if_not_existing(char *audio_folders_path);
+void jppron_create_index(const char *audio_folders_path);
 
 #endif // JPPRON_H

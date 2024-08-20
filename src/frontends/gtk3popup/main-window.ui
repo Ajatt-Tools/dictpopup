@@ -2,7 +2,6 @@
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkTextBuffer" id="dictionary_textbuffer">
-    <property name="text" translatable="yes">loading...</property>
   </object>
 
   <object class="GtkApplicationWindow" id="main_window">
@@ -27,7 +26,7 @@
             <property name="can_focus">False</property>
             <property name="spacing">0</property>
             <child>
-              <object class="GtkButton" id="btn_l">
+              <object class="GtkButton" id="btn_left">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -132,7 +131,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="btn_right">
                 <property name="receives_default">True</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>

@@ -9,20 +9,30 @@ dictentry dm_get_currently_visible(const DictManager self) {
     return dictentry_at_index(self.dictionary, self.index_visible);
 }
 
-dictentry dm_increment(DictManager self[static 1]) {
-    self->index_visible = (self->index_visible < num_of_dictentries(self->dictionary) - 1)
-                              ? self->index_visible + 1
-                              : 0;
-    return dm_get_currently_visible(*self);
+bool dm_increment(DictManager self[static 1]) {
+    size_t new_index =
+        (self->index_visible + 1 < num_entries(self->dictionary)) ? self->index_visible + 1 : 0;
+
+    if (new_index != self->index_visible) {
+        self->index_visible = new_index;
+        return true;
+    } else
+        return false;
 }
 
-dictentry dm_decrement(DictManager self[static 1]) {
-    self->index_visible = (self->index_visible > 0) ? self->index_visible - 1
-                                                    : num_of_dictentries(self->dictionary) - 1;
-    return dm_get_currently_visible(*self);
+bool dm_decrement(DictManager self[static 1]) {
+    size_t new_index = (self->index_visible > 0)           ? self->index_visible - 1
+                      : num_entries(self->dictionary) > 0 ? num_entries(self->dictionary) - 1
+                                                          : 0;
+
+    if (new_index != self->index_visible) {
+        self->index_visible = new_index;
+        return true;
+    } else
+        return false;
 }
 
-void dm_replace_dict(DictManager self[static 1], Dict new_dict) {
+void dm_swap_dict(DictManager self[static 1], Dict new_dict) {
     dict_free(self->dictionary);
     self->dictionary = new_dict;
     self->index_visible = 0;
@@ -33,7 +43,7 @@ size_t dm_get_current_index(const DictManager self) {
 }
 
 size_t dm_get_total_num_of_entries(const DictManager self) {
-    return num_of_dictentries(self.dictionary);
+    return num_entries(self.dictionary);
 }
 
 const char *dm_get_current_dictname(const DictManager self) {

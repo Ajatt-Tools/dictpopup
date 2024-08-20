@@ -7,8 +7,10 @@
 #include "dp-settings.h"
 
 #include <ankiconnectc.h>
-#include <dictionary_lookup.h>
+#include <db.h>
+#include <jppron/jppron.h>
 #include <objects/dict.h>
+#include <platformdep/audio.h>
 #include <platformdep/clipboard.h>
 #include <utils/messages.h>
 
@@ -16,6 +18,10 @@ G_DEFINE_TYPE(DpApplication, dp_application, GTK_TYPE_APPLICATION)
 
 void perform_lookup(DpApplication *app, s8 word);
 static gboolean dp_update_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data);
+static void set_no_lookup_string(DpApplication *app);
+static void set_database_not_found(DpApplication *app);
+static void disable_button(GtkWidget *button);
+static void disable_dictionary_buttons(DpApplication *app);
 
 static void dp_application_dispose(GObject *object) {
     DpApplication *self = DP_APPLICATION(object);
@@ -26,18 +32,33 @@ static void dp_application_dispose(GObject *object) {
     G_OBJECT_CLASS(dp_application_parent_class)->dispose(object);
 }
 
+static bool can_lookup(DpApplication *app) {
+    if (!app->lookup_str.len) {
+        set_no_lookup_string(app);
+        return false;
+    }
+
+    // TODO: Fix
+    _drop_(frees8) s8 dbpath = db_get_dbpath();
+    if (!db_check_exists(dbpath)) {
+        set_database_not_found(app);
+        return false;
+    }
+
+    return true;
+}
+
 static void dictpopup_activate(GApplication *app) {
     DpApplication *self = DP_APPLICATION(app);
 
-    if (!self->lookup_str.len) {
-        self->lookup_str = get_selection();
-    }
-    if (!self->lookup_str.len) {
-        msg("No selection and no argument provided. Exiting..");
-        exit(EXIT_FAILURE);
-    }
+    disable_dictionary_buttons(self);
 
-    dict_lookup_async(self);
+    if (!self->lookup_str.len)
+        self->lookup_str = get_selection();
+
+    if (can_lookup(self))
+        dict_lookup_async(self);
+
     gtk_widget_show_all(GTK_WIDGET(self->main_window));
 }
 
@@ -69,6 +90,13 @@ static void dictpopup_startup(GApplication *app) {
 
     GtkBuilder *builder =
         gtk_builder_new_from_resource("/com/github/Ajatt-Tools/dictpopup/main-window.ui");
+
+    /* buttons */
+    self->btn_previous = GTK_WIDGET(gtk_builder_get_object(builder, "btn_left"));
+    self->btn_next = GTK_WIDGET(gtk_builder_get_object(builder, "btn_right"));
+    self->btn_pronounce = GTK_WIDGET(gtk_builder_get_object(builder, "pronounce_btn"));
+    self->btn_add_to_anki = GTK_WIDGET(gtk_builder_get_object(builder, "add_to_anki_btn"));
+    /* ------- */
 
     self->main_window = GTK_WINDOW(gtk_builder_get_object(builder, "main_window"));
     self->settings_button = GTK_WIDGET(gtk_builder_get_object(builder, "settings_button"));
@@ -145,39 +173,140 @@ static void dp_application_class_init(DpApplicationClass *klass) {
     app_class->command_line = dp_application_command_line;
 }
 
+static void disable_button(GtkWidget *button) {
+    gtk_widget_set_sensitive(button, FALSE);
+}
+
+void disable_dictionary_buttons(DpApplication *app) {
+    disable_button(app->btn_previous);
+    disable_button(app->btn_next);
+    disable_button(app->btn_add_to_anki);
+}
+
+static void enable_button(GtkWidget *button) {
+    gtk_widget_set_sensitive(button, TRUE);
+}
+
+void enable_dictionary_buttons(DpApplication *app) {
+    enable_button(app->btn_previous);
+    enable_button(app->btn_next);
+    enable_button(app->btn_add_to_anki);
+}
+
+static void set_text(DpApplication *app, s8 text) {
+    gtk_text_buffer_set_text(app->definition_textbuffer, (char *)text.s, (gint)text.len);
+}
+
+static void set_no_lookup_string(DpApplication *app) {
+    set_text(app, S("No lookup provided."));
+}
+
+void set_no_dictentry_found(DpApplication *app) {
+    set_text(app, S("No dictionary entry found."));
+}
+
+static void set_database_not_found(DpApplication *app) {
+    s8 no_database_text =
+        S("No database found. "
+          "You need to create one first with the command line application 'dictpopup-create'.");
+    set_text(app, no_database_text);
+}
+
 /* ---------------- START OBJECT FUNCTIONS ---------------------- */
-s8 *dp_get_lookup_str(DpApplication *app) {
+s8 dp_get_lookup_str(DpApplication *app) {
     g_mutex_lock(&app->dict_manager_mutex);
 
-    s8 *lookup_copy = new (s8, 1);
-    *lookup_copy = s8dup(app->lookup_str);
+    // s8 *lookup_copy = new (s8, 1);
+    s8 lookup_copy = s8dup(app->lookup_str);
 
     g_mutex_unlock(&app->dict_manager_mutex);
 
     return lookup_copy;
 }
 
+/* ------------ START PRONUNCIATION ------------------- */
+static void play_audio_for_pronfile(GtkMenuItem *menuitem, gpointer user_data) {
+    Pronfile *pronfile = (Pronfile *)user_data;
+    play_audio_async(pronfile->filepath);
+}
+
+static gboolean on_pronunciation_button_press(GtkWidget *widget, GdkEventButton *event,
+                                      gpointer user_data) {
+    if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
+        GtkWidget *menu = GTK_WIDGET(user_data);
+        gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static char *create_label_for_pronfile(Pronfile pronfile) {
+    s8 origin = pronfile.fileinfo.origin;
+    s8 pitch_pattern = pronfile.fileinfo.pitch_pattern;
+    char *label = g_strdup_printf("%.*s%s%.*s", (int)pitch_pattern.len, (char *)pitch_pattern.s,
+         origin.len && pitch_pattern.len ? " - " : "", (int)origin.len, (char *)origin.s);
+
+    return label;
+}
+
+static void setup_pronunciation_button_right_click_menu(GtkWidget *button, Pronfile *pronfiles) {
+    GtkWidget *menu = gtk_menu_new();
+
+    for (size_t i = 0; i < buf_size(pronfiles); i++) {
+        char *label = create_label_for_pronfile(pronfiles[i]);
+        GtkWidget *menu_item = gtk_menu_item_new_with_label(label);
+        g_signal_connect(menu_item, "activate", G_CALLBACK(play_audio_for_pronfile), &pronfiles[i]);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+    }
+
+    gtk_widget_show_all(menu);
+
+    g_signal_connect(button, "button-press-event", G_CALLBACK(on_pronunciation_button_press), menu);
+}
+
+static void initiate_pronunciation(DpApplication *self) {
+    _drop_(word_free) Word current_word = dp_get_copy_of_current_word(self);
+
+    Pronfile *pronfiles = get_pronfiles_for(current_word);
+
+    if (buf_size(pronfiles) != 0) {
+        enable_button(self->btn_pronounce);
+        setup_pronunciation_button_right_click_menu(self->btn_pronounce, pronfiles);
+
+        if (dp_settings_get_pronounce_on_startup(self->settings)) {
+            play_audio_async(pronfiles[0].filepath);
+        }
+    } else
+        disable_button(self->btn_pronounce);
+}
+/* ---------------- END PRONUNCIATION -------------- */
+
 static void on_lookup_completed(DpApplication *app) {
     refresh_ui(app);
-    pronounce_current_word(app);
+    initiate_pronunciation(app);
     gtk_widget_queue_draw(app->anki_status_dot);
 }
 
 void dp_swap_dict_lookup(DpApplication *app, DictLookup new_dict_lookup) {
     g_mutex_lock(&app->dict_manager_mutex);
-    dm_replace_dict(&app->dict_manager, new_dict_lookup.dict);
+
+    dm_swap_dict(&app->dict_manager, new_dict_lookup.dict);
+
+    frees8(&app->lookup_str);
     app->lookup_str = new_dict_lookup.lookup;
+
     g_mutex_unlock(&app->dict_manager_mutex);
 
     on_lookup_completed(app);
 }
 
-Word *dp_get_copy_of_current_word(DpApplication *app) {
-    Word *word_copy = new (Word, 1);
-
+Word dp_get_copy_of_current_word(DpApplication *app) {
     g_mutex_lock(&app->dict_manager_mutex);
+
     dictentry current_entry = dm_get_currently_visible(app->dict_manager);
-    *word_copy = word_dup((Word){.kanji = current_entry.kanji, .reading = current_entry.reading});
+    Word word_copy =
+        word_dup((Word){.kanji = current_entry.kanji, .reading = current_entry.reading});
+
     g_mutex_unlock(&app->dict_manager_mutex);
 
     return word_copy;
@@ -187,19 +316,16 @@ static void refresh_exists_dot_with_color(GtkWidget *widget, cairo_t *cr, Color 
 static gboolean dp_update_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
     DpApplication *app = DP_APPLICATION(user_data);
 
-    if (num_of_dictentries(app->dict_manager.dictionary) == 0) // TODO TODO
+    if (num_entries(app->dict_manager.dictionary) == 0) // TODO TODO
         return FALSE;
 
-    // TODO: Pointer is unnecessary here
-    Word *current_word = dp_get_copy_of_current_word(app);
+    _drop_(word_free) Word current_word = dp_get_copy_of_current_word(app);
 
     AnkiCollectionStatus exists_status = ac_check_exists(
         dp_settings_get_anki_deck(app->settings), dp_settings_get_anki_search_field(app->settings),
-        (char *)current_word->kanji.s, 0);
+        (char *)current_word.kanji.s, 0);
     Color color = map_ac_status_to_color(exists_status);
     refresh_exists_dot_with_color(widget, cr, color);
-
-    word_ptr_free(current_word);
 
     return FALSE;
 }
