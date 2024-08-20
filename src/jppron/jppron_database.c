@@ -7,38 +7,34 @@
 #include <lmdb.h>
 #include <string.h>
 
-#include "jppron/database.h"
-
 #include "jppron/ajt_audio_index_parser.h"
 #include "utils/messages.h"
 #include "utils/str.h"
 #include "utils/util.h"
 
+#include <jppron/jppron_database.h>
+
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
 #define MDB_CHECK(call)                                                                            \
     do {                                                                                           \
-        if ((rc = call) != MDB_SUCCESS) {                                                          \
-            printf("Error: %s\n at %s (%d)\n", mdb_strerror(rc), __FILE__, __LINE__);              \
-            exit(EXIT_FAILURE);                                                                    \
-        }                                                                                          \
+        int _rc = (call);                                                                          \
+        die_on(_rc != MDB_SUCCESS, "Database error: %s", mdb_strerror(_rc));                       \
     } while (0)
 
-struct database_s {
+struct _PronDatabase {
     stringbuilder_s lastval;
     MDB_env *env;
-    MDB_dbi db_words_to_id;
-    MDB_dbi db_id_to_definition;
+    MDB_dbi db_headword_to_filepath;
+    MDB_dbi db_filepath_to_fileinfo;
     MDB_txn *txn;
     bool readonly;
 };
 
-database *jdb_open(char *dbpath, bool readonly) {
-    int rc;
-
+PronDatabase *jppron_open_db(char *dbpath, bool readonly) {
     dbg("Opening database in directory: '%s'", dbpath);
 
-    database *db = new (database, 1);
+    PronDatabase *db = new (PronDatabase, 1);
     db->readonly = readonly;
 
     MDB_CHECK(mdb_env_create(&db->env));
@@ -56,8 +52,9 @@ database *jdb_open(char *dbpath, bool readonly) {
 
         MDB_CHECK(mdb_env_open(db->env, dbpath, 0, 0664));
         MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
-        MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT | MDB_CREATE, &db->db_words_to_id));
-        MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", MDB_CREATE, &db->db_id_to_definition));
+        MDB_CHECK(
+            mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT | MDB_CREATE, &db->db_headword_to_filepath));
+        MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", MDB_CREATE, &db->db_filepath_to_fileinfo));
 
         db->lastval = sb_init(200);
     }
@@ -65,12 +62,11 @@ database *jdb_open(char *dbpath, bool readonly) {
     return db;
 }
 
-void jdb_close(database *db) {
+void jppron_close_db(PronDatabase *db) {
     if (!db->readonly) {
-        int rc;
         MDB_CHECK(mdb_txn_commit(db->txn));
-        mdb_dbi_close(db->env, db->db_words_to_id);
-        mdb_dbi_close(db->env, db->db_id_to_definition);
+        mdb_dbi_close(db->env, db->db_headword_to_filepath);
+        mdb_dbi_close(db->env, db->db_filepath_to_fileinfo);
 
         const char *dbpath = NULL;
         mdb_env_get_path(db->env, &dbpath);
@@ -82,32 +78,19 @@ void jdb_close(database *db) {
     free(db);
 }
 
-void jdb_add_headword_with_file(database *db, s8 headword, s8 filepath) {
-    int rc;
+void jdb_add_headword_with_file(PronDatabase *db, s8 headword, s8 filepath) {
     MDB_val mdb_key = {.mv_data = headword.s, .mv_size = (size_t)headword.len};
     MDB_val mdb_val = {.mv_data = filepath.s, .mv_size = (size_t)filepath.len};
 
-    rc = mdb_put(db->txn, db->db_words_to_id, &mdb_key, &mdb_val, MDB_NOOVERWRITE);
-    if (rc == MDB_KEYEXIST) {
-        if (s8equals(sb_gets8(db->lastval), headword)) {
-            mdb_val = (MDB_val){.mv_data = filepath.s, .mv_size = (size_t)filepath.len};
-            rc = mdb_put(db->txn, db->db_words_to_id, &mdb_key, &mdb_val, 0);
-        }
-
-        if (rc != MDB_KEYEXIST)
-            MDB_CHECK(rc);
-    } else
-        MDB_CHECK(rc);
-
-    if (rc == MDB_SUCCESS)
-        sb_set(&db->lastval, headword);
+    MDB_CHECK(mdb_put(db->txn, db->db_headword_to_filepath, &mdb_key, &mdb_val, 0));
 }
 
-static s8 fileinfo_to_data(fileinfo_s fi) {
-    return concat(fi.origin, fi.hira_reading, fi.pitch_number, fi.pitch_pattern);
+static s8 serialize_fileinfo(FileInfo fi) {
+    return concat(fi.origin, S("\0"), fi.hira_reading, S("\0"), fi.pitch_number, S("\0"),
+                  fi.pitch_pattern);
 }
 
-static fileinfo_s convert_data_to_fileinfo(s8 data) {
+static FileInfo deserialize_to_fileinfo(s8 data) {
     s8 data_split[4] = {0};
     for (long unsigned int i = 0; i < arrlen(data_split) && data.len > 0; i++) {
         assert(data.len > 0);
@@ -123,31 +106,29 @@ static fileinfo_s convert_data_to_fileinfo(s8 data) {
         data.len -= data_split[i].len + 1;
     }
 
-    return (fileinfo_s){.origin = data_split[0],
-                        .hira_reading = data_split[1],
-                        .pitch_number = data_split[2],
-                        .pitch_pattern = data_split[3]};
+    return (FileInfo){.origin = data_split[0],
+                      .hira_reading = data_split[1],
+                      .pitch_number = data_split[2],
+                      .pitch_pattern = data_split[3]};
 }
 
-void jdb_add_file_with_fileinfo(database *db, s8 filepath, fileinfo_s fi) {
-    int rc;
-
-    _drop_(frees8) s8 data = fileinfo_to_data(fi);
+void jdb_add_file_with_fileinfo(PronDatabase *db, s8 filepath, FileInfo fi) {
+    _drop_(frees8) s8 data = serialize_fileinfo(fi);
 
     MDB_val mdb_key = {.mv_data = filepath.s, .mv_size = (size_t)filepath.len};
     MDB_val mdb_val = {.mv_data = data.s, .mv_size = (size_t)data.len};
-    MDB_CHECK(mdb_put(db->txn, db->db_id_to_definition, &mdb_key, &mdb_val, MDB_NOOVERWRITE));
+    MDB_CHECK(mdb_put(db->txn, db->db_filepath_to_fileinfo, &mdb_key, &mdb_val, MDB_NOOVERWRITE));
 }
 
-static s8 get_fileinfo_data(database *db, s8 fullpath) {
+static s8 get_fileinfo_data(PronDatabase *db, s8 fullpath) {
     int rc;
     MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
-    MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", 0, &db->db_id_to_definition));
+    MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", 0, &db->db_filepath_to_fileinfo));
 
     MDB_val key_m = (MDB_val){.mv_data = fullpath.s, .mv_size = (size_t)fullpath.len};
     MDB_val val_m = {0};
 
-    if ((rc = mdb_get(db->txn, db->db_id_to_definition, &key_m, &val_m)) == MDB_NOTFOUND)
+    if ((rc = mdb_get(db->txn, db->db_filepath_to_fileinfo, &key_m, &val_m)) == MDB_NOTFOUND)
         return (s8){0};
     MDB_CHECK(rc);
 
@@ -157,21 +138,21 @@ static s8 get_fileinfo_data(database *db, s8 fullpath) {
     return ret;
 }
 
-fileinfo_s jdb_get_fileinfo(database *db, s8 fullpath) {
+FileInfo jdb_get_fileinfo(PronDatabase *db, s8 fullpath) {
     _drop_(frees8) s8 data = get_fileinfo_data(db, fullpath);
-    return convert_data_to_fileinfo(data);
+    return deserialize_to_fileinfo(data);
 }
 
-s8 *jdb_get_files(database *db, s8 word) {
+s8Buf jdb_get_files(PronDatabase *db, s8 word) {
     int rc;
     MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
-    MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT, &db->db_words_to_id));
+    MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT, &db->db_headword_to_filepath));
 
     MDB_val key_m = (MDB_val){.mv_data = word.s, .mv_size = (size_t)word.len};
     MDB_val val_m = {0};
 
     _drop_(mdb_cursor_close) MDB_cursor *cursor = 0;
-    MDB_CHECK(mdb_cursor_open(db->txn, db->db_words_to_id, &cursor));
+    MDB_CHECK(mdb_cursor_open(db->txn, db->db_headword_to_filepath, &cursor));
 
     s8 *ret = 0;
     bool first = true;

@@ -11,28 +11,28 @@ BeforeEach(Jppron) {
 AfterEach(Jppron) {
 }
 
-database *jdb_open(char *path, bool readonly) {
+PronDatabase *jppron_open_db(char *path, bool readonly) {
     return NULL;
 }
 
-void jdb_close(database *db) {
+void jppron_close_db(PronDatabase *db) {
     return;
 }
 
-void jdb_add_headword_with_file(database *db, s8 headword, s8 filepath) {
+void jdb_add_headword_with_file(PronDatabase *db, s8 headword, s8 filepath) {
     mock(headword.s, filepath.s);
 }
 
-void jdb_add_file_with_fileinfo(database *db, s8 filepath, fileinfo_s fi) {
+void jdb_add_file_with_fileinfo(PronDatabase *db, s8 filepath, FileInfo fi) {
     mock(filepath.s, fi.hira_reading.s, fi.origin.s, fi.pitch_number.s, fi.pitch_pattern.s);
 }
 
-s8 *jdb_get_files(database *db, s8 key) {
+s8 *jdb_get_files(PronDatabase *db, s8 key) {
     return (s8*)mock(key.s);
 }
 
-fileinfo_s jdb_get_fileinfo(database *db, s8 fullpath) {
-    return (fileinfo_s){0};
+FileInfo jdb_get_fileinfo(PronDatabase *db, s8 fullpath) {
+    return (FileInfo){0};
 }
 
 i32 jdb_check_exists(s8 dbpath) {
@@ -43,7 +43,7 @@ void jdb_remove(s8 dbpath) {
     mock(dbpath.s);
 }
 
-void play_audio(s8 filepath) {
+void play_audio_sync(s8 filepath) {
     mock(filepath.s);
 }
 
