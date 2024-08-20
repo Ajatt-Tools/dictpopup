@@ -6,6 +6,7 @@
 #include "dp-settings.h"
 
 #include <gtk/gtk.h>
+#include <jppron/jppron_objects.h>
 
 #define DP_TYPE_APPLICATION (dp_application_get_type())
 G_DECLARE_FINAL_TYPE(DpApplication, dp_application, DP, APPLICATION, GtkApplication)
@@ -32,6 +33,7 @@ struct _DpApplication {
     GtkWidget *btn_add_to_anki;
 
     s8 lookup_str;
+    Pronfile *pronfiles;
 
     DictManager dict_manager; // Should never be accessed directly
     GMutex dict_manager_mutex;

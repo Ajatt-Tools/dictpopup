@@ -225,56 +225,15 @@ s8 dp_get_lookup_str(DpApplication *app) {
 }
 
 /* ------------ START PRONUNCIATION ------------------- */
-static void play_audio_for_pronfile(GtkMenuItem *menuitem, gpointer user_data) {
-    Pronfile *pronfile = (Pronfile *)user_data;
-    play_audio_async(pronfile->filepath);
-}
-
-static gboolean on_pronunciation_button_press(GtkWidget *widget, GdkEventButton *event,
-                                      gpointer user_data) {
-    if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
-        GtkWidget *menu = GTK_WIDGET(user_data);
-        gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *)event);
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static char *create_label_for_pronfile(Pronfile pronfile) {
-    s8 origin = pronfile.fileinfo.origin;
-    s8 pitch_pattern = pronfile.fileinfo.pitch_pattern;
-    char *label = g_strdup_printf("%.*s%s%.*s", (int)pitch_pattern.len, (char *)pitch_pattern.s,
-         origin.len && pitch_pattern.len ? " - " : "", (int)origin.len, (char *)origin.s);
-
-    return label;
-}
-
-static void setup_pronunciation_button_right_click_menu(GtkWidget *button, Pronfile *pronfiles) {
-    GtkWidget *menu = gtk_menu_new();
-
-    for (size_t i = 0; i < buf_size(pronfiles); i++) {
-        char *label = create_label_for_pronfile(pronfiles[i]);
-        GtkWidget *menu_item = gtk_menu_item_new_with_label(label);
-        g_signal_connect(menu_item, "activate", G_CALLBACK(play_audio_for_pronfile), &pronfiles[i]);
-        gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-    }
-
-    gtk_widget_show_all(menu);
-
-    g_signal_connect(button, "button-press-event", G_CALLBACK(on_pronunciation_button_press), menu);
-}
-
 static void initiate_pronunciation(DpApplication *self) {
     _drop_(word_free) Word current_word = dp_get_copy_of_current_word(self);
+    self->pronfiles = get_pronfiles_for(current_word);
 
-    Pronfile *pronfiles = get_pronfiles_for(current_word);
-
-    if (buf_size(pronfiles) != 0) {
+    if (buf_size(self->pronfiles) != 0) {
         enable_button(self->btn_pronounce);
-        setup_pronunciation_button_right_click_menu(self->btn_pronounce, pronfiles);
 
         if (dp_settings_get_pronounce_on_startup(self->settings)) {
-            play_audio_async(pronfiles[0].filepath);
+            play_audio_async(self->pronfiles[0].filepath);
         }
     } else
         disable_button(self->btn_pronounce);

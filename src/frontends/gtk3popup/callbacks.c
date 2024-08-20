@@ -10,6 +10,7 @@
 #include <ankiconnectc.h>
 #include <dictionary_lookup.h>
 #include <jppron/jppron.h>
+#include <platformdep/audio.h>
 #include <platformdep/clipboard.h>
 #include <utils/messages.h>
 
@@ -137,6 +138,36 @@ void pronounce_current_word(DpApplication *app) {
 void pronounce_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = DP_APPLICATION(data);
     pronounce_current_word(app);
+}
+
+static void play_audio_for_pronfile(GtkMenuItem *menuitem, gpointer user_data) {
+    Pronfile *pronfile = (Pronfile *)user_data;
+    play_audio_async(pronfile->filepath);
+}
+
+static char *create_label_for_pronfile(Pronfile pronfile) {
+    s8 origin = pronfile.fileinfo.origin;
+    s8 pitch_pattern = pronfile.fileinfo.pitch_pattern;
+    char *label = g_strdup_printf("%.*s%s%.*s", (int)pitch_pattern.len, (char *)pitch_pattern.s,
+                                  origin.len && pitch_pattern.len ? " - " : "", (int)origin.len,
+                                  (char *)origin.s);
+
+    return label;
+}
+
+static void show_pronunciation_button_right_click_menu(DpApplication *self) {
+    GtkWidget *menu = gtk_menu_new();
+
+    for (size_t i = 0; i < buf_size(self->pronfiles); i++) {
+        char *label = create_label_for_pronfile(self->pronfiles[i]);
+        GtkWidget *menu_item = gtk_menu_item_new_with_label(label);
+        g_signal_connect(menu_item, "activate", G_CALLBACK(play_audio_for_pronfile), &self->pronfiles[i]);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+    }
+
+    gtk_widget_show_all(menu);
+    gtk_menu_popup_at_widget(GTK_MENU(menu), self->btn_pronounce, GDK_GRAVITY_SOUTH,
+                             GDK_GRAVITY_WEST, NULL);
 }
 /* --------------- END JPPRON --------------- */
 
