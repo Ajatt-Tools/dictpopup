@@ -43,13 +43,22 @@ static s8 get_text_selection(DpApplication *app) {
     return (s8){0};
 }
 
+struct SelectionData {
+    DpApplication *app;
+    s8 text_selection;
+};
+
 static void sentence_selected(GtkClipboard *clipboard, GdkEvent *event, gpointer user_data) {
-    DpApplication *app = user_data;
+    struct SelectionData *data = (struct SelectionData *)user_data;
+    DpApplication *app = data->app;
+    s8 text_selection = data->text_selection;
 
     s8 sentence = fromcstr_(gtk_clipboard_wait_for_text(clipboard));
-    dictentry entry_to_add = dm_get_currently_visible(app->dict_manager);
+    if (dp_settings_get_nuke_whitespace_of_sentence(app->settings)) {
+        nuke_whitespace(&sentence);
+    }
 
-    s8 text_selection = get_text_selection(app);
+    dictentry entry_to_add = dm_get_currently_visible(app->dict_manager);
     if (text_selection.len > 0) {
         frees8(&entry_to_add.definition);
         entry_to_add.definition = text_selection;
@@ -58,7 +67,12 @@ static void sentence_selected(GtkClipboard *clipboard, GdkEvent *event, gpointer
     AnkiConfig anki_cfg = dp_settings_get_anki_settings(app->settings);
     create_ankicard(app->lookup_str, sentence, entry_to_add, anki_cfg);
 
+    // TODO: Cleanup
+    free(anki_cfg.fieldmapping.field_content);
+    g_strfreev(anki_cfg.fieldmapping.field_names);
+    dictentry_free(entry_to_add);
     g_free(sentence.s);
+    free(data);
     g_application_quit(G_APPLICATION(app));
 }
 
@@ -67,16 +81,22 @@ static void show_copy_sentence_dialog(void) {
 }
 
 void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
+    DpApplication *app = data;
+
     if (!ac_check_connection()) {
         err("Cannot connect to Anki. Is Anki running?");
         return;
     }
 
-    DpApplication *app = data;
     gtk_widget_hide(GTK_WIDGET(app->main_window));
 
+    struct SelectionData *selection_data = new (struct SelectionData, 1);
+    selection_data->app = app;
+    selection_data->text_selection = get_text_selection(app);
+
     GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-    g_signal_connect(clipboard, "owner-change", G_CALLBACK(sentence_selected), app);
+    g_signal_connect(clipboard, "owner-change", G_CALLBACK(sentence_selected), selection_data);
+
     show_copy_sentence_dialog();
 }
 /* -------------- END ANKI -------------------- */
