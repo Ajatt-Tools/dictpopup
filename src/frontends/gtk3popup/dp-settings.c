@@ -10,6 +10,7 @@ struct _DpSettings {
 
     gchar **dict_sort_order;
     gboolean nuke_whitespace_of_lookup;
+    gboolean nuke_whitespace_of_sentence;
     gboolean mecab_conversion;
     gboolean substring_search;
 
@@ -25,6 +26,7 @@ G_DEFINE_TYPE(DpSettings, dp_settings, G_TYPE_OBJECT)
 enum {
     PROP_0,
     PROP_NUKE_WHITESPACE_LOOKUP,
+    PROP_NUKE_WHITESPACE_SENTENCE,
     PROP_MECAB_CONVERSION,
     PROP_SUBSTRING_SEARCH,
     PROP_SORT_ORDER,
@@ -45,6 +47,9 @@ static void dp_settings_set_property(GObject *object, guint property_id, const G
     switch (property_id) {
         case PROP_NUKE_WHITESPACE_LOOKUP:
             self->nuke_whitespace_of_lookup = g_value_get_boolean(value);
+            break;
+        case PROP_NUKE_WHITESPACE_SENTENCE:
+            self->nuke_whitespace_of_sentence = g_value_get_boolean(value);
             break;
         case PROP_MECAB_CONVERSION:
             self->mecab_conversion = g_value_get_boolean(value);
@@ -80,6 +85,9 @@ static void dp_settings_get_property(GObject *object, guint property_id, GValue 
     switch (property_id) {
         case PROP_NUKE_WHITESPACE_LOOKUP:
             g_value_set_boolean(value, self->nuke_whitespace_of_lookup);
+            break;
+        case PROP_NUKE_WHITESPACE_SENTENCE:
+            g_value_set_boolean(value, self->nuke_whitespace_of_sentence);
             break;
         case PROP_MECAB_CONVERSION:
             g_value_set_boolean(value, self->mecab_conversion);
@@ -122,9 +130,15 @@ static void dp_settings_class_init(DpSettingsClass *klass) {
     object_class->get_property = dp_settings_get_property;
     object_class->finalize = dp_settings_finalize;
 
-    pspecs[PROP_NUKE_WHITESPACE_LOOKUP] = g_param_spec_boolean(
-        "nuke-whitespace-lookup", "Nuke Whitespace Lookup",
-        "Whether to remove whitespace from lookup strings", TRUE, G_PARAM_READWRITE);
+    pspecs[PROP_NUKE_WHITESPACE_LOOKUP] =
+        g_param_spec_boolean("nuke-whitespace-lookup", "Nuke Whitespace Lookup",
+                             "Whether to remove whitespace from lookup strings", TRUE,
+                             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+    pspecs[PROP_NUKE_WHITESPACE_SENTENCE] =
+        g_param_spec_boolean("nuke-whitespace-sentence", "Nuke Whitespace Sentence",
+                             "Whether to remove whitespace from the copied sentence", TRUE,
+                             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
     pspecs[PROP_MECAB_CONVERSION] = g_param_spec_boolean(
         "mecab-conversion", "MeCab Conversion", "Whether to use MeCab for hiragana conversion",
@@ -157,6 +171,8 @@ static void dp_settings_init(DpSettings *self) {
 
     g_settings_bind(self->settings, "nuke-whitespace-lookup", self, "nuke-whitespace-lookup",
                     G_SETTINGS_BIND_DEFAULT);
+    g_settings_bind(self->settings, "nuke-whitespace-sentence", self, "nuke-whitespace-sentence",
+                    G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "mecab-conversion", self, "mecab-conversion",
                     G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "substring-search", self, "substring-search",
@@ -177,6 +193,10 @@ DpSettings *dp_settings_new(void) {
 /* Getter / Setter */
 gboolean dp_settings_get_nuke_whitespace_of_lookup(DpSettings *self) {
     return self->nuke_whitespace_of_lookup;
+}
+
+gboolean dp_settings_get_nuke_whitespace_of_sentence(DpSettings *self) {
+    return self->nuke_whitespace_of_sentence;
 }
 
 gboolean dp_settings_get_mecab_conversion(DpSettings *self) {

@@ -11,6 +11,11 @@
       <summary>Remove Whitespace from Lookup</summary>
       <description>Whether to remove whitespace from lookup strings</description>
     </key>
+    <key name="nuke-whitespace-sentence" type="b">
+      <default>true</default>
+      <summary>Remove Whitespace from the Copied Sentence</summary>
+      <description>Whether to remove whitespace from the copied sentence</description>
+    </key>
     <key name="mecab-conversion" type="b">
       <default>false</default>
       <summary>Fallback to a Hiragana Conversion</summary>

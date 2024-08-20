@@ -15,6 +15,7 @@ DpSettings *dp_settings_new(void);
 
 gboolean dp_settings_get_sort_entries(DpSettings *self);
 gboolean dp_settings_get_nuke_whitespace_of_lookup(DpSettings *self);
+gboolean dp_settings_get_nuke_whitespace_of_sentence(DpSettings *self);
 gboolean dp_settings_get_mecab_conversion(DpSettings *self);
 gboolean dp_settings_get_lookup_longest_matching_prefix(DpSettings *self);
 const gchar *const *dp_settings_get_dict_sort_order(DpSettings *self);
