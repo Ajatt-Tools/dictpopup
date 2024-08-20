@@ -109,7 +109,7 @@ static void show_anki_button_right_click_menu(DpApplication *self) {
 
     gtk_widget_show_all(menu);
     gtk_menu_popup_at_widget(GTK_MENU(menu), self->btn_add_to_anki, GDK_GRAVITY_SOUTH,
-                             GDK_GRAVITY_WEST, NULL);
+                             GDK_GRAVITY_NORTH_WEST, NULL);
 }
 /* -------------- END ANKI -------------------- */
 
@@ -167,7 +167,7 @@ static void show_pronunciation_button_right_click_menu(DpApplication *self) {
 
     gtk_widget_show_all(menu);
     gtk_menu_popup_at_widget(GTK_MENU(menu), self->btn_pronounce, GDK_GRAVITY_SOUTH,
-                             GDK_GRAVITY_WEST, NULL);
+                             GDK_GRAVITY_NORTH_WEST, NULL);
 }
 /* --------------- END JPPRON --------------- */
 
@@ -282,6 +282,15 @@ gboolean on_add_to_anki_button_press(GtkWidget *widget, GdkEventButton *event, g
     if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
         DpApplication *app = DP_APPLICATION(user_data);
         show_anki_button_right_click_menu(app);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+gboolean on_pronounce_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
+    if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
+        DpApplication *app = DP_APPLICATION(user_data);
+        show_pronunciation_button_right_click_menu(app);
         return TRUE;
     }
     return FALSE;
