@@ -54,6 +54,7 @@
                 <property name="receives_default">True</property>
                 <property name="tooltip-text" translatable="yes">Add Current Entry To Anki</property>
                 <property name="action-name">app.add-to-anki</property>
+                <signal name="button-press-event" handler="on_add_to_anki_button_press" swapped="no"/>
                 <child>
                   <object class="GtkImage">
                     <property name="visible">True</property>

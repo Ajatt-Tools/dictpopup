@@ -10,30 +10,8 @@
 #include <ankiconnectc.h>
 #include <dictionary_lookup.h>
 #include <jppron/jppron.h>
+#include <platformdep/clipboard.h>
 #include <utils/messages.h>
-
-/* --------------- START CALLBACKS ------------------ */
-void on_settings_button_clicked(GtkButton *button, gpointer user_data) {
-    DpApplication *dp = (DpApplication *)user_data;
-    gtk_widget_show_all(g_object_new(DP_TYPE_PREFERENCES_WINDOW, "settings", dp->settings, NULL));
-}
-
-void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
-    DpApplication *app = DP_APPLICATION(user_data);
-
-    Word *current_word = dp_get_copy_of_current_word(app);
-
-    char *errormsg = NULL;
-    ac_gui_search(dp_settings_get_anki_deck(app->settings),
-                  dp_settings_get_anki_search_field(app->settings), (char *)current_word->kanji.s,
-                  &errormsg);
-    if (errormsg) {
-        err("%s", errormsg);
-        free(errormsg);
-    }
-
-    word_ptr_free(current_word);
-}
 
 /* -------------- START ANKI -------------------- */
 static s8 get_text_selection(DpApplication *app) {
@@ -45,13 +23,13 @@ static s8 get_text_selection(DpApplication *app) {
 
 struct SelectionData {
     DpApplication *app;
-    s8 text_selection;
+    s8 definition_override;
 };
 
 static void sentence_selected(GtkClipboard *clipboard, GdkEvent *event, gpointer user_data) {
     struct SelectionData *data = (struct SelectionData *)user_data;
     DpApplication *app = data->app;
-    s8 text_selection = data->text_selection;
+    s8 text_selection = data->definition_override;
 
     s8 sentence = fromcstr_(gtk_clipboard_wait_for_text(clipboard));
     if (dp_settings_get_nuke_whitespace_of_sentence(app->settings)) {
@@ -80,6 +58,27 @@ static void show_copy_sentence_dialog(void) {
     msg("Please copy the context.");
 }
 
+// TODO TODO: Remove duplication
+static void add_to_anki_from_clipboard(GtkMenuItem *self, gpointer user_data) {
+    DpApplication *app = DP_APPLICATION(user_data);
+
+    if (!ac_check_connection()) {
+        err("Cannot connect to Anki. Is Anki running?");
+        return;
+    }
+
+    gtk_widget_hide(GTK_WIDGET(app->main_window));
+
+    struct SelectionData *selection_data = new (struct SelectionData, 1);
+    selection_data->app = app;
+    selection_data->definition_override = get_clipboard();
+
+    GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    g_signal_connect(clipboard, "owner-change", G_CALLBACK(sentence_selected), selection_data);
+
+    show_copy_sentence_dialog();
+}
+
 void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = data;
 
@@ -92,12 +91,24 @@ void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer 
 
     struct SelectionData *selection_data = new (struct SelectionData, 1);
     selection_data->app = app;
-    selection_data->text_selection = get_text_selection(app);
+    selection_data->definition_override = get_text_selection(app);
 
     GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     g_signal_connect(clipboard, "owner-change", G_CALLBACK(sentence_selected), selection_data);
 
     show_copy_sentence_dialog();
+}
+
+static void show_anki_button_right_click_menu(DpApplication *self) {
+    GtkWidget *menu = gtk_menu_new();
+
+    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add with clipboard content as definition");
+    g_signal_connect(menu_item, "activate", G_CALLBACK(add_to_anki_from_clipboard), self);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+
+    gtk_widget_show_all(menu);
+    gtk_menu_popup_at_widget(GTK_MENU(menu), self->btn_add_to_anki, GDK_GRAVITY_SOUTH,
+                             GDK_GRAVITY_WEST, NULL);
 }
 /* -------------- END ANKI -------------------- */
 
@@ -203,3 +214,33 @@ void dict_lookup_async(DpApplication *app) {
     }
 }
 /* --------------- END DICTIONARY LOOKUP --------------- */
+
+/* --------------- START CALLBACKS ------------------ */
+void on_settings_button_clicked(GtkButton *button, gpointer user_data) {
+    DpApplication *dp = (DpApplication *)user_data;
+    gtk_widget_show_all(g_object_new(DP_TYPE_PREFERENCES_WINDOW, "settings", dp->settings, NULL));
+}
+
+void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
+    DpApplication *app = DP_APPLICATION(user_data);
+
+    _drop_(word_free) Word current_word = dp_get_copy_of_current_word(app);
+
+    char *errormsg = NULL;
+    ac_gui_search(dp_settings_get_anki_deck(app->settings),
+                  dp_settings_get_anki_search_field(app->settings), (char *)current_word.kanji.s,
+                  &errormsg);
+    if (errormsg) {
+        err("%s", errormsg);
+        free(errormsg);
+    }
+}
+
+gboolean on_add_to_anki_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
+    if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
+        DpApplication *app = DP_APPLICATION(user_data);
+        show_anki_button_right_click_menu(app);
+        return TRUE;
+    }
+    return FALSE;
+}

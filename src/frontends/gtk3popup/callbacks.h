@@ -9,6 +9,8 @@ struct Color;
 
 void on_settings_button_clicked(GtkButton *button, gpointer user_data);
 void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
+gboolean on_add_to_anki_button_press(GtkWidget *widget, GdkEventButton *event,
+                                         gpointer user_data);
 
 void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer data);
 void pronounce_activated(GSimpleAction *action, GVariant *parameter, gpointer data);
