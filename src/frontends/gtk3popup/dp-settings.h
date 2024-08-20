@@ -17,6 +17,7 @@ gboolean dp_settings_get_sort_entries(DpSettings *self);
 gboolean dp_settings_get_nuke_whitespace_of_lookup(DpSettings *self);
 gboolean dp_settings_get_nuke_whitespace_of_sentence(DpSettings *self);
 gboolean dp_settings_get_mecab_conversion(DpSettings *self);
+gboolean dp_settings_get_pronounce_on_startup(DpSettings *self);
 gboolean dp_settings_get_lookup_longest_matching_prefix(DpSettings *self);
 const gchar *const *dp_settings_get_dict_sort_order(DpSettings *self);
 void dp_settings_set_dict_sort_order(DpSettings *self, char **sort_order);
@@ -31,6 +32,9 @@ AnkiConfig dp_settings_get_anki_settings(DpSettings *self);
 
 void dp_settings_set_anki_field_mappings(DpSettings *self, AnkiFieldMapping field_mapping);
 AnkiFieldMapping dp_settings_get_anki_field_mappings(DpSettings *self);
+
+gchar *dp_settings_get_pronunciation_path(DpSettings *self);
+void dp_settings_set_pronunciation_path(DpSettings *self, const gchar *path);
 
 G_END_DECLS
 

@@ -19,6 +19,9 @@ struct _DpSettings {
     gchar *anki_search_field;
     gchar **anki_fieldnames;
     GArray *anki_fieldentries;
+
+    gboolean pronunciation_on_startup;
+    gchar *pronunciation_path;
 };
 
 G_DEFINE_TYPE(DpSettings, dp_settings, G_TYPE_OBJECT)
@@ -33,6 +36,8 @@ enum {
     PROP_ANKI_DECK,
     PROP_ANKI_NOTETYPE,
     PROP_ANKI_SEARCH_FIELD,
+    PROP_PRONUNCIATION_ON_STARTUP,
+    PROP_PRONUNCIATION_PATH,
     N_PROPERTIES
 };
 
@@ -72,6 +77,12 @@ static void dp_settings_set_property(GObject *object, guint property_id, const G
             g_free(self->anki_search_field);
             self->anki_search_field = g_value_dup_string(value);
             break;
+        case PROP_PRONUNCIATION_ON_STARTUP:
+            self->pronunciation_on_startup = g_value_get_boolean(value);
+            break;
+        case PROP_PRONUNCIATION_PATH:
+            self->pronunciation_path = g_value_dup_string(value);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -95,6 +106,9 @@ static void dp_settings_get_property(GObject *object, guint property_id, GValue 
         case PROP_SUBSTRING_SEARCH:
             g_value_set_boolean(value, self->substring_search);
             break;
+        case PROP_PRONUNCIATION_ON_STARTUP:
+            g_value_set_boolean(value, self->pronunciation_on_startup);
+            break;
         case PROP_SORT_ORDER:
             g_value_set_boxed(value, self->dict_sort_order);
             break;
@@ -107,6 +121,9 @@ static void dp_settings_get_property(GObject *object, guint property_id, GValue 
         case PROP_ANKI_SEARCH_FIELD:
             g_value_set_string(value, self->anki_search_field);
             break;
+        case PROP_PRONUNCIATION_PATH:
+            g_value_set_string(value, self->pronunciation_path);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -116,9 +133,14 @@ static void dp_settings_get_property(GObject *object, guint property_id, GValue 
 static void dp_settings_finalize(GObject *object) {
     DpSettings *self = DP_SETTINGS(object);
 
+    g_free(self->anki_deck);
+    g_free(self->anki_notetype);
+    g_free(self->anki_search_field);
     g_strfreev(self->anki_fieldnames);
     if (self->anki_fieldentries)
         g_array_free(self->anki_fieldentries, TRUE);
+
+    g_free(self->pronunciation_path);
 
     G_OBJECT_CLASS(dp_settings_parent_class)->finalize(object);
 }
@@ -142,26 +164,40 @@ static void dp_settings_class_init(DpSettingsClass *klass) {
 
     pspecs[PROP_MECAB_CONVERSION] = g_param_spec_boolean(
         "mecab-conversion", "MeCab Conversion", "Whether to use MeCab for hiragana conversion",
-        FALSE, G_PARAM_READWRITE);
+        FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-    pspecs[PROP_SUBSTRING_SEARCH] =
-        g_param_spec_boolean("substring-search", "Substring Search",
-                             "Whether to enable substring search", TRUE, G_PARAM_READWRITE);
+    pspecs[PROP_SUBSTRING_SEARCH] = g_param_spec_boolean(
+        "substring-search", "Substring Search", "Whether to enable substring search", TRUE,
+        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-    pspecs[PROP_SORT_ORDER] =
-        g_param_spec_boxed("dict-sort-order", "Dictionary Sort Order",
-                           "Order of dictionaries for sorting", G_TYPE_STRV, G_PARAM_READWRITE);
+    /* ----------------- */
 
-    pspecs[PROP_ANKI_DECK] = g_param_spec_string(
-        "anki-deck", "Anki Deck", "Name of the Anki deck to use", NULL, G_PARAM_READWRITE);
+    pspecs[PROP_SORT_ORDER] = g_param_spec_boxed("dict-sort-order", "Dictionary Sort Order",
+                                                 "Order of dictionaries for sorting", G_TYPE_STRV,
+                                                 G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+    pspecs[PROP_ANKI_DECK] =
+        g_param_spec_string("anki-deck", "Anki Deck", "Name of the Anki deck to use", NULL,
+                            G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
     pspecs[PROP_ANKI_NOTETYPE] =
         g_param_spec_string("anki-notetype", "Anki Note Type", "Name of the Anki note type to use",
-                            NULL, G_PARAM_READWRITE);
+                            NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-    pspecs[PROP_ANKI_SEARCH_FIELD] =
-        g_param_spec_string("anki-search-field", "Anki Search Field",
-                            "Name of the Anki field to search in", NULL, G_PARAM_READWRITE);
+    pspecs[PROP_ANKI_SEARCH_FIELD] = g_param_spec_string(
+        "anki-search-field", "Anki Search Field", "Name of the Anki field to search in", NULL,
+        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+    /* ----------------- */
+
+    pspecs[PROP_PRONUNCIATION_ON_STARTUP] = g_param_spec_boolean(
+        "pronounce-on-startup", "Pronounce on Startup", "Whether play a pronunciation on startup",
+        FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+    pspecs[PROP_PRONUNCIATION_PATH] =
+        g_param_spec_string("pronunciation-dirs-path", "Pronunciation Path",
+                            "Path to the pronunciation file directories", NULL,
+                            G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
     g_object_class_install_properties(object_class, N_PROPERTIES, pspecs);
 }
@@ -177,12 +213,18 @@ static void dp_settings_init(DpSettings *self) {
                     G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "substring-search", self, "substring-search",
                     G_SETTINGS_BIND_DEFAULT);
+
     g_settings_bind(self->settings, "dict-sort-order", self, "dict-sort-order",
                     G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "anki-deck", self, "anki-deck", G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "anki-notetype", self, "anki-notetype",
                     G_SETTINGS_BIND_DEFAULT);
     g_settings_bind(self->settings, "anki-search-field", self, "anki-search-field",
+                    G_SETTINGS_BIND_DEFAULT);
+
+    g_settings_bind(self->settings, "pronounce-on-startup", self, "pronounce-on-startup",
+                    G_SETTINGS_BIND_DEFAULT);
+    g_settings_bind(self->settings, "pronunciation-dirs-path", self, "pronunciation-dirs-path",
                     G_SETTINGS_BIND_DEFAULT);
 }
 
@@ -204,6 +246,7 @@ gboolean dp_settings_get_mecab_conversion(DpSettings *self) {
 }
 
 gboolean dp_settings_get_lookup_longest_matching_prefix(DpSettings *self) {
+    g_return_val_if_fail(DP_IS_SETTINGS(self), TRUE);
     return self->substring_search;
 }
 
@@ -285,4 +328,23 @@ AnkiFieldMapping dp_settings_get_anki_field_mappings(DpSettings *self) {
     g_variant_unref(variant);
 
     return field_mapping;
+}
+
+/* ------- PRON ----------- */
+gboolean dp_settings_get_pronounce_on_startup(DpSettings *self) {
+    g_return_val_if_fail(DP_IS_SETTINGS(self), FALSE);
+    return self->pronunciation_on_startup;
+}
+
+gchar *dp_settings_get_pronunciation_path(DpSettings *self) {
+    g_return_val_if_fail(DP_IS_SETTINGS(self), NULL);
+    return self->pronunciation_path;
+}
+
+void dp_settings_set_pronunciation_path(DpSettings *self, const gchar *path) {
+    g_return_if_fail(DP_IS_SETTINGS(self));
+    g_free(self->pronunciation_path);
+    self->pronunciation_path = g_strdup(path);
+    g_object_notify(G_OBJECT(self), "pronunciation-dirs-path");
+    g_settings_set_string(self->settings, "pronunciation-dirs-path", path);
 }

@@ -52,8 +52,17 @@
     </key>
     <key name="anki-field-entries" type="ai">
       <default>[]</default>
-      <summary>Anki field entries</summary>
+      <summary>Anki Field Entries</summary>
       <description>Integer values corresponding to the AnkiFieldEntry enum for each field</description>
+    </key>
+    <key name="pronounce-on-startup" type="b">
+      <default>false</default>
+      <summary>Play a Pronunciation on Startup</summary>
+      <description>Play a pronunciation from the locald pronunciation files (needs setup)</description>
+    </key>
+    <key name="pronunciation-dirs-path" type="s">
+      <default>''</default>
+      <summary>Path to Pronunciation Files</summary>
     </key>
   </schema>
 </schemalist>
