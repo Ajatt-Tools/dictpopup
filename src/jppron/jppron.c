@@ -31,8 +31,8 @@ static s8 get_default_database_path(void) {
     return buildpath(fromcstr_((char *)get_user_data_dir()), S("jppron"));
 }
 
-static void process_audio_subdirectory(char *audio_dir_path, char *subdir_name, PronDatabase *db) {
-    _drop_(frees8) s8 curdir = buildpath(fromcstr_(audio_dir_path), fromcstr_(subdir_name));
+static void process_audio_subdirectory(const char *audio_dir_path, char *subdir_name, PronDatabase *db) {
+    _drop_(frees8) s8 curdir = buildpath(fromcstr_((char*)audio_dir_path), fromcstr_(subdir_name));
     _drop_(frees8) s8 index_path = buildpath(curdir, S("index.json"));
     dbg("Processing path: %.*s", (int)curdir.len, (char *)curdir.s);
 
