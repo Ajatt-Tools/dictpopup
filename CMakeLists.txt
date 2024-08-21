@@ -24,7 +24,7 @@ find_package(CURL REQUIRED)
 find_package(LMDB REQUIRED)
 find_package(MECAB REQUIRED)
 
-###### Needed binaries for compilation
+###### Binaries needed for compilation
 find_program(GLIB_COMPILE_SCHEMAS NAMES glib-compile-schemas)
 if (NOT GLIB_COMPILE_SCHEMAS)
     message(FATAL_ERROR "glib-compile-schemas binary not found")
@@ -59,35 +59,37 @@ find_program(CPPCHECK cppcheck)
 # ##############################################################################
 # General compilation
 # ##############################################################################
-add_library(project_options INTERFACE)
-target_compile_features(project_options INTERFACE c_std_11)
-
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_COMPILER gcc)
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(project_options INTERFACE DEBUG)
-    target_compile_options(project_options INTERFACE
-            -Wall -Wextra -Werror -Wstrict-prototypes -Wshadow -Wdouble-promotion
-            -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align -Wpointer-arith
-            -Wno-sign-conversion -Wno-unused-function -Wno-unused-parameter -Wno-discarded-qualifiers
-            -Wno-overlength-strings -Wno-missing-field-initializers
-            -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong
-            -O0 -ggdb
-    )
-    target_link_options(project_options INTERFACE -fsanitize=address)
-else ()
-    target_compile_options(project_options INTERFACE
-            -Oz -flto -march=native -mtune=native -g -fno-omit-frame-pointer
-    )
+
+include_directories(
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/lib
+)
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
 endif ()
 
-function(add_dictpopup_executable name)
-    add_executable(${name} ${ARGN})
-    target_link_libraries(${name} PRIVATE project_options)
-    target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/lib)
-endfunction()
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} \
+            -Wall -Wextra -Werror -Wstrict-prototypes -Wshadow -Wdouble-promotion \
+            -Wmissing-prototypes -Wstrict-prototypes -Wstrict-overflow -Wcast-align -Wpointer-arith \
+            -Wno-sign-conversion -Wno-unused-function -Wno-unused-parameter \
+            -Wno-overlength-strings -Wno-missing-field-initializers \
+            -fsanitize=address,undefined -fsanitize-undefined-trap-on-error -fstack-protector-strong \
+            -O0 -ggdb \
+")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=address")
+#set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -pg -g -O0 -Wall")
 
-add_definitions(${GTK3_CFLAGS_OTHER} ${NOTIFY_CFLAGS_OTHER} ${LIBZIP_DEFINITIONS} ${CURL_DEFINITIONS})
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Ofast -flto -march=native -mtune=native -g -fno-omit-frame-pointer")
 
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+# ##############################################################################
+# Sub modules
+# ##############################################################################
 set(JPPRON_SRCS
         src/jppron/jppron.c
         src/jppron/jppron_database.c
@@ -98,7 +100,7 @@ set(JPPRON_SRCS
         include/objects/freqentry.h
 )
 
-set(ANKI_SRCS
+set(ANKICONNECTC_SRCS
         src/ankiconnectc/send_request.c
         src/ankiconnectc/ankiconnectc.c
         src/anki.c
@@ -172,11 +174,10 @@ add_custom_target(
 # ##############################################################################
 # dictpopup
 # ##############################################################################
-# UI
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
-# #########
+############# UI #################
 set(GRESOURCE_XML ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/dictpopup.gresource.xml)
 set(GRESOURCE_C ${GENERATED_DIR}/resources.c)
 
@@ -194,7 +195,6 @@ add_custom_command(
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/style.css
         VERBATIM
 )
-# ###########
 
 ############# SETTINGS #################
 set(GSETTINGS_DIR ${CMAKE_INSTALL_DATADIR}/glib-2.0/schemas)
@@ -213,10 +213,8 @@ add_custom_target(gsettings-schemas ALL DEPENDS ${COMPILED_SETTINGS_SCHEMA})
 
 install(FILES ${GSETTINGS_SCHEMA} DESTINATION ${GSETTINGS_DIR})
 install(CODE "execute_process(COMMAND ${GLIB_COMPILE_SCHEMAS} ${CMAKE_INSTALL_PREFIX}/${GSETTINGS_DIR})")
-########################################
 
-
-# ####
+############# DEINFLECTION RULES #################
 set(DEINFLECTION_RULES_GPERF ${CMAKE_CURRENT_SOURCE_DIR}/src/deinflector/deinflection_rules.gperf)
 set(DEINFLECTION_RULES_C ${GENERATED_DIR}/deinflection_rules.c)
 add_custom_command(
@@ -229,9 +227,9 @@ add_custom_command(
         MAIN_DEPENDENCY ${DEINFLECTION_RULES_GPERF}
         VERBATIM
 )
-# #######
 
-add_dictpopup_executable(dictpopup
+############# MAIN #################
+add_executable(dictpopup
         src/frontends/gtk3popup/dictpopup-application.c
         src/frontends/gtk3popup/dp-settings.c
         src/frontends/gtk3popup/dp-preferences-window.c
@@ -248,7 +246,7 @@ add_dictpopup_executable(dictpopup
         src/platformdep/windowtitle.c
         src/objects/freqentry.c
         ${JPPRON_SRCS}
-        ${ANKI_SRCS}
+        ${ANKICONNECTC_SRCS}
         ${DICTLOOKUP_SRCS}
         ${GRESOURCE_C}
         ${DEINFLECTION_RULES_C}
@@ -263,6 +261,7 @@ target_link_libraries(dictpopup PRIVATE
         CURL::libcurl
         -rdynamic
 )
+
 if (X11_FOUND)
     target_link_libraries(dictpopup PRIVATE ${X11_LIBRARIES})
 endif ()
@@ -270,7 +269,7 @@ endif ()
 # ##############################################################################
 # dictpopup-create
 # ##############################################################################
-add_dictpopup_executable(dictpopup-create
+add_executable(dictpopup-create
         src/dictpopup_create/dictpopup_create.c
         src/dictpopup_create/objects.c
         src/utils/util.c
@@ -292,7 +291,7 @@ target_link_libraries(dictpopup-create PRIVATE
 # dictpopup-window
 # ##############################################################################
 pkg_check_modules(GTK4 REQUIRED gtk4)
-add_dictpopup_executable(dictpopup-win EXCLUDE_FROM_ALL
+add_executable(dictpopup-win EXCLUDE_FROM_ALL
         src/frontends/gtk4window.c
         src/db.c
         src/utils/util.c
@@ -344,8 +343,8 @@ target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES
 if (BUILD_TESTS)
     enable_testing()
     find_package(cgreen REQUIRED)
-    add_dictpopup_executable(c_tests
-            tests/dp_application_tests.c
+    add_executable(c_tests
+            src/jppron/jppron_objects.c
             src/utils/util.c
             src/utils/utf8.c
             src/utils/str.c
@@ -382,49 +381,6 @@ if (BUILD_TESTS)
 
     #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 endif ()
-
-#add_dictpopup_executable(gui_tests
-#        tests/dp_application_tests.c
-#        src/frontends/gtk3popup/dictpopup-application.c
-#        src/frontends/gtk3popup/dp-settings.c
-#        src/frontends/gtk3popup/dp-preferences-window.c
-#        src/frontends/gtk3popup/dict_state_manager.c
-#        src/frontends/gtk3popup/callbacks.c
-#        src/utils/util.c
-#        src/utils/utf8.c
-#        src/utils/str.c
-#        src/platformdep/audio.c
-#        src/platformdep/notifications.c
-#        src/platformdep/clipboard.c
-#        src/platformdep/file_operations.c
-#        src/platformdep/windowtitle.c
-#        src/objects/freqentry.c
-#        ${JPPRON_SRCS}
-#        ${ANKI_SRCS}
-#        ${DICTLOOKUP_SRCS}
-#        ${GRESOURCE_C}
-#        ${DEINFLECTION_RULES_C}
-#        ${COMPILED_SETTINGS_SCHEMA}
-#)
-#target_compile_definitions(gui_tests PRIVATE UNIT_TEST CLIPBOARD)
-#target_include_directories(gui_tests PRIVATE
-#        ${GTK3_INCLUDE_DIRS}
-#        ${CGREEN_INCLUDE_DIRS}
-#        lib/
-#        include/
-#        src/
-#        src/jppron
-#)
-#target_link_libraries(gui_tests PRIVATE
-#        ${CGREEN_LIBRARIES}
-#        MECAB::MECAB
-#        PkgConfig::GTK3
-#        libzip::zip
-#        LMDB::LMDB
-#        CURL::libcurl
-#        PkgConfig::NOTIFY
-#)
-#add_test(NAME run_gui_tests COMMAND $<TARGET_FILE:gui_tests>)
 
 # ##############################################################################
 # Install
