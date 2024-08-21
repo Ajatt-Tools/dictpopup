@@ -74,10 +74,7 @@
                 <property name="can_focus">False</property>
                 <property name="width_request">20</property>
                 <property name="height_request">20</property>
-                <property name="tooltip-text" translatable="yes">Indicator for the word/reading pair in your Anki
-                  collection&#10;Green: Exists&#10;Red: Does not exist&#10;Orange: Exists, but all instances are
-                  suspended&#10;Blue: Exists, but all instances are new
-                </property>
+                <property name="tooltip-text" translatable="yes">Indicator for the word/reading pair in your Anki collection&#10;Green: Exists&#10;Red: Does not exist&#10;Orange: Exists, but all instances are suspended&#10;Blue: Exists, but all instances are new</property>
               </object>
               <packing>
                 <property name="expand">False</property>
