@@ -142,6 +142,7 @@ static void dp_application_init(DpApplication *self) {
     g_mutex_init(&self->dict_manager_mutex);
     dict_manager_init(&self->dict_manager);
     self->lookup_str = (s8){0};
+    self->anki_exists_status = 0;
 
     g_action_map_add_action_entries(G_ACTION_MAP(self), app_entries, G_N_ELEMENTS(app_entries),
                                     self);
@@ -239,11 +240,21 @@ static void initiate_pronunciation(DpApplication *self) {
         disable_button(self->btn_pronounce);
 }
 /* ---------------- END PRONUNCIATION -------------- */
+static void initiate_anki_indicator(DpApplication *self) {
+    char *deck = dp_settings_get_anki_deck(self->settings);
+    char *search_field = dp_settings_get_anki_search_field(self->settings);
+    Word word = dp_get_copy_of_current_word(self);
+
+    self->anki_exists_status = ac_check_exists(deck, search_field, (char *)word.kanji.s, 0);
+
+    gtk_widget_queue_draw(self->anki_status_dot);
+}
 
 static void on_lookup_completed(DpApplication *app) {
     refresh_ui(app);
+
     initiate_pronunciation(app);
-    gtk_widget_queue_draw(app->anki_status_dot);
+    initiate_anki_indicator(app);
 }
 
 void dp_swap_dict_lookup(DpApplication *app, DictLookup new_dict_lookup) {
@@ -271,27 +282,7 @@ Word dp_get_copy_of_current_word(DpApplication *app) {
     return word_copy;
 }
 
-static void refresh_exists_dot_with_color(GtkWidget *widget, cairo_t *cr, Color color);
-static gboolean dp_update_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
-    DpApplication *app = DP_APPLICATION(user_data);
-
-    if (num_entries(app->dict_manager.dictionary) == 0) // TODO TODO
-        return FALSE;
-
-    _drop_(word_free) Word current_word = dp_get_copy_of_current_word(app);
-
-    AnkiCollectionStatus exists_status = ac_check_exists(
-        dp_settings_get_anki_deck(app->settings), dp_settings_get_anki_search_field(app->settings),
-        (char *)current_word.kanji.s, 0);
-    Color color = map_ac_status_to_color(exists_status);
-    refresh_exists_dot_with_color(widget, cr, color);
-
-    return FALSE;
-}
-/* ---------------- END OBJECT FUNCTIONS ---------------------- */
-
-/* ------------ START REFRESH UI ------------------ */
-static void refresh_exists_dot_with_color(GtkWidget *widget, cairo_t *cr, Color color) {
+static void update_exists_dot_with_color(GtkWidget *widget, cairo_t *cr, Color color) {
     int width = gtk_widget_get_allocated_width(widget);
     int height = gtk_widget_get_allocated_height(widget);
     int size = MIN(width, height) * 2 / 3;
@@ -303,6 +294,17 @@ static void refresh_exists_dot_with_color(GtkWidget *widget, cairo_t *cr, Color 
     cairo_fill(cr);
 }
 
+static gboolean dp_update_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
+    DpApplication *app = DP_APPLICATION(user_data);
+
+    Color color = map_ac_status_to_color(app->anki_exists_status);
+    update_exists_dot_with_color(widget, cr, color);
+
+    return FALSE;
+}
+/* ---------------- END OBJECT FUNCTIONS ---------------------- */
+
+/* ------------ START REFRESH UI ------------------ */
 static void refresh_definition_with_entry(DpApplication *app, dictentry de) {
     gtk_text_buffer_set_text(app->definition_textbuffer, (char *)de.definition.s,
                              (gint)de.definition.len);

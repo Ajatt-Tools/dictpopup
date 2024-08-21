@@ -34,6 +34,7 @@ struct _DpApplication {
 
     s8 lookup_str;
     Pronfile *pronfiles;
+    int anki_exists_status;
 
     DictManager dict_manager; // Should never be accessed directly
     GMutex dict_manager_mutex;
