@@ -49,7 +49,7 @@ static void buffer_dump(s8 *buffer) {
     do {                                                                                           \
         char **words = (char *[]){__VA_ARGS__, NULL};                                              \
         for (char **wordptr = words; *wordptr != NULL; wordptr++) {                                \
-            _drop_(frees8buffer) s8 *deinfs = deinflect(fromcstr_(*wordptr));                      \
+            _drop_(s8_buf_free) s8 *deinfs = deinflect(fromcstr_(*wordptr));                      \
             bool contains = buffer_contains(deinfs, S(expected_deinf));                            \
             if (!contains) {                                                                       \
                 printf("Expected '%s' to be deinflected to '%s'\n", *wordptr, expected_deinf);     \
@@ -190,7 +190,7 @@ Ensure(Deinflector, deinflects_nagara) {
 }
 
 Ensure(Deinflector, does_not_contain) {
-    _drop_(frees8buffer) s8 *deinfs = deinflect(S("白ける"));
+    _drop_(s8_buf_free) s8 *deinfs = deinflect(S("白ける"));
     bool contains = buffer_contains(deinfs, S("白い"));
     assert_that(contains, is_false);
 }

@@ -47,10 +47,9 @@ Ensure(AnkiCardCreator, properly_prepares_full_ankicard) {
                                .definition = S("つらい思い。苦しみ。"),
                                .frequency = 12831293};
     char *fieldNames[] = {"SentKanji", "VocabKanji", "VocabFurigana", "VocabDef", "Notes"};
-    u32 fieldMapping[] = {3, 4, 7, 6, 8};
-    AnkiConfig config = {.numFields = arrlen(fieldMapping),
-                         .fieldMapping = fieldMapping,
-                         .fieldnames = fieldNames,
+    u32 fieldMapping[] = {DP_ANKI_BOLD_COPIED_SENTENCE, DP_ANKI_DICTIONARY_KANJI, DP_ANKI_FURIGANA, DP_ANKI_DICTIONARY_DEFINITION, DP_ANKI_FOCUSED_WINDOW_NAME};
+    AnkiFieldMapping field_mapping = (AnkiFieldMapping) {.field_names = fieldNames, .field_content = fieldMapping, .num_fields = arrlen(fieldMapping)};
+    AnkiConfig config = {.fieldmapping = field_mapping,
                          .deck = "Japanese",
                          .notetype = "Japanese Sentences"};
 
