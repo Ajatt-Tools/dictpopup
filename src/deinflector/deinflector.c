@@ -77,17 +77,26 @@ static void add_replace_suffix(s8 word, s8 new_suffix, isize suffix_len) {
     add_deinflection(deinflected);
 }
 
-// TODO: Would be cool if the for loop could expand at compile time, so S(..)
-// can be used.	Or just use multiple macros with different arguement length
-#define IF_ENDSWITH_REPLACE(ending, ...)                                                           \
+/*
+#define IF_ENDSWITH_REPLACE(ending, ...) IF_ENDSWITH_REPLACE_IMPL(ending, __VA_ARGS__, END_MARKER)
+
+#define IF_ENDSWITH_REPLACE_IMPL(ending, arg, ...)                                                 \
     do {                                                                                           \
         if (endswith(word, S(ending))) {                                                           \
-            for (const char **iterator = (const char *[]){__VA_ARGS__, NULL}; *iterator;           \
-                 iterator++) {                                                                     \
-                add_replace_suffix(word, fromcstr_((char *)*iterator), lengthof(ending));          \
-            }                                                                                      \
+            add_replace_suffix(word, fromcstr_((char *)arg), lengthof(ending));                    \
+            IF_ENDSWITH_REPLACE_NEXT(ending, __VA_ARGS__)                                          \
         }                                                                                          \
     } while (0)
+
+#define IF_ENDSWITH_REPLACE_NEXT(ending, arg, ...)                                                 \
+    IF_ENDSWITH_REPLACE_IMPL_2(ending, arg, __VA_ARGS__)
+
+#define IF_ENDSWITH_REPLACE_IMPL_2(ending, arg, ...)                                               \
+    add_replace_suffix(word, fromcstr_((char *)arg), lengthof(ending));                            \
+    IF_ENDSWITH_REPLACE_NEXT(ending, __VA_ARGS__)
+
+#define END_MARKER
+*/
 
 static void deinflect_one_iter(s8 word) {
     // TODO: Use character width instead of hardcoded 3. Currently breaks with non-japanese chars
