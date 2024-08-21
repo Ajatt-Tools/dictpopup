@@ -161,7 +161,8 @@ static void show_pronunciation_button_right_click_menu(DpApplication *self) {
     for (size_t i = 0; i < buf_size(self->pronfiles); i++) {
         char *label = create_label_for_pronfile(self->pronfiles[i]);
         GtkWidget *menu_item = gtk_menu_item_new_with_label(label);
-        g_signal_connect(menu_item, "activate", G_CALLBACK(play_audio_for_pronfile), &self->pronfiles[i]);
+        g_signal_connect(menu_item, "activate", G_CALLBACK(play_audio_for_pronfile),
+                         &self->pronfiles[i]);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
     }
 
@@ -257,12 +258,74 @@ void dict_lookup_async(DpApplication *app) {
 }
 /* --------------- END DICTIONARY LOOKUP --------------- */
 
-/* --------------- START CALLBACKS ------------------ */
-void on_settings_button_clicked(GtkButton *button, gpointer user_data) {
-    DpApplication *dp = (DpApplication *)user_data;
-    gtk_widget_show_all(g_object_new(DP_TYPE_PREFERENCES_WINDOW, "settings", dp->settings, NULL));
+/* -------------------- ACTIONS -------------------- */
+void search_massif_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
+    DpApplication *app = data;
+
+    _drop_(word_free) Word word = dp_get_copy_of_current_word(app);
+    char *url = g_strdup_printf("https://massif.la/ja/search?q=%.*s", (int)word.kanji.len,
+                                (char *)word.kanji.s);
+
+    GError *error = NULL;
+    if (!gtk_show_uri_on_window(GTK_WINDOW(app->main_window), url, GDK_CURRENT_TIME, &error)) {
+        g_warning("Failed to open URL: %s", error->message);
+        g_error_free(error);
+
+        // Fallback method using g_app_info_launch_default_for_uri
+        if (!g_app_info_launch_default_for_uri(url, NULL, &error)) {
+            g_warning("Failed to open URL (fallback method): %s", error->message);
+            g_error_free(error);
+        }
+    }
+
+    g_free(url);
 }
 
+static void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data) {
+    DpApplication *app = DP_APPLICATION(user_data);
+    if (response_id == GTK_RESPONSE_ACCEPT) {
+        GtkEntry *entry = GTK_ENTRY(g_object_get_data(G_OBJECT(dialog), "entry"));
+        const char *new_lookup = gtk_entry_get_text(entry);
+
+        g_mutex_lock(&app->dict_manager_mutex);
+        frees8(&app->lookup_str);
+        app->lookup_str = s8dup(fromcstr_((char *)new_lookup));
+        g_mutex_unlock(&app->dict_manager_mutex);
+
+        dict_lookup_async(app);
+    }
+    gtk_widget_destroy(GTK_WIDGET(dialog));
+}
+
+void edit_lookup_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
+    DpApplication *app = DP_APPLICATION(data);
+
+    GtkWidget *dialog =
+        gtk_dialog_new_with_buttons("Edit Lookup String", GTK_WINDOW(app->main_window),
+                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Cancel",
+                                    GTK_RESPONSE_CANCEL, "Apply", GTK_RESPONSE_ACCEPT, NULL);
+
+    GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget *entry = gtk_entry_new();
+    gtk_container_add(GTK_CONTAINER(content_area), entry);
+
+    g_mutex_lock(&app->dict_manager_mutex);
+    gtk_entry_set_text(GTK_ENTRY(entry), (const char *)app->lookup_str.s);
+    g_mutex_unlock(&app->dict_manager_mutex);
+
+    g_object_set_data(G_OBJECT(dialog), "entry", entry);
+
+    g_signal_connect(dialog, "response", G_CALLBACK(on_dialog_response), app);
+
+    gtk_widget_show_all(dialog);
+}
+
+void open_settings_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
+    DpApplication *app = data;
+    gtk_widget_show_all(g_object_new(DP_TYPE_PREFERENCES_WINDOW, "settings", app->settings, NULL));
+}
+
+/* --------------- START CALLBACKS ------------------ */
 void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
     DpApplication *app = DP_APPLICATION(user_data);
 

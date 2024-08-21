@@ -76,6 +76,9 @@ static GActionEntry app_entries[] = {
     {"previous-definition", previous_definition_activated, NULL, NULL, NULL, {0}},
     {"pronounce", pronounce_activated, NULL, NULL, NULL, {0}},
     {"add-to-anki", add_to_anki_activated, NULL, NULL, NULL, {0}},
+    {"search-massif", search_massif_activated, NULL, NULL, NULL, {0}},
+    {"edit-lookup", edit_lookup_activated, NULL, NULL, NULL, {0}},
+    {"open-settings", open_settings_activated, NULL, NULL, NULL, {0}},
 };
 
 static void dictpopup_startup(GApplication *app) {
@@ -98,8 +101,11 @@ static void dictpopup_startup(GApplication *app) {
     self->btn_add_to_anki = GTK_WIDGET(gtk_builder_get_object(builder, "add_to_anki_btn"));
     /* ------- */
 
+    GtkWidget *menu_button = GTK_WIDGET(gtk_builder_get_object(builder, "menu_button"));
+    GtkWidget *popover_menu = GTK_WIDGET(gtk_builder_get_object(builder, "popover_menu"));
+    gtk_menu_button_set_popover(GTK_MENU_BUTTON(menu_button), popover_menu);
+
     self->main_window = GTK_WINDOW(gtk_builder_get_object(builder, "main_window"));
-    self->settings_button = GTK_WIDGET(gtk_builder_get_object(builder, "settings_button"));
     self->definition_textbuffer =
         GTK_TEXT_BUFFER(gtk_builder_get_object(builder, "dictionary_textbuffer"));
     self->dictionary_number_lbl = GTK_LABEL(gtk_builder_get_object(builder, "lbl_dictnum"));
