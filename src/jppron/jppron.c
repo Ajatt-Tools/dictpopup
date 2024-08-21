@@ -9,7 +9,7 @@
 #include "jppron/jppron.h"
 #include "jppron/jppron_database.h"
 
-#include "deinflector.h"
+#include "deinflector/kata2hira.h"
 #include "platformdep/audio.h"
 #include "platformdep/file_operations.h"
 #include "utils/messages.h"

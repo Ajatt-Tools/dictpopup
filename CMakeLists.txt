@@ -109,6 +109,7 @@ set(ANKICONNECTC_SRCS
 set(DICTLOOKUP_SRCS
         src/dictionary_lookup.c
         src/deinflector/deinflector.c
+        src/deinflector/kata2hira.c
         src/db.c
         #        ${DEINFLECTION_RULES_C} # Doesn't get generated if put in here
 )
@@ -267,6 +268,33 @@ if (X11_FOUND)
 endif ()
 
 # ##############################################################################
+# dictpopup-config
+# ##############################################################################
+
+add_executable(dictpopup-config
+        src/frontends/gtk3popup/dictpopup-config_main.c
+        src/frontends/gtk3popup/dp-settings.c
+        src/frontends/gtk3popup/dp-preferences-window.c
+        src/utils/util.c
+        src/utils/str.c
+        src/db.c
+        src/platformdep/file_operations.c
+        src/platformdep/windowtitle.c # Remove?
+        src/deinflector/kata2hira.c # Remove?
+        src/utils/utf8.c # Remove?
+        src/platformdep/audio.c # Remove?
+        ${JPPRON_SRCS}
+        ${ANKICONNECTC_SRCS}
+        ${GRESOURCE_C}
+        ${COMPILED_SETTINGS_SCHEMA}
+)
+target_link_libraries(dictpopup-config PRIVATE
+        LMDB::LMDB
+        PkgConfig::GTK3
+        CURL::libcurl
+)
+
+# ##############################################################################
 # dictpopup-create
 # ##############################################################################
 add_executable(dictpopup-create
@@ -386,6 +414,7 @@ endif ()
 # Install
 # ##############################################################################
 install(TARGETS dictpopup DESTINATION bin)
+install(TARGETS dictpopup-config DESTINATION bin)
 install(FILES ${GSETTINGS_SCHEMA} DESTINATION ${GSETTINGS_DIR})
 install(CODE "execute_process(COMMAND ${GLIB_COMPILE_SCHEMAS} ${CMAKE_INSTALL_PREFIX}/${GSETTINGS_DIR})")
 install(

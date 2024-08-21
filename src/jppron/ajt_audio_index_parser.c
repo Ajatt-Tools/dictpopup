@@ -5,7 +5,7 @@
 #include "utils/messages.h"
 #include "utils/util.h"
 #include "yyjson.h"
-#include <deinflector.h>
+#include <deinflector/kata2hira.h>
 #include <errno.h>
 
 typedef struct {

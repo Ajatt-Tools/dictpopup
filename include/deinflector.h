@@ -19,9 +19,3 @@ _deallocator_(s8_buf_free) s8Buf deinflect(s8 word);
  * Returns: A newly allocated string containing the conversion.
  */
 s8 kanji2hira(s8 input);
-
-/*
- * Converts all katakana characters in @kata_in into its hiragana counterparts
- * (inplace).
- */
-void kata2hira(s8 kata_in);
