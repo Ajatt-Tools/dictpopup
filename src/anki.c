@@ -6,7 +6,7 @@
 #include <utils/messages.h>
 #include <utils/str.h>
 
-s8 focused_window_title = {0};
+s8 focused_window_title = S("");
 
 void safe_focused_window_title(void) {
     focused_window_title = get_windowname();
