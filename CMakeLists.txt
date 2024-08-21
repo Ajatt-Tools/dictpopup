@@ -240,6 +240,7 @@ add_executable(dictpopup
         src/utils/util.c
         src/utils/utf8.c
         src/utils/str.c
+        src/utils/dp_profile.c
         src/platformdep/audio.c
         src/platformdep/notifications.c
         src/platformdep/clipboard.c

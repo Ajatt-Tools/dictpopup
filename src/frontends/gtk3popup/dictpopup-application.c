@@ -12,6 +12,7 @@
 #include <objects/dict.h>
 #include <platformdep/audio.h>
 #include <platformdep/clipboard.h>
+#include <utils/dp_profile.h>
 #include <utils/messages.h>
 
 G_DEFINE_TYPE(DpApplication, dp_application, GTK_TYPE_APPLICATION)
@@ -258,6 +259,8 @@ static void initiate_anki_indicator(DpApplication *self) {
 
 static void on_lookup_completed(DpApplication *app) {
     refresh_ui(app);
+
+    set_end_time_now(); // Not quite accuracte possibly
 
     initiate_pronunciation(app);
     initiate_anki_indicator(app);

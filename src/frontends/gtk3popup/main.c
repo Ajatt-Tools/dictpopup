@@ -1,6 +1,8 @@
 #include "dictpopup-application.h"
+#include "utils/dp_profile.h"
 
 int main(int argc, char *argv[]) {
+    set_start_time_now();
     safe_focused_window_title();
 
     g_autoptr(GtkApplication) app = g_object_new(
