@@ -287,10 +287,15 @@ static void on_edit_lookup_dialog_response(GtkDialog *dialog, gint response_id,
     if (response_id == GTK_RESPONSE_ACCEPT) {
         GtkEntry *entry = GTK_ENTRY(g_object_get_data(G_OBJECT(dialog), "entry"));
         const char *new_lookup = gtk_entry_get_text(entry);
+
         data->on_accept(new_lookup, data->user_data);
     }
     gtk_widget_destroy(GTK_WIDGET(dialog));
     free(data);
+}
+
+static void on_entry_activate(GtkEntry *entry, GtkDialog *dialog) {
+    gtk_dialog_response(dialog, GTK_RESPONSE_ACCEPT);
 }
 
 void ui_manager_show_edit_lookup_dialog(UiManager *self, const char *current_lookup,
@@ -314,14 +319,15 @@ void ui_manager_show_edit_lookup_dialog(UiManager *self, const char *current_loo
     data->user_data = user_data;
 
     g_signal_connect(dialog, "response", G_CALLBACK(on_edit_lookup_dialog_response), data);
+    g_signal_connect(entry, "activate", G_CALLBACK(on_entry_activate), dialog);
 
     gtk_widget_show_all(dialog);
 }
 
 /* -------------- ANKI BUTTON RIGHT CLICK MENU ---------------- */
-void ui_manager_show_anki_button_right_click_menu(UiManager *self,
-                                                  void (*on_clipboard_definition)(GtkMenuItem *self, gpointer user_data),
-                                                  gpointer user_data) {
+void ui_manager_show_anki_button_right_click_menu(
+    UiManager *self, void (*on_clipboard_definition)(GtkMenuItem *self, gpointer user_data),
+    gpointer user_data) {
     GtkWidget *menu = gtk_menu_new();
 
     GtkWidget *menu_item = gtk_menu_item_new_with_label("Add with clipboard content as definition");
