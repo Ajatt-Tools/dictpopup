@@ -35,10 +35,17 @@ struct database_s {
     } while (0)
 
 s8 db_get_dbpath(void) {
-    return buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
+    static s8 dbpath = (s8){0};
+
+    if (!dbpath.len) {
+        dbpath = buildpath(fromcstr_((char *)get_user_data_dir()), S("dictpopup"));
+    }
+
+    return dbpath;
 }
 
-database_t *db_open(s8 dbdir, bool readonly) {
+database_t *db_open(bool readonly) {
+    s8 dbdir = db_get_dbpath();
     dbg("Opening database in directory: '%s'", (char *)dbdir.s);
 
     database_t *db = new (database_t, 1);
@@ -105,7 +112,7 @@ void db_close(database_t *db) {
     free(db);
 }
 
-static void serialize_dictentry(stringbuilder_s sb[static 1], dictentry de) {
+static void serialize_dictentry(stringbuilder_s sb[static 1], Dictentry de) {
     s8 sep = S("\0");
     sb_set(sb, de.dictname);
     sb_append(sb, sep);
@@ -116,7 +123,7 @@ static void serialize_dictentry(stringbuilder_s sb[static 1], dictentry de) {
     sb_append(sb, de.definition);
 }
 
-static void put_de_if_new(database_t *db, dictentry de) {
+static void put_de_if_new(database_t *db, Dictentry de) {
     MDB_val id_mdb = {.mv_data = &db->last_id, .mv_size = sizeof(db->last_id)};
     serialize_dictentry(&db->datastr, de);
     if (!s8equals(sb_gets8(db->datastr), sb_gets8(db->lastdatastr))) {
@@ -138,7 +145,7 @@ static void add_key_with_id(database_t *db, s8 key, u32 id) {
     mdb_put(db->txn, db->db_words_to_id, &key_mdb, &id_mdb, MDB_NODUPDATA);
 }
 
-void db_put_dictent(database_t *db, dictentry de) {
+void db_put_dictent(database_t *db, Dictentry de) {
     die_on(db->readonly, "Cannot put dictentry into db in readonly mode.");
     if (!de.definition.len) {
         dbg("Entry with kanji: %s and reading: %s has no definition. Skipping..",
@@ -206,7 +213,7 @@ static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
 /*
  * Returns: dictentry with newly allocated strings parsed from @data
  */
-static dictentry data_to_dictent(const database_t *db, s8 data) {
+static Dictentry data_to_dictent(const database_t *db, s8 data) {
     assert(data.s);
 
     s8 data_split[4] = {0};
@@ -223,7 +230,7 @@ static dictentry data_to_dictent(const database_t *db, s8 data) {
         data.len -= data_split[i].len + 1;
     }
 
-    dictentry ret = {0};
+    Dictentry ret = {0};
     ret.dictname = data_split[0];
     ret.kanji = data_split[1];
     ret.reading = data_split[2];
@@ -254,7 +261,7 @@ void db_append_lookup(const database_t *db, s8 headword, Dict dict[static 1],
     if (ids) {
         for (size_t i = 0; i < n_ids; i++) {
             s8 de_data = getdata(db, ids[i]);
-            dictentry de = data_to_dictent(db, de_data);
+            Dictentry de = data_to_dictent(db, de_data);
             de.is_deinflection = is_deinflection;
             dictionary_add(dict, de);
         }

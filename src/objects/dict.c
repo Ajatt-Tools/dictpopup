@@ -13,14 +13,14 @@ void word_free(Word word) {
     frees8(&word.reading);
 }
 
-dictentry dictentry_dup(dictentry de) {
-    return (dictentry){.dictname = s8dup(de.dictname),
+Dictentry dictentry_dup(Dictentry de) {
+    return (Dictentry){.dictname = s8dup(de.dictname),
                        .kanji = s8dup(de.kanji),
                        .reading = s8dup(de.reading),
                        .definition = s8dup(de.definition)};
 }
 
-void dictentry_print(dictentry de) {
+void dictentry_print(Dictentry de) {
     printf("dictname: %s\n"
            "kanji: %s\n"
            "reading: %s\n"
@@ -28,6 +28,15 @@ void dictentry_print(dictentry de) {
            (char *)de.dictname.s, (char *)de.kanji.s, (char *)de.reading.s,
            (char *)de.definition.s);
 }
+
+Word dictentry_get_word(Dictentry de) {
+    return (Word) { .kanji = de.kanji, .reading = de.reading, };
+}
+
+Word dictentry_get_dup_word(Dictentry de) {
+    return (Word) { .kanji = s8dup(de.kanji), .reading = s8dup(de.reading), };
+}
+
 
 Dict newDict() {
     return (Dict){0};
@@ -37,7 +46,7 @@ bool isEmpty(Dict dict) {
     return buf_size(dict.entries) == 0;
 }
 
-void dictionary_add(Dict *dict, dictentry de) {
+void dictionary_add(Dict *dict, Dictentry de) {
     buf_push(dict->entries, de);
 }
 
@@ -60,7 +69,7 @@ static const char *const *SORT_ORDER = NULL;
 /*
  * -1 means @a comes first
  */
-static int _nonnull_ dictentry_comparer(const dictentry *a, const dictentry *b) {
+static int _nonnull_ dictentry_comparer(const Dictentry *a, const Dictentry *b) {
     int inda, indb;
 
     // TODO: Make this less cryptic
@@ -81,25 +90,27 @@ static int _nonnull_ dictentry_comparer(const dictentry *a, const dictentry *b) 
 void dict_sort(Dict dict, const char *const *sort_order) {
     SORT_ORDER = sort_order;
     if (!isEmpty(dict))
-        qsort(dict.entries, num_entries(dict), sizeof(dictentry),
+        qsort(dict.entries, num_entries(dict), sizeof(Dictentry),
               (int (*)(const void *, const void *))dictentry_comparer);
     SORT_ORDER = 0;
 }
 
-void dictentry_free(dictentry de) {
+void dictentry_free(Dictentry de) {
     frees8(&de.dictname);
     frees8(&de.kanji);
     frees8(&de.reading);
     frees8(&de.definition);
 }
 
-void dict_free(Dict dict) {
-    while (buf_size(dict.entries) > 0)
-        dictentry_free(buf_pop(dict.entries));
+void dict_free(Dict dict, bool free_entries) {
+    if (free_entries) {
+        while (buf_size(dict.entries) > 0)
+            dictentry_free(buf_pop(dict.entries));
+    }
     buf_free(dict.entries);
 }
 
-dictentry dictentry_at_index(Dict dict, size_t index) {
+Dictentry dictentry_at_index(Dict dict, size_t index) {
     assert(index < buf_size(dict.entries));
     return dict.entries[index];
 }
@@ -113,8 +124,8 @@ bool dict_contains(Dict dict, s8 word) {
     return false;
 }
 
-void dict_lookup_free(DictLookup *dl) {
-    dict_free(dl->dict);
-    frees8(&dl->lookup);
-    free(dl);
-}
+// void dict_lookup_free(DictLookup *dl) {
+//     dict_free(dl->dict);
+//     frees8(&dl->lookup);
+//     free(dl);
+// }

@@ -60,8 +60,7 @@ static Dict _nonnull_ lookup_hiragana_conversion(s8 word, database_t *db) {
 }
 
 static DictLookup _nonnull_ lookup(s8 word, DictpopupConfig cfg) {
-    _drop_(frees8) s8 dbpath = db_get_dbpath();
-    _drop_(db_close) database_t *db = db_open(dbpath, true);
+    _drop_(db_close) database_t *db = db_open(true);
 
     Dict dict = lookup_word(word, db);
     if (isEmpty(dict) && cfg.fallback_to_mecab_conversion) {

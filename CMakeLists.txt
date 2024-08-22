@@ -234,7 +234,8 @@ add_executable(dictpopup
         src/frontends/gtk3popup/dictpopup-application.c
         src/frontends/gtk3popup/dp-settings.c
         src/frontends/gtk3popup/dp-preferences-window.c
-        src/frontends/gtk3popup/dict_state_manager.c
+        src/frontends/gtk3popup/dp_page_manager.c
+        src/frontends/gtk3popup/ui_manager.c
         src/frontends/gtk3popup/callbacks.c
         src/frontends/gtk3popup/main.c
         src/utils/util.c
@@ -253,6 +254,7 @@ add_executable(dictpopup
         ${GRESOURCE_C}
         ${DEINFLECTION_RULES_C}
         ${COMPILED_SETTINGS_SCHEMA}
+        src/objects/color.c
 )
 target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD GTK3)
 target_link_libraries(dictpopup PRIVATE

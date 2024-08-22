@@ -219,17 +219,17 @@ static s8 parse_definition(yyjson_val *val) {
     return def;
 }
 
-static dictentry parse_dictionary_entry(yyjson_val *arr) {
+static Dictentry parse_dictionary_entry(yyjson_val *arr) {
     if (!yyjson_is_arr(arr)) {
         err("Invalid dictionary format: Entry is not an array.");
-        return (dictentry){0};
+        return (Dictentry){0};
     }
     if (yyjson_arr_size(arr) != 8) {
         err("Invalid dictionary format: Faulty array size.");
-        return (dictentry){0};
+        return (Dictentry){0};
     }
 
-    dictentry de = {0};
+    Dictentry de = {0};
     // first
     yyjson_val *val = yyjson_arr_get_first(arr);
     de.kanji = yyjson_get_s8(val);
@@ -283,7 +283,7 @@ static void parse_yomichan_dictentries_from_buffer(const s8 buffer, const s8 dic
         if (unlikely(!yyjson_is_arr(entry)))
             dbg("Entry is not an array. Skipping..");
 
-        dictentry de = parse_dictionary_entry(entry);
+        Dictentry de = parse_dictionary_entry(entry);
         de.dictname = dictname;
         callbacks.foreach_dictentry(callbacks.userdata_de, de);
         frees8(&de.definition);

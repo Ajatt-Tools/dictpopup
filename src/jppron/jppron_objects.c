@@ -16,3 +16,24 @@ void file_info_free(FileInfo *fi) {
     frees8(&fi->pitch_number);
     frees8(&fi->pitch_pattern);
 }
+
+FileInfo file_info_dup(FileInfo fi) {
+    return (FileInfo){
+        .origin = s8dup(fi.origin),
+        .hira_reading = s8dup(fi.hira_reading),
+        .pitch_number = s8dup(fi.pitch_number),
+        .pitch_pattern = s8dup(fi.pitch_pattern),
+    };
+}
+
+Pronfile pron_file_dup(Pronfile pronfile) {
+    return (Pronfile){
+        .filepath = s8dup(pronfile.filepath),
+        .fileinfo = file_info_dup(pronfile.fileinfo),
+    };
+}
+
+void pron_file_free(Pronfile pronfile) {
+    frees8(&pronfile.filepath);
+    file_info_free(&pronfile.fileinfo);
+}

@@ -66,7 +66,7 @@ static void set_default_values(config *cfg) {
 }
 
 static ParserCallbacks get_callbacks(database_t *db) {
-    return (ParserCallbacks){.foreach_dictentry = (void (*)(void *, dictentry))db_put_dictent,
+    return (ParserCallbacks){.foreach_dictentry = (void (*)(void *, Dictentry))db_put_dictent,
                              .userdata_de = db,
                              .foreach_freqentry = (void (*)(void *, freqentry))db_put_freq,
                              .userdata_fe = db,
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     parse_cmd_line(argc, argv, &cfg);
     set_default_values(&cfg);
 
-    _drop_(frees8) s8 dbpath = db_get_dbpath();
+    s8 dbpath = db_get_dbpath();
 
     msg("Using directory '%.*s' as dictionary path.", (int)cfg.dictspath.len,
         (char *)cfg.dictspath.s);

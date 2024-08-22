@@ -97,7 +97,7 @@ static s8 create_furigana(s8 kanji, s8 reading) {
 }
 
 // TODO: Improve maintainability?
-static s8 map_entry(s8 lookup, s8 sent, dictentry de, AnkiFieldEntry i) {
+static s8 map_entry(s8 lookup, s8 sent, Dictentry de, AnkiFieldEntry i) {
     switch (i) {
         case DP_ANKI_EMPTY:
             return s8dup(S(""));
@@ -123,7 +123,7 @@ static s8 map_entry(s8 lookup, s8 sent, dictentry de, AnkiFieldEntry i) {
     }
 }
 
-static AnkiCard prepare_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config) {
+static AnkiCard prepare_ankicard(s8 lookup, s8 sentence, Dictentry de, AnkiConfig config) {
     char **fieldentries = new (char *, config.fieldmapping.num_fields);
     for (size_t i = 0; i < config.fieldmapping.num_fields; i++) {
         // TODO: fix
@@ -155,7 +155,7 @@ static void send_ankicard(AnkiCard ac) {
         msg("Successfully added card.");
 }
 
-void create_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config) {
+void create_ankicard(s8 lookup, s8 sentence, Dictentry de, AnkiConfig config) {
     AnkiCard ac = prepare_ankicard(lookup, sentence, de, config);
     send_ankicard(ac);
     free_prepared_ankicard(ac);

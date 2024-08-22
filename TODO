@@ -1,31 +1,38 @@
 ## dictpopup
 
-- Add Anki button right click menu
+High priority
 
-- Create pronounce button right click menu only when needed
-- Cache pronfiles per kanji/reading pair
+- think about set_index_visible
 
-- What happens if jppron create gets called twice?
-    -> Move to preferences
+- Left and right buttons should be greyed out if there is only one result
+- Enter in 'Edit Lookup' window should press apply
+
+- pronfiles and exists dot should be consistent with current dictionary state
+  -> add to dict_state manager
 
 - Suspended + new cards indicator?
 
-- Proper error handling on faulty Anki settings
-- Allow creating dictpopup db from preferences window
+- Proper error handling for faulty Anki settings
 
-- Add version to database
+- Add database version to metadata of database
+
+- Remove margin to border in general settings
 
 - What happens if some random folder was selected for pronunciation index?
   -> Proper error message
 
+- More tests, esp. for gui components?
+
 Mid priority
-- Move pronunciation button initialization to a different thread?
+- Remove duplication of full path in every jppron database entry
+  - Safe prefix to indices in metadata and concatenate at runtime
+- Allow creating dictpopup db from preferences window
+- Cache pronfiles per kanji/reading pair
 - Settings should work without a database
 - Check if sentence is mapped to some field and only prompt for it in that case
 - Implement the reading label as a text view to allow for editing -> initiate new search on Enter press
 - Group terms by reading, allow for switching between different readings
 - Implement a small window to manually enter a search string instead of selecting
-- Build database from preferences window instead of cli?
 - Write a "Yomichan search"-like window application
 
 pron:
@@ -34,7 +41,6 @@ pron:
 - Search for audio of inflected selected word (e.g. 下がらない) (optionally)
 
 Low priority
-- Cache dot indicator result for kanji/reading pairs and lookup for every dict entry
 - Kanjify the word in the copied sentence according to the dictionary entry
 - (dictpopup_create) Cleanup database data on error (lock.mdb)
 - Don't show frequency dicts in sort order

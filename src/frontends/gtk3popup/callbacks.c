@@ -15,13 +15,6 @@
 #include <utils/messages.h>
 
 /* -------------- START ANKI -------------------- */
-static s8 get_text_selection(DpApplication *app) {
-    GtkTextIter start, end;
-    if (gtk_text_buffer_get_selection_bounds(app->definition_textbuffer, &start, &end))
-        return fromcstr_(gtk_text_buffer_get_text(app->definition_textbuffer, &start, &end, FALSE));
-    return (s8){0};
-}
-
 struct SelectionData {
     DpApplication *app;
     s8 definition_override;
@@ -37,14 +30,14 @@ static void sentence_selected(GtkClipboard *clipboard, GdkEvent *event, gpointer
         nuke_whitespace(&sentence);
     }
 
-    dictentry entry_to_add = dm_get_currently_visible(app->dict_manager);
+    Dictentry entry_to_add = pm_get_current_dictentry(&app->page_manager);
     if (text_selection.len > 0) {
         frees8(&entry_to_add.definition);
         entry_to_add.definition = text_selection;
     }
 
     AnkiConfig anki_cfg = dp_settings_get_anki_settings(app->settings);
-    create_ankicard(app->lookup_str, sentence, entry_to_add, anki_cfg);
+    create_ankicard(app->initial_lookup_str, sentence, entry_to_add, anki_cfg);
 
     // TODO: Cleanup
     free(anki_cfg.fieldmapping.field_content);
@@ -60,7 +53,27 @@ static void show_copy_sentence_dialog(void) {
 }
 
 // TODO TODO: Remove duplication
-static void add_to_anki_from_clipboard(GtkMenuItem *self, gpointer user_data) {
+void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
+    DpApplication *app = data;
+
+    if (!ac_check_connection()) {
+        err("Cannot connect to Anki. Is Anki running?");
+        return;
+    }
+
+    ui_manager_hide_window(&app->ui_manager);
+
+    struct SelectionData *selection_data = new (struct SelectionData, 1);
+    selection_data->app = app;
+    selection_data->definition_override = ui_manager_get_text_selection(&app->ui_manager);
+
+    GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    g_signal_connect(clipboard, "owner-change", G_CALLBACK(sentence_selected), selection_data);
+
+    show_copy_sentence_dialog();
+}
+
+static void on_add_to_anki_from_clipboard(void *user_data) {
     DpApplication *app = DP_APPLICATION(user_data);
 
     if (!ac_check_connection()) {
@@ -68,7 +81,7 @@ static void add_to_anki_from_clipboard(GtkMenuItem *self, gpointer user_data) {
         return;
     }
 
-    gtk_widget_hide(GTK_WIDGET(app->main_window));
+    ui_manager_hide_window(&app->ui_manager);
 
     struct SelectionData *selection_data = new (struct SelectionData, 1);
     selection_data->app = app;
@@ -79,109 +92,26 @@ static void add_to_anki_from_clipboard(GtkMenuItem *self, gpointer user_data) {
 
     show_copy_sentence_dialog();
 }
-
-void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
-    DpApplication *app = data;
-
-    if (!ac_check_connection()) {
-        err("Cannot connect to Anki. Is Anki running?");
-        return;
-    }
-
-    gtk_widget_hide(GTK_WIDGET(app->main_window));
-
-    struct SelectionData *selection_data = new (struct SelectionData, 1);
-    selection_data->app = app;
-    selection_data->definition_override = get_text_selection(app);
-
-    GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-    g_signal_connect(clipboard, "owner-change", G_CALLBACK(sentence_selected), selection_data);
-
-    show_copy_sentence_dialog();
-}
-
-static void show_anki_button_right_click_menu(DpApplication *self) {
-    GtkWidget *menu = gtk_menu_new();
-
-    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add with clipboard content as definition");
-    g_signal_connect(menu_item, "activate", G_CALLBACK(add_to_anki_from_clipboard), self);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-
-    gtk_widget_show_all(menu);
-    gtk_menu_popup_at_widget(GTK_MENU(menu), self->btn_add_to_anki, GDK_GRAVITY_SOUTH,
-                             GDK_GRAVITY_NORTH_WEST, NULL);
-}
 /* -------------- END ANKI -------------------- */
-
-/* --------------- START JPPRON --------------- */
-static void *jppron_thread(void *arg) {
-    Word *word = (Word *)arg;
-    jppron(*word, 0);
-    word_free(*word);
-    return NULL;
-}
-
-void pronounce_current_word(DpApplication *app) {
-
-    Word *word = new (Word, 1);
-    *word = dp_get_copy_of_current_word(app);
-
-    pthread_t thread_id;
-    if (pthread_create(&thread_id, NULL, jppron_thread, word) != 0) {
-        dbg("Failed to create pronunciation thread");
-        word_free(*word);
-    } else {
-        pthread_detach(thread_id);
-    }
-}
 
 void pronounce_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = DP_APPLICATION(data);
-    pronounce_current_word(app);
+
+    _drop_(frees8) s8 pron_path = pm_get_path_of_current_pronunciation(&app->page_manager);
+
+    play_audio_async(pron_path);
 }
-
-static void play_audio_for_pronfile(GtkMenuItem *menuitem, gpointer user_data) {
-    Pronfile *pronfile = (Pronfile *)user_data;
-    play_audio_async(pronfile->filepath);
-}
-
-static char *create_label_for_pronfile(Pronfile pronfile) {
-    s8 origin = pronfile.fileinfo.origin;
-    s8 pitch_pattern = pronfile.fileinfo.pitch_pattern;
-    char *label = g_strdup_printf("%.*s%s%.*s", (int)pitch_pattern.len, (char *)pitch_pattern.s,
-                                  origin.len && pitch_pattern.len ? " - " : "", (int)origin.len,
-                                  (char *)origin.s);
-
-    return label;
-}
-
-static void show_pronunciation_button_right_click_menu(DpApplication *self) {
-    GtkWidget *menu = gtk_menu_new();
-
-    for (size_t i = 0; i < buf_size(self->pronfiles); i++) {
-        char *label = create_label_for_pronfile(self->pronfiles[i]);
-        GtkWidget *menu_item = gtk_menu_item_new_with_label(label);
-        g_signal_connect(menu_item, "activate", G_CALLBACK(play_audio_for_pronfile),
-                         &self->pronfiles[i]);
-        gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
-    }
-
-    gtk_widget_show_all(menu);
-    gtk_menu_popup_at_widget(GTK_MENU(menu), self->btn_pronounce, GDK_GRAVITY_SOUTH,
-                             GDK_GRAVITY_NORTH_WEST, NULL);
-}
-/* --------------- END JPPRON --------------- */
 
 void next_definition_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = data;
-    if (dm_increment(&app->dict_manager))
-        refresh_ui(app);
+    if (pm_increment(&app->page_manager))
+        ui_refresh(&app->ui_manager, &app->page_manager);
 }
 
 void previous_definition_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = data;
-    if (dm_decrement(&app->dict_manager))
-        refresh_ui(app);
+    if (pm_decrement(&app->page_manager))
+        ui_refresh(&app->ui_manager, &app->page_manager);
 }
 
 void quit_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
@@ -212,12 +142,6 @@ struct DictLookupArgs {
     DictpopupConfig cfg;
 };
 
-static gboolean enable_buttons_idle(gpointer user_data) {
-    DpApplication *app = (DpApplication *)user_data;
-    enable_dictionary_buttons(app);
-    return G_SOURCE_REMOVE;
-}
-
 static void *dict_lookup_thread(void *voidarg) {
     struct DictLookupArgs *args = (struct DictLookupArgs *)voidarg;
 
@@ -225,10 +149,9 @@ static void *dict_lookup_thread(void *voidarg) {
     DictLookup dict_lookup = dictionary_lookup(lookup, args->cfg);
 
     if (isEmpty(dict_lookup.dict)) {
-        set_no_dictentry_found(args->app);
+        ui_manager_set_error(&args->app->ui_manager, S("No dictionary entry found"));
     } else {
         dp_swap_dict_lookup(args->app, dict_lookup);
-        gdk_threads_add_idle(enable_buttons_idle, args->app);
     }
 
     free(args);
@@ -259,65 +182,35 @@ void dict_lookup_async(DpApplication *app) {
 /* --------------- END DICTIONARY LOOKUP --------------- */
 
 /* -------------------- ACTIONS -------------------- */
+static void open_url(const char *url) {
+    GError *error = NULL;
+    if (!g_app_info_launch_default_for_uri(url, NULL, &error)) {
+        g_warning("Failed to open URL with g_app_info_launch_default_for_uri: %s", error->message);
+        g_clear_error(&error);
+    }
+}
+
 void search_massif_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = data;
 
     _drop_(word_free) Word word = dp_get_copy_of_current_word(app);
-    char *url = g_strdup_printf("https://massif.la/ja/search?q=%.*s", (int)word.kanji.len,
-                                (char *)word.kanji.s);
 
-    GError *error = NULL;
-    if (!gtk_show_uri_on_window(GTK_WINDOW(app->main_window), url, GDK_CURRENT_TIME, &error)) {
-        g_warning("Failed to open URL: %s", error->message);
-        g_error_free(error);
-
-        // Fallback method using g_app_info_launch_default_for_uri
-        if (!g_app_info_launch_default_for_uri(url, NULL, &error)) {
-            g_warning("Failed to open URL (fallback method): %s", error->message);
-            g_error_free(error);
-        }
-    }
-
-    g_free(url);
+    _drop_(frees8) s8 url = concat(S("https://massif.la/ja/search?q="), word.kanji);
+    open_url((const char *)url.s);
 }
 
-static void on_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data) {
+static void on_edit_lookup_accept(const char *new_lookup, void *user_data) {
     DpApplication *app = DP_APPLICATION(user_data);
-    if (response_id == GTK_RESPONSE_ACCEPT) {
-        GtkEntry *entry = GTK_ENTRY(g_object_get_data(G_OBJECT(dialog), "entry"));
-        const char *new_lookup = gtk_entry_get_text(entry);
-
-        g_mutex_lock(&app->dict_manager_mutex);
-        frees8(&app->lookup_str);
-        app->lookup_str = s8dup(fromcstr_((char *)new_lookup));
-        g_mutex_unlock(&app->dict_manager_mutex);
-
-        dict_lookup_async(app);
-    }
-    gtk_widget_destroy(GTK_WIDGET(dialog));
+    dp_swap_initial_lookup(app, s8dup(fromcstr_((char *)new_lookup)));
+    dict_lookup_async(app);
 }
 
 void edit_lookup_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = DP_APPLICATION(data);
+    _drop_(frees8) s8 current_lookup_str = dp_get_lookup_str(app);
 
-    GtkWidget *dialog =
-        gtk_dialog_new_with_buttons("Edit Lookup String", GTK_WINDOW(app->main_window),
-                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Cancel",
-                                    GTK_RESPONSE_CANCEL, "Apply", GTK_RESPONSE_ACCEPT, NULL);
-
-    GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    GtkWidget *entry = gtk_entry_new();
-    gtk_container_add(GTK_CONTAINER(content_area), entry);
-
-    g_mutex_lock(&app->dict_manager_mutex);
-    gtk_entry_set_text(GTK_ENTRY(entry), (const char *)app->lookup_str.s);
-    g_mutex_unlock(&app->dict_manager_mutex);
-
-    g_object_set_data(G_OBJECT(dialog), "entry", entry);
-
-    g_signal_connect(dialog, "response", G_CALLBACK(on_dialog_response), app);
-
-    gtk_widget_show_all(dialog);
+    ui_manager_show_edit_lookup_dialog(&app->ui_manager, (const char *)current_lookup_str.s,
+                                       on_edit_lookup_accept, app);
 }
 
 void open_settings_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
@@ -327,7 +220,7 @@ void open_settings_activated(GSimpleAction *action, GVariant *parameter, gpointe
 
 /* --------------- START CALLBACKS ------------------ */
 void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
-    DpApplication *app = DP_APPLICATION(user_data);
+    DpApplication *app = user_data;
 
     _drop_(word_free) Word current_word = dp_get_copy_of_current_word(app);
 
@@ -344,7 +237,8 @@ void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer u
 gboolean on_add_to_anki_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
     if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
         DpApplication *app = DP_APPLICATION(user_data);
-        show_anki_button_right_click_menu(app);
+        ui_manager_show_anki_button_right_click_menu(&app->ui_manager,
+                                                     on_add_to_anki_from_clipboard, app);
         return TRUE;
     }
     return FALSE;
@@ -353,7 +247,11 @@ gboolean on_add_to_anki_button_press(GtkWidget *widget, GdkEventButton *event, g
 gboolean on_pronounce_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
     if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
         DpApplication *app = DP_APPLICATION(user_data);
-        show_pronunciation_button_right_click_menu(app);
+
+        Pronfile *pronfiles = pm_get_current_pronfiles(&app->page_manager);
+        show_pronunciation_button_right_click_menu(&app->ui_manager, pronfiles);
+        free_pronfile_buffer(pronfiles);
+
         return TRUE;
     }
     return FALSE;

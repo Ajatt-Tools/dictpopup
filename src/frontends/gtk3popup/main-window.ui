@@ -75,6 +75,8 @@
                 <property name="width_request">20</property>
                 <property name="height_request">20</property>
                 <property name="tooltip-text" translatable="yes">Indicator for the word/reading pair in your Anki collection&#10;Green: Exists&#10;Red: Does not exist&#10;Orange: Exists, but all instances are suspended&#10;Blue: Exists, but all instances are new</property>
+                <property name="events">GDK_BUTTON_PRESS_MASK</property>
+                <signal name="button-press-event" handler="on_anki_status_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -215,6 +217,7 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="tooltip-text" translatable="yes">Open Menu</property>
+                <property name="popover">popover_menu</property>
                 <child>
                   <object class="GtkImage">
                     <property name="visible">True</property>

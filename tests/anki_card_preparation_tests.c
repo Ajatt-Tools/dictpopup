@@ -41,7 +41,7 @@ Ensure(AnkiCardCreator, correctly_formats_furigana_full_kanji) {
 Ensure(AnkiCardCreator, properly_prepares_full_ankicard) {
     s8 sent = S("白鯨同様、世界中が被害を被っている。騎士団も長く辛酸を味わわされてきた相手だ");
     s8 lookup = S("辛酸");
-    dictentry de = (dictentry){.dictname = S("明鏡国語辞典　第二版"),
+    Dictentry de = (Dictentry){.dictname = S("明鏡国語辞典　第二版"),
                                .kanji = S("辛酸"),
                                .reading = S("しんさん"),
                                .definition = S("つらい思い。苦しみ。"),

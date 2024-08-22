@@ -8,12 +8,13 @@
 // An opaque struct
 typedef struct database_s database_t;
 
+// Should not be freed! Value gets cached
 s8 db_get_dbpath(void);
 
-__attribute__((returns_nonnull)) database_t *_nonnull_ db_open(s8 dbdir, bool readonly);
+__attribute__((returns_nonnull)) database_t *_nonnull_ db_open(bool readonly);
 void _nonnull_ db_close(database_t *db);
 
-void _nonnull_ db_put_dictent(database_t *db, dictentry de);
+void _nonnull_ db_put_dictent(database_t *db, Dictentry de);
 void _nonnull_ db_put_freq(database_t *db, freqentry fe);
 void _nonnull_ db_put_dictname(database_t *db, s8 dictname);
 

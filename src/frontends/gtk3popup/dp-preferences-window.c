@@ -349,8 +349,7 @@ void dp_preferences_window_populate_dict_order(DpPreferencesWindow *self) {
     const gchar *const *current_order = dp_settings_get_dict_sort_order(self->settings);
     assert(current_order);
 
-    s8 dbpath = db_get_dbpath();
-    database_t *db = db_open(dbpath, true);
+    database_t *db = db_open(true);
     s8Buf dict_names = db_get_dictnames(db);
     db_close(db);
 

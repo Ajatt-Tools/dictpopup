@@ -18,7 +18,7 @@ static void foreach_freqentry(void *userdata, freqentry fe) {
     mock(fe.frequency, fe.reading.s, fe.word.s);
 }
 
-static _nonnull_ void foreach_dictentry(void *userdata, dictentry de) {
+static _nonnull_ void foreach_dictentry(void *userdata, Dictentry de) {
     mock(de.definition.s, de.dictname.s, de.kanji.s, de.reading.s);
 }
 

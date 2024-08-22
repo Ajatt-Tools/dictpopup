@@ -19,27 +19,30 @@ typedef struct {
     s8 definition;
     u32 frequency;
     bool is_deinflection;
-} dictentry;
+} Dictentry;
 
-dictentry dictentry_dup(dictentry de);
-void _nonnull_ dictentry_free(dictentry de);
-void dictentry_print(dictentry de);
+Dictentry dictentry_dup(Dictentry de);
+void _nonnull_ dictentry_free(Dictentry de);
+void dictentry_print(Dictentry de);
+
+Word dictentry_get_word(Dictentry de);
+Word dictentry_get_dup_word(Dictentry de);
 
 typedef struct {
-    dictentry *entries;
+    Dictentry *entries;
 } Dict;
 
 Dict newDict(void);
 bool isEmpty(Dict dict);
-void _nonnull_ dictionary_add(Dict *dict, dictentry de);
+void _nonnull_ dictionary_add(Dict *dict, Dictentry de);
 size_t num_entries(Dict dict);
 
 // Sorts @dict in place
 // Not thread safe
 void dict_sort(Dict dict, const char *const *sort_order);
 
-void dict_free(Dict dict);
-dictentry dictentry_at_index(Dict dict, size_t index);
+void dict_free(Dict dict, bool free_entries);
+Dictentry dictentry_at_index(Dict dict, size_t index);
 
 typedef struct {
     s8 lookup;

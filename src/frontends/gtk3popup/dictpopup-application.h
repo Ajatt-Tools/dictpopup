@@ -1,12 +1,12 @@
 #ifndef DICTPOPUP_APP_H
 #define DICTPOPUP_APP_H
 
-#include "dict_state_manager.h"
 #include "dp-preferences-window.h"
 #include "dp-settings.h"
+#include "dp_page_manager.h"
+#include "ui_manager.h"
 
 #include <gtk/gtk.h>
-#include <jppron/jppron_objects.h>
 
 #define DP_TYPE_APPLICATION (dp_application_get_type())
 G_DECLARE_FINAL_TYPE(DpApplication, dp_application, DP, APPLICATION, GtkApplication)
@@ -18,33 +18,19 @@ struct _DpApplication {
 
     DpPreferencesWindow *preferences_window;
 
-    GtkWindow *main_window;
-    GtkWidget *settings_button;
-    GtkLabel *dictionary_number_lbl;
-    GtkTextBuffer *definition_textbuffer;
-    GtkLabel *dictname_lbl;
-    GtkLabel *frequency_lbl;
-    GtkLabel *current_word_lbl;
-    GtkWidget *anki_status_dot;
+    s8 initial_lookup_str;
+    s8 actual_lookup_str;
 
-    GtkWidget *btn_previous;
-    GtkWidget *btn_next;
-    GtkWidget *btn_pronounce;
-    GtkWidget *btn_add_to_anki;
-
-    s8 lookup_str;
-    Pronfile *pronfiles;
-    int anki_exists_status;
-
-    DictManager dict_manager; // Should never be accessed directly
-    GMutex dict_manager_mutex;
+    PageManager page_manager;
+    UiManager ui_manager;
 };
 
 s8 dp_get_lookup_str(DpApplication *app);
 Word dp_get_copy_of_current_word(DpApplication *app);
+void dp_show_page(DpApplication *self, PageData page, size_t num_pages);
 
-void refresh_ui(DpApplication *app);
 void dp_swap_dict_lookup(DpApplication *app, DictLookup new_dict_lookup);
+void dp_swap_initial_lookup(DpApplication *app, s8 new_inital_lookup);
 
 void dp_application_show_preferences(DpApplication *self);
 

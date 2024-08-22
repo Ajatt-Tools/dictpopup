@@ -35,6 +35,6 @@ typedef struct {
 } AnkiConfig;
 
 void safe_focused_window_title(void);
-void create_ankicard(s8 lookup, s8 sentence, dictentry de, AnkiConfig config);
+void create_ankicard(s8 lookup, s8 sentence, Dictentry de, AnkiConfig config);
 
 #endif // ANKI_H
