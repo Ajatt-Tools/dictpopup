@@ -164,13 +164,13 @@ typedef struct {
     PageManager *pm;
 } DelayedUpdatesArgs;
 
-static gboolean refresh_exists_dot(UiManager *self, PageManager *pm) {
+static void refresh_exists_dot(UiManager *self, PageManager *pm) {
     AnkiCollectionStatus status = pm_get_current_anki_status_nolock(pm);
     self->current_anki_status_color = map_ac_status_to_color(status);
     gtk_widget_queue_draw(self->anki_status_dot);
 }
 
-static gboolean refresh_pron_button(UiManager *self, PageManager *pm) {
+static void refresh_pron_button(UiManager *self, PageManager *pm) {
     Pronfile *pronfiles = pm_get_current_pronfiles_ref(pm);
     if (pronfiles) {
         enable_button(self->btn_pronounce);
@@ -224,7 +224,7 @@ static gboolean _ui_refresh_impl(gpointer data) {
     return G_SOURCE_REMOVE;
 }
 
-void ui_queue_quick_updates(UiManager *self, PageManager *pm) {
+static void ui_queue_quick_updates(UiManager *self, PageManager *pm) {
     struct ui_refresh_args_s *args = new (struct ui_refresh_args_s, 1);
     args->self = self;
     args->pm = pm;
@@ -320,8 +320,8 @@ void ui_manager_show_edit_lookup_dialog(UiManager *self, const char *current_loo
 
 /* -------------- ANKI BUTTON RIGHT CLICK MENU ---------------- */
 void ui_manager_show_anki_button_right_click_menu(UiManager *self,
-                                                  void (*on_clipboard_definition)(void *user_data),
-                                                  void *user_data) {
+                                                  void (*on_clipboard_definition)(GtkMenuItem *self, gpointer user_data),
+                                                  gpointer user_data) {
     GtkWidget *menu = gtk_menu_new();
 
     GtkWidget *menu_item = gtk_menu_item_new_with_label("Add with clipboard content as definition");

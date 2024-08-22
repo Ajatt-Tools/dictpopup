@@ -73,7 +73,7 @@ void add_to_anki_activated(GSimpleAction *action, GVariant *parameter, gpointer 
     show_copy_sentence_dialog();
 }
 
-static void on_add_to_anki_from_clipboard(void *user_data) {
+static void on_add_to_anki_from_clipboard(GtkMenuItem *self, gpointer user_data) {
     DpApplication *app = DP_APPLICATION(user_data);
 
     if (!ac_check_connection()) {
