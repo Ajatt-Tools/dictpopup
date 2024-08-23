@@ -17,6 +17,7 @@ struct _DpPreferencesWindow {
     GtkWidget *anki_notetype_combo;
     GtkWidget *anki_fields_list;
 
+    GtkWidget *pronounce_on_startup_switch;
     GtkWidget *pronunciation_path_chooser;
 };
 
@@ -106,6 +107,10 @@ static void dp_preferences_window_constructed(GObject *object) {
     g_object_bind_property(self->settings, "substring-search", self->substring_search_switch,
                            "active", G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
+    g_object_bind_property(self->settings, "pronounce-on-startup",
+                       self->pronounce_on_startup_switch, "active",
+                       G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
     dp_preferences_window_populate_dict_order(self);
     populate_anki_notetypes(self);
     g_signal_connect(self->anki_notetype_combo, "changed", G_CALLBACK(on_notetype_changed), self);
@@ -139,6 +144,7 @@ static void dp_preferences_window_class_init(DpPreferencesWindowClass *klass) {
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_notetype_combo);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_fields_list);
 
+    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, pronounce_on_startup_switch);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
                                          pronunciation_path_chooser);
 

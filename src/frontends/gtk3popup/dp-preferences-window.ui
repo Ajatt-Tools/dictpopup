@@ -304,6 +304,34 @@
                     <property name="orientation">horizontal</property>
                     <property name="spacing">6</property>
                     <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Play Pronunciation on Startup</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="pronounce_on_startup_switch">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="halign">end</property>
+                        <property name="valign">center</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <child>
                       <object class="GtkFileChooserButton" id="pronunciation_path_chooser">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
