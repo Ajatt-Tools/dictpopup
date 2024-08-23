@@ -58,7 +58,7 @@
     <key name="pronounce-on-startup" type="b">
       <default>false</default>
       <summary>Play a Pronunciation on Startup</summary>
-      <description>Play a pronunciation from the locald pronunciation files (needs setup)</description>
+      <description>Play a pronunciation from the local pronunciation files (needs setup)</description>
     </key>
     <key name="pronunciation-dirs-path" type="s">
       <default>''</default>
