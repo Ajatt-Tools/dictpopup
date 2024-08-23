@@ -49,7 +49,14 @@ static void on_pronunciation_create_button_clicked(GtkButton *button, DpPreferen
 
     g_free(path);
 }
-/* ----------------------------------------- */
+
+static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
+    if (event->keyval == GDK_KEY_Escape) {
+        gtk_widget_destroy(widget);
+        return TRUE;
+    }
+    return FALSE;
+}/* ----------------------------------------- */
 
 static void dp_preferences_window_dispose(GObject *object) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(object);
@@ -142,6 +149,8 @@ static void dp_preferences_window_class_init(DpPreferencesWindowClass *klass) {
 
 static void dp_preferences_window_init(DpPreferencesWindow *self) {
     gtk_widget_init_template(GTK_WIDGET(self));
+
+    g_signal_connect(self, "key-press-event", G_CALLBACK(on_key_press), NULL);
 }
 
 /* -------- START NOTETYPE ----------- */
