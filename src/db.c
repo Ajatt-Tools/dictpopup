@@ -28,7 +28,7 @@ struct database_s {
     bool readonly;
 };
 
-#define MDB_CHECK(call)                                                                               \
+#define MDB_CHECK(call)                                                                            \
     do {                                                                                           \
         int _rc = (call);                                                                          \
         die_on(_rc != MDB_SUCCESS, "Database error: %s", mdb_strerror(_rc));                       \
@@ -44,53 +44,76 @@ s8 db_get_dbpath(void) {
     return dbpath;
 }
 
-database_t *db_open(bool readonly) {
-    s8 dbdir = db_get_dbpath();
-    dbg("Opening database in directory: '%s'", (char *)dbdir.s);
-
+static database_t *db_open_readonly(void) {
     database_t *db = new (database_t, 1);
-    db->readonly = readonly;
+    db->readonly = true;
 
     MDB_CHECK(mdb_env_create(&db->env));
     mdb_env_set_maxdbs(db->env, DB_MAX_DBS);
 
-    if (readonly) {
-        die_on(!db_check_exists(dbdir),
-               "There is no database in '%s'. You must create one first with dictpopup-create.",
-               (char *)dbdir.s);
+    s8 dbdir = db_get_dbpath();
+    int rc = mdb_env_open(db->env, (char *)dbdir.s, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664);
 
-        MDB_CHECK(
-            mdb_env_open(db->env, (char *)dbdir.s, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
-        MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
-
-        MDB_CHECK(
-            mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED, &db->db_words_to_id));
-        MDB_CHECK(
-            mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY, &db->db_id_to_definition));
-        MDB_CHECK(mdb_dbi_open(db->txn, DB_FREQUENCIES, 0, &db->db_frequencies));
-        MDB_CHECK(mdb_dbi_open(db->txn, DB_METADATA, 0, &db->db_metadata));
-    } else {
-        unsigned int mapsize = 2097152000; // 2Gb
-        MDB_CHECK(mdb_env_set_mapsize(db->env, mapsize));
-
-        MDB_CHECK(mdb_env_open(db->env, (char *)dbdir.s, 0, 0664));
-        MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
-
-        MDB_CHECK(mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE,
-                            &db->db_words_to_id));
-        MDB_CHECK(mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY | MDB_CREATE,
-                            &db->db_id_to_definition));
-        MDB_CHECK(mdb_dbi_open(db->txn, DB_FREQUENCIES, MDB_CREATE, &db->db_frequencies));
-        MDB_CHECK(mdb_dbi_open(db->txn, DB_METADATA, MDB_CREATE, &db->db_metadata));
-
-        db->datastr = sb_init(200);
-        db->lastdatastr = sb_init(200);
+    if (rc != MDB_SUCCESS) {
+        dbg("Could not open database: %s", mdb_strerror(rc));
+        free(db);
+        return NULL;
     }
+
+    MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
+
+    MDB_CHECK(
+        mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED, &db->db_words_to_id));
+    MDB_CHECK(
+        mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY, &db->db_id_to_definition));
+    MDB_CHECK(mdb_dbi_open(db->txn, DB_FREQUENCIES, 0, &db->db_frequencies));
+    MDB_CHECK(mdb_dbi_open(db->txn, DB_METADATA, 0, &db->db_metadata));
 
     return db;
 }
 
+static database_t *db_open_read_write(void) {
+    database_t *db = new (database_t, 1);
+    db->readonly = false;
+
+    MDB_CHECK(mdb_env_create(&db->env));
+    mdb_env_set_maxdbs(db->env, DB_MAX_DBS);
+
+    unsigned int mapsize = 2097152000; // 2Gb
+    MDB_CHECK(mdb_env_set_mapsize(db->env, mapsize));
+
+    s8 dbdir = db_get_dbpath();
+    int rc = mdb_env_open(db->env, (char *)dbdir.s, 0, 0664);
+
+    if (rc != MDB_SUCCESS) {
+        dbg("Could not open database: %s", mdb_strerror(rc));
+        free(db);
+        return NULL;
+    }
+
+    MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
+
+    MDB_CHECK(mdb_dbi_open(db->txn, DB_WORDS_TO_ID, MDB_DUPSORT | MDB_DUPFIXED | MDB_CREATE,
+                           &db->db_words_to_id));
+    MDB_CHECK(mdb_dbi_open(db->txn, DB_ID_TO_DEFINITIONS, MDB_INTEGERKEY | MDB_CREATE,
+                           &db->db_id_to_definition));
+    MDB_CHECK(mdb_dbi_open(db->txn, DB_FREQUENCIES, MDB_CREATE, &db->db_frequencies));
+    MDB_CHECK(mdb_dbi_open(db->txn, DB_METADATA, MDB_CREATE, &db->db_metadata));
+
+    db->datastr = sb_init(200);
+    db->lastdatastr = sb_init(200);
+
+    return db;
+}
+
+database_t *db_open(bool readonly) {
+    return readonly ? db_open_readonly() : db_open_read_write();
+}
+
 void db_close(database_t *db) {
+    if (!db)
+        return;
+
     if (db->readonly) {
         mdb_txn_abort(db->txn);
     } else {
@@ -131,7 +154,7 @@ static void put_de_if_new(database_t *db, Dictentry de) {
         db->last_id++; // Note: The above id struct updates too
         MDB_val val_mdb = {.mv_data = datastr.s, .mv_size = datastr.len};
         MDB_CHECK(mdb_put(db->txn, db->db_id_to_definition, &id_mdb, &val_mdb,
-                       MDB_NOOVERWRITE | MDB_APPEND));
+                          MDB_NOOVERWRITE | MDB_APPEND));
 
         stringbuilder_s tmp = db->lastdatastr;
         db->lastdatastr = db->datastr;

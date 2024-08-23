@@ -11,8 +11,8 @@ typedef struct database_s database_t;
 // Should not be freed! Value gets cached
 s8 db_get_dbpath(void);
 
-__attribute__((returns_nonnull)) database_t *_nonnull_ db_open(bool readonly);
-void _nonnull_ db_close(database_t *db);
+database_t *db_open(bool readonly);
+void db_close(database_t *db);
 
 void _nonnull_ db_put_dictent(database_t *db, Dictentry de);
 void _nonnull_ db_put_freq(database_t *db, freqentry fe);
