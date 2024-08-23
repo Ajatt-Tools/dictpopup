@@ -131,8 +131,8 @@ static int dp_application_command_line(GApplication *app, GApplicationCommandLin
     int argc;
     char **argv = g_application_command_line_get_arguments(cmdline, &argc);
 
-    for (int i = 1; i < argc; i++) {
-        self->initial_lookup_str = s8dup(fromcstr_(argv[i]));
+    if (argc > 1) {
+        dp_swap_initial_lookup(self, s8dup(fromcstr_(argv[1])));
     }
 
     g_strfreev(argv);
