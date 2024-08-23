@@ -30,7 +30,7 @@ static void sentence_selected(GtkClipboard *clipboard, GdkEvent *event, gpointer
         nuke_whitespace(&sentence);
     }
 
-    Dictentry entry_to_add = pm_get_current_dictentry(&app->page_manager);
+    Dictentry entry_to_add = dp_get_current_dictentry(app);
     if (text_selection.len > 0) {
         frees8(&entry_to_add.definition);
         entry_to_add.definition = text_selection;
@@ -93,13 +93,9 @@ static void on_add_to_anki_from_clipboard(GtkMenuItem *self, gpointer user_data)
     show_copy_sentence_dialog();
 }
 /* -------------- END ANKI -------------------- */
-
 void pronounce_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = DP_APPLICATION(data);
-
-    _drop_(frees8) s8 pron_path = pm_get_path_of_current_pronunciation(&app->page_manager);
-
-    play_audio_async(pron_path);
+    dp_play_current_pronunciation(app);
 }
 
 void next_definition_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
@@ -193,7 +189,7 @@ static void open_url(const char *url) {
 void search_massif_activated(GSimpleAction *action, GVariant *parameter, gpointer data) {
     DpApplication *app = data;
 
-    _drop_(word_free) Word word = dp_get_copy_of_current_word(app);
+    _drop_(word_free) Word word = dp_get_current_word(app);
 
     _drop_(frees8) s8 url = concat(S("https://massif.la/ja/search?q="), word.kanji);
     open_url((const char *)url.s);
@@ -222,7 +218,7 @@ void open_settings_activated(GSimpleAction *action, GVariant *parameter, gpointe
 void on_anki_status_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
     DpApplication *app = user_data;
 
-    _drop_(word_free) Word current_word = dp_get_copy_of_current_word(app);
+    _drop_(word_free) Word current_word = dp_get_current_word(app);
 
     char *errormsg = NULL;
     ac_gui_search(dp_settings_get_anki_deck(app->settings),
@@ -248,7 +244,7 @@ gboolean on_pronounce_button_press(GtkWidget *widget, GdkEventButton *event, gpo
     if (event->type == GDK_BUTTON_PRESS && event->button == 3) {
         DpApplication *app = DP_APPLICATION(user_data);
 
-        Pronfile *pronfiles = pm_get_current_pronfiles(&app->page_manager);
+        Pronfile *pronfiles = dp_get_current_pronfiles(app);
         show_pronunciation_button_right_click_menu(&app->ui_manager, pronfiles);
         free_pronfile_buffer(pronfiles);
 

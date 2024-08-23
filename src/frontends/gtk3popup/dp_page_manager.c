@@ -1,7 +1,6 @@
 #include "callbacks.h"
 #include "dictpopup-application.h"
 
-#include <glib/gthread.h>
 #include <jppron/jppron.h>
 #include <objects/dict.h>
 #include <utils/messages.h>
@@ -32,7 +31,6 @@ static void dict_pages_free(PageData *pages) {
 }
 
 void _nonnull_ page_manager_init(PageManager *self, DpSettings *settings) {
-    g_mutex_init(&self->mutex);
     self->pages = NULL;
     self->index_visible = 0;
     self->num_pages = 0;
@@ -98,68 +96,38 @@ bool _nonnull_ pm_decrement(PageManager *self) {
 void _nonnull_ pm_swap_dict(PageManager *self, Dict new_dict) {
     PageData *new_page_data = dict_pages_from_dictentries(new_dict, &self->num_pages);
 
-    g_mutex_lock(&self->mutex);
-
     dict_pages_free(self->pages);
     self->pages = new_page_data;
     set_index_visible(self, 0);
+}
 
-    g_mutex_unlock(&self->mutex);
+Pronfile *_nonnull_ pm_get_current_pronfiles(PageManager *self) {
+    PageData *data = get_current_data(self);
+
+    if (!data->pronfiles_loaded)
+        pm_load_pronfiles(self);
+
+    return data->pronfiles;
 }
 
 s8 _nonnull_ pm_get_path_of_current_pronunciation(PageManager *self) {
     s8 ret = {0};
-    g_mutex_lock(&self->mutex);
 
-    PageData *data = get_current_data(self);
-    if (data->pronfiles)
-        ret = s8dup(data->pronfiles[0].filepath);
+    Pronfile *pronfiles = pm_get_current_pronfiles(self);
+    if (pronfiles)
+        ret = pronfiles[0].filepath;
 
-    g_mutex_unlock(&self->mutex);
-    return ret;
-}
-
-Pronfile *_nonnull_ pm_get_current_pronfiles(PageManager *self) {
-    Pronfile *ret = 0;
-    g_mutex_lock(&self->mutex);
-
-    PageData *data = get_current_data(self);
-    for (size_t i = 0; i < buf_size(data->pronfiles); i++) {
-        buf_push(ret, data->pronfiles[i]);
-    }
-
-    g_mutex_unlock(&self->mutex);
     return ret;
 }
 
 Word _nonnull_ pm_get_current_word(PageManager *self) {
-    Word ret = {0};
-    g_mutex_lock(&self->mutex);
-
     PageData *data = get_current_data(self);
-    ret = dictentry_get_dup_word(data->entry);
-
-    g_mutex_unlock(&self->mutex);
-    return ret;
+    return dictentry_get_word(data->entry);
 }
 
 Dictentry _nonnull_ pm_get_current_dictentry(PageManager *self) {
-    Dictentry ret = {0};
-    g_mutex_lock(&self->mutex);
-
     PageData *data = get_current_data(self);
-    ret = dictentry_dup(data->entry);
-
-    g_mutex_unlock(&self->mutex);
-    return ret;
-}
-
-void pm_lock(PageManager *self) {
-    g_mutex_lock(&self->mutex);
-}
-
-Dictentry *pm_get_current_entry_ref(PageManager *self) {
-    return &get_current_data(self)->entry;
+    return data->entry;
 }
 
 size_t pm_get_current_index(PageManager *self) {
@@ -170,24 +138,11 @@ size_t pm_get_num_pages(PageManager *self) {
     return self->num_pages;
 }
 
-AnkiCollectionStatus _nonnull_ pm_get_current_anki_status_nolock(PageManager *self) {
+AnkiCollectionStatus _nonnull_ pm_get_current_anki_status(PageManager *self) {
     PageData *data = get_current_data(self);
 
     if (!data->anki_status_loaded)
         pm_load_anki_status(self);
 
     return data->anki_exists_status;
-}
-
-Pronfile *pm_get_current_pronfiles_ref(PageManager *self) {
-    PageData *data = get_current_data(self);
-
-    if (!data->pronfiles_loaded)
-        pm_load_pronfiles(self);
-
-    return data->pronfiles;
-}
-
-void pm_unlock(PageManager *self) {
-    g_mutex_unlock(&self->mutex);
 }

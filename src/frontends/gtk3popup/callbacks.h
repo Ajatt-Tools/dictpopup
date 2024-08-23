@@ -22,7 +22,6 @@ void next_definition_activated(GSimpleAction *action, GVariant *parameter, gpoin
 void previous_definition_activated(GSimpleAction *action, GVariant *parameter, gpointer data);
 void quit_activated(GSimpleAction *action, GVariant *parameter, gpointer data);
 
-void pronounce_current_word(DpApplication *app);
 struct Color map_ac_status_to_color(AnkiCollectionStatus status);
 
 void dict_lookup_async(DpApplication *app);

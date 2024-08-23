@@ -18,8 +18,6 @@ typedef struct {
 } PageData;
 
 typedef struct {
-    GMutex mutex;
-
     PageData *pages;
     size_t index_visible;
     size_t num_pages;
@@ -37,15 +35,8 @@ s8 _nonnull_ pm_get_path_of_current_pronunciation(PageManager *self);
 Pronfile *_nonnull_ pm_get_current_pronfiles(PageManager *self);
 Word _nonnull_ pm_get_current_word(PageManager *self);
 Dictentry _nonnull_ pm_get_current_dictentry(PageManager *self);
-
-
-
-void pm_lock(PageManager *self);
-Dictentry *pm_get_current_entry_ref(PageManager *self);
-size_t pm_get_current_index(PageManager *self);
-size_t pm_get_num_pages(PageManager *self);
-AnkiCollectionStatus _nonnull_ pm_get_current_anki_status_nolock(PageManager *self);
-Pronfile *pm_get_current_pronfiles_ref(PageManager *self);
-void pm_unlock(PageManager *self);
+size_t _nonnull_ pm_get_current_index(PageManager *self);
+size_t _nonnull_ pm_get_num_pages(PageManager *self);
+AnkiCollectionStatus _nonnull_ pm_get_current_anki_status(PageManager *self);
 
 #endif // DICT_STATE_MANAGER_H

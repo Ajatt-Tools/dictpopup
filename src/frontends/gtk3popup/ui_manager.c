@@ -123,9 +123,9 @@ static void refresh_dictname(UiManager *self, s8 dictname) {
     gtk_label_set_text(self->dictname_label, (char *)dictname.s);
 }
 
-static void refresh_title_with_entry(UiManager *self, Dictentry *de) {
+static void refresh_title_with_entry(UiManager *self, Dictentry de) {
     _drop_(frees8) s8 title =
-        concat(S("dictpopup - "), de->reading, S("【"), de->kanji, S("】from "), de->dictname);
+        concat(S("dictpopup - "), de.reading, S("【"), de.kanji, S("】from "), de.dictname);
     gtk_window_set_title(self->main_window, (char *)title.s);
 }
 
@@ -165,13 +165,13 @@ typedef struct {
 } DelayedUpdatesArgs;
 
 static void refresh_exists_dot(UiManager *self, PageManager *pm) {
-    AnkiCollectionStatus status = pm_get_current_anki_status_nolock(pm);
+    AnkiCollectionStatus status = pm_get_current_anki_status(pm);
     self->current_anki_status_color = map_ac_status_to_color(status);
     gtk_widget_queue_draw(self->anki_status_dot);
 }
 
 static void refresh_pron_button(UiManager *self, PageManager *pm) {
-    Pronfile *pronfiles = pm_get_current_pronfiles_ref(pm);
+    Pronfile *pronfiles = pm_get_current_pronfiles(pm);
     if (pronfiles) {
         enable_button(self->btn_pronounce);
     } else {
@@ -184,10 +184,8 @@ static gboolean process_delayed_updates(void *voidarg) {
     UiManager *self = args->self;
     PageManager *pm = args->pm;
 
-    pm_lock(pm);
     refresh_exists_dot(self, pm);
     refresh_pron_button(self, pm);
-    pm_unlock(pm);
 
     free(args);
     return G_SOURCE_REMOVE;
@@ -205,22 +203,18 @@ static gboolean _ui_refresh_impl(gpointer data) {
     UiManager *self = args->self;
     PageManager *pm = args->pm;
 
-    pm_lock(pm);
-    Dictentry *de = pm_get_current_entry_ref(pm);
+    Dictentry de = pm_get_current_dictentry(pm);
     size_t current_index = pm_get_current_index(pm);
     size_t num_pages = pm_get_num_pages(pm);
 
-    refresh_definition(self, de->definition);
-    refresh_current_word_with_entry(self, dictentry_get_word(*de));
-    refresh_dictname(self, de->dictname);
+    refresh_definition(self, de.definition);
+    refresh_current_word_with_entry(self, dictentry_get_word(de));
+    refresh_dictname(self, de.dictname);
     refresh_dictionary_number(self, current_index, num_pages);
-    set_frequency_to(self, de->frequency);
+    set_frequency_to(self, de.frequency);
     refresh_left_right_buttons(self, num_pages);
     refresh_title_with_entry(self, de);
 
-    pm_unlock(pm);
-
-    set_end_time_now();
     return G_SOURCE_REMOVE;
 }
 

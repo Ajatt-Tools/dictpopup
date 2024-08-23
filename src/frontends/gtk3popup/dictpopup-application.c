@@ -116,6 +116,7 @@ static void dictpopup_startup(GApplication *app) {
 }
 
 static void dp_application_init(DpApplication *self) {
+    g_mutex_init(&self->dict_data_mutex);
     self->settings = dp_settings_new();
     page_manager_init(&self->page_manager, self->settings);
     self->initial_lookup_str = (s8){0};
@@ -162,32 +163,73 @@ static void set_database_not_found(DpApplication *app) {
 }
 
 /* ---------------- START OBJECT FUNCTIONS ---------------------- */
-s8 dp_get_lookup_str(DpApplication *app) {
-    // TODO: Mutex
-    s8 lookup_copy = s8dup(app->initial_lookup_str);
+void dp_swap_initial_lookup(DpApplication *self, s8 new_inital_lookup) {
+    g_mutex_lock(&self->dict_data_mutex);
+    frees8(&self->initial_lookup_str);
+    self->initial_lookup_str = new_inital_lookup;
+    g_mutex_unlock(&self->dict_data_mutex);
+}
+
+static void _dp_swap_actual_lookup_nolock(DpApplication *self, s8 new_actual_lookup) {
+    frees8(&self->actual_lookup_str);
+    self->actual_lookup_str = new_actual_lookup;
+}
+
+static void on_dict_lookup_completed(DpApplication *app) {
+    ui_refresh(&app->ui_manager, &app->page_manager);
+
+    if (dp_settings_get_pronounce_on_startup(app->settings))
+        dp_play_current_pronunciation(app);
+}
+
+void dp_swap_dict_lookup(DpApplication *self, DictLookup new_dict_lookup) {
+    g_mutex_lock(&self->dict_data_mutex);
+    pm_swap_dict(&self->page_manager, new_dict_lookup.dict);
+    _dp_swap_actual_lookup_nolock(self, new_dict_lookup.lookup);
+    g_mutex_unlock(&self->dict_data_mutex);
+
+    on_dict_lookup_completed(self);
+}
+
+void dp_play_current_pronunciation(DpApplication *self) {
+    g_mutex_lock(&self->dict_data_mutex);
+    const s8 pron_path = pm_get_path_of_current_pronunciation(&self->page_manager);
+    if (pron_path.len)
+        play_audio_async(pron_path);
+    g_mutex_unlock(&self->dict_data_mutex);
+}
+
+Word dp_get_current_word(DpApplication *self) {
+    g_mutex_lock(&self->dict_data_mutex);
+    Word ret = word_dup(pm_get_current_word(&self->page_manager));
+    g_mutex_unlock(&self->dict_data_mutex);
+    return ret;
+}
+
+_deallocator_(free_pronfile_buffer) Pronfile *dp_get_current_pronfiles(DpApplication *self) {
+    Pronfile *ret = 0;
+
+    g_mutex_lock(&self->dict_data_mutex);
+    Pronfile *pronfiles = pm_get_current_pronfiles(&self->page_manager);
+    for (size_t i = 0; i < buf_size(pronfiles); i++) {
+        buf_push(ret, pronfiles[i]);
+    }
+    g_mutex_unlock(&self->dict_data_mutex);
+
+    return ret;
+}
+
+s8 dp_get_lookup_str(DpApplication *self) {
+    g_mutex_lock(&self->dict_data_mutex);
+    s8 lookup_copy = s8dup(self->initial_lookup_str);
+    g_mutex_unlock(&self->dict_data_mutex);
     return lookup_copy;
 }
 
-void dp_swap_initial_lookup(DpApplication *app, s8 new_inital_lookup) {
-    // TODO mutex
-    frees8(&app->initial_lookup_str);
-    app->initial_lookup_str = new_inital_lookup;
-}
-
-static void dp_swap_actual_lookup(DpApplication *app, s8 new_actual_lookup) {
-    // TODO mutex
-    frees8(&app->actual_lookup_str);
-    app->actual_lookup_str = new_actual_lookup;
-}
-
-void dp_swap_dict_lookup(DpApplication *app, DictLookup new_dict_lookup) {
-    pm_swap_dict(&app->page_manager, new_dict_lookup.dict);
-    ui_refresh(&app->ui_manager, &app->page_manager);
-
-    dp_swap_actual_lookup(app, new_dict_lookup.lookup);
-}
-
-Word dp_get_copy_of_current_word(DpApplication *app) {
-    return pm_get_current_word(&app->page_manager);
+Dictentry dp_get_current_dictentry(DpApplication *self) {
+    g_mutex_lock(&self->dict_data_mutex);
+    Dictentry ret = dictentry_dup(pm_get_current_dictentry(&self->page_manager));
+    g_mutex_unlock(&self->dict_data_mutex);
+    return ret;
 }
 /* ---------------- END OBJECT FUNCTIONS ---------------------- */
