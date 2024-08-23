@@ -31,8 +31,9 @@ static s8 get_default_database_path(void) {
     return buildpath(fromcstr_((char *)get_user_data_dir()), S("jppron"));
 }
 
-static void process_audio_subdirectory(const char *audio_dir_path, char *subdir_name, PronDatabase *db) {
-    _drop_(frees8) s8 curdir = buildpath(fromcstr_((char*)audio_dir_path), fromcstr_(subdir_name));
+static void process_audio_subdirectory(const char *audio_dir_path, char *subdir_name,
+                                       PronDatabase *db) {
+    _drop_(frees8) s8 curdir = buildpath(fromcstr_((char *)audio_dir_path), fromcstr_(subdir_name));
     _drop_(frees8) s8 index_path = buildpath(curdir, S("index.json"));
     dbg("Processing path: %.*s", (int)curdir.len, (char *)curdir.s);
 
@@ -48,7 +49,7 @@ static void jppron_create_database(const char *audio_dir_path, s8 dbpth) {
     jdb_remove(dbpth);
     createdir(dbpth);
 
-    _drop_(jppron_close_db) PronDatabase *db = jppron_open_db((char *)dbpth.s, false);
+    _drop_(jppron_close_db) PronDatabase *db = jppron_open_db(false);
 
     _drop_(closedir) DIR *audio_dir = opendir(audio_dir_path);
     err_ret_on(!audio_dir, "Failed to open audio directory '%s': %s", audio_dir_path,
@@ -91,9 +92,11 @@ static FileInfo *get_fileinfo_for_array(PronDatabase *db, s8 *files) {
     return fi;
 }
 
-static void get_all_files_and_fileinfo_for(s8 kanji, s8 db_path, s8 *files[static 1],
-                                           FileInfo *fileinfo[static 1]) {
-    _drop_(jppron_close_db) PronDatabase *db = jppron_open_db((char *)db_path.s, true);
+static void _nonnull_ get_all_files_and_fileinfo_for(s8 kanji, s8 *files[static 1],
+                                                     FileInfo *fileinfo[static 1]) {
+    _drop_(jppron_close_db) PronDatabase *db = jppron_open_db(true);
+    if (!db)
+        return;
 
     *files = jdb_get_files(db, kanji);
     if (!*files)
@@ -103,10 +106,9 @@ static void get_all_files_and_fileinfo_for(s8 kanji, s8 db_path, s8 *files[stati
 }
 
 Pronfile *get_pronfiles_for(Word word) {
-    _drop_(frees8) s8 db_path = get_default_database_path();
     _drop_(s8_buf_free) s8Buf files = 0;
     _drop_(free) FileInfo *fileinfo = 0;
-    get_all_files_and_fileinfo_for(word.kanji, db_path, &files, &fileinfo);
+    get_all_files_and_fileinfo_for(word.kanji, &files, &fileinfo);
 
     if (!files)
         return NULL;
@@ -144,12 +146,6 @@ Pronfile *get_pronfiles_for(Word word) {
     return pronfiles;
 }
 
-static void play_pronfiles(Pronfile *pronfiles) {
-    for (size_t i = 0; i < buf_size(pronfiles); i++) {
-        play_audio_sync(pronfiles[i].filepath);
-    }
-}
-
 void jppron_create_index(const char *audio_folders_path) {
     _drop_(frees8) s8 dbpath = get_default_database_path();
 
@@ -157,19 +153,7 @@ void jppron_create_index(const char *audio_folders_path) {
         msg("Indexing files..");
         jppron_create_database(audio_folders_path, dbpath); // TODO: エラー処理
         msg("Index completed.");
-    }
-    else {
+    } else {
         err("No path provided.");
     }
-}
-
-void jppron(Word word, char *audio_folders_path) {
-    /* _drop_(free_pronfile_buffer) pronfile_s *pronfiles = get_pronfiles_for(word, reading,
-     * dbpath); */
-    Pronfile *pronfiles = get_pronfiles_for(word);
-    if (pronfiles) {
-        play_pronfiles(pronfiles);
-        free_pronfile_buffer(pronfiles);
-    } else
-        msg("No pronunciation found.");
 }

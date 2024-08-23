@@ -13,6 +13,7 @@
 #include "utils/util.h"
 
 #include <jppron/jppron_database.h>
+#include <platformdep/file_operations.h>
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
@@ -31,38 +32,68 @@ struct _PronDatabase {
     bool readonly;
 };
 
-PronDatabase *jppron_open_db(char *dbpath, bool readonly) {
-    dbg("Opening database in directory: '%s'", dbpath);
+static s8 pron_db_get_path(void) {
+    static s8 dbpath = (s8){0};
 
+    if (!dbpath.len) {
+        dbpath = buildpath(fromcstr_((char *)get_user_data_dir()), S("jppron"));
+    }
+
+    return dbpath;
+}
+
+static PronDatabase *pron_db_open_readonly(s8 dbpath) {
     PronDatabase *db = new (PronDatabase, 1);
-    db->readonly = readonly;
+    db->readonly = true;
 
     MDB_CHECK(mdb_env_create(&db->env));
     mdb_env_set_maxdbs(db->env, 2);
 
-    if (db->readonly) {
-        die_on(!jdb_check_exists(fromcstr_(dbpath)), "There is no jppron database in '%s'.",
-               dbpath);
-
-        MDB_CHECK(mdb_env_open(db->env, dbpath, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664));
-
-    } else {
-        unsigned int mapsize = 2147483648; // 2 Gb max
-        MDB_CHECK(mdb_env_set_mapsize(db->env, mapsize));
-
-        MDB_CHECK(mdb_env_open(db->env, dbpath, 0, 0664));
-        MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
-        MDB_CHECK(
-            mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT | MDB_CREATE, &db->db_headword_to_filepath));
-        MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", MDB_CREATE, &db->db_filepath_to_fileinfo));
-
-        db->lastval = sb_init(200);
+    int rc = mdb_env_open(db->env, (char *)dbpath.s, MDB_RDONLY | MDB_NOLOCK | MDB_NORDAHEAD, 0664);
+    if (rc != MDB_SUCCESS) {
+        dbg("Could not open pron database: %s", mdb_strerror(rc));
+        free(db);
+        return NULL;
     }
-
     return db;
 }
 
+static PronDatabase *pron_db_open_read_write(s8 dbpath) {
+    PronDatabase *db = new (PronDatabase, 1);
+    db->readonly = true;
+
+    MDB_CHECK(mdb_env_create(&db->env));
+    mdb_env_set_maxdbs(db->env, 2);
+
+    unsigned int mapsize = 2147483648; // 2 Gb max
+    MDB_CHECK(mdb_env_set_mapsize(db->env, mapsize));
+
+    int rc = mdb_env_open(db->env, (char *)dbpath.s, 0, 0664);
+    if (rc != MDB_SUCCESS) {
+        dbg("Could not open pron database: %s", mdb_strerror(rc));
+        free(db);
+        return NULL;
+    }
+
+    MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
+    MDB_CHECK(
+        mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT | MDB_CREATE, &db->db_headword_to_filepath));
+    MDB_CHECK(mdb_dbi_open(db->txn, "dbi2", MDB_CREATE, &db->db_filepath_to_fileinfo));
+
+    db->lastval = sb_init(200);
+    return db;
+}
+
+PronDatabase *jppron_open_db(bool readonly) {
+    s8 dbpath = pron_db_get_path();
+    dbg("Opening jppron database in directory: '%s'", (char *)dbpath.s);
+    return readonly ? pron_db_open_readonly(dbpath) : pron_db_open_read_write(dbpath);
+}
+
 void jppron_close_db(PronDatabase *db) {
+    if (!db)
+        return;
+
     if (!db->readonly) {
         MDB_CHECK(mdb_txn_commit(db->txn));
         mdb_dbi_close(db->env, db->db_headword_to_filepath);

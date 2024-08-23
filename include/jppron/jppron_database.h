@@ -9,7 +9,7 @@
 
 typedef struct _PronDatabase PronDatabase;
 
-PronDatabase *jppron_open_db(char *path, bool readonly);
+PronDatabase *jppron_open_db(bool readonly);
 void jppron_close_db(PronDatabase *);
 /*
  * Add to database, allowing duplicates if they are added directly after another

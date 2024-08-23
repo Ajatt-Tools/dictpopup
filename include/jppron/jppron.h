@@ -11,8 +11,7 @@ void free_pronfile_buffer(Pronfile *pronfiles);
 DEFINE_DROP_FUNC_PTR(Pronfile, free_pronfile)
 DEFINE_DROP_FUNC(Pronfile *, free_pronfile_buffer)
 
-void jppron(Word word, char *audio_folders_path);
-/* _deallocator_(free_pronfile_buffer) */ // TODO: Check why this gives compiler errors
+_deallocator_(free_pronfile_buffer) // TODO: Check why this gives compiler errors
 Pronfile *get_pronfiles_for(Word word);
 
 void jppron_create_index(const char *audio_folders_path);
