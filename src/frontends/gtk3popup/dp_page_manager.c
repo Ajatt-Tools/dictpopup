@@ -64,6 +64,7 @@ static void pm_load_pronfiles(PageManager *self) {
 
     Word word = dictentry_get_word(current_data->entry);
     current_data->pronfiles = get_pronfiles_for(word);
+    current_data->pronfiles_loaded = true;
 }
 
 static void _nonnull_ set_index_visible(PageManager *self, size_t new_index) {
