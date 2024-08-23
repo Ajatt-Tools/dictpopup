@@ -339,13 +339,18 @@
                         <property name="action">select-folder</property>
                         <property name="width_chars">40</property>
                       </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                      </packing>
                     </child>
                     <child>
                       <object class="GtkButton" id="pronunciation_create_button">
                         <property name="label" translatable="yes">Generate Index</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
-                        <property name="receives_default">True</property>
+                        <property name="halign">end</property>
+                        <property name="valign">center</property>
                         <signal name="clicked" handler="on_pronunciation_create_button_clicked" swapped="no"/>
                       </object>
                     </child>
