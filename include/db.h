@@ -22,8 +22,8 @@ void _nonnull_ db_append_lookup(const database_t *db, s8 headword, Dict dict[sta
                                 bool is_deinflection);
 s8Buf db_get_dictnames(database_t *db);
 
-bool db_check_exists(s8 dbpath);
-void db_remove(s8 dbpath);
+bool db_check_exists(void);
+void db_remove(void);
 
 DEFINE_DROP_FUNC(database_t *, db_close)
 

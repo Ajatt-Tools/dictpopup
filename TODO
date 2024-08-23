@@ -2,13 +2,8 @@
 
 High priority
 
-- think about set_index_visible
-
-- Left and right buttons should be greyed out if there is only one result
-- Enter in 'Edit Lookup' window should press apply
-
-- pronfiles and exists dot should be consistent with current dictionary state
-  -> add to dict_state manager
+- Investigate why デジタル大辞泉 appears twice in dictionary sort order
+- Fix update of dictionary sort order not working
 
 - Suspended + new cards indicator?
 
@@ -16,14 +11,13 @@ High priority
 
 - Add database version to metadata of database
 
-- Remove margin to border in general settings
-
 - What happens if some random folder was selected for pronunciation index?
   -> Proper error message
 
-- More tests, esp. for gui components?
+- More tests (esp. for gui components?)
 
 Mid priority
+- Close settings window with escape
 - Remove duplication of full path in every jppron database entry
   - Safe prefix to indices in metadata and concatenate at runtime
 - Allow creating dictpopup db from preferences window

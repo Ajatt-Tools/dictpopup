@@ -345,12 +345,14 @@ s8Buf db_get_dictnames(database_t *db) {
     return names;
 }
 
-bool db_check_exists(s8 dbpath) {
+bool db_check_exists(void) {
+    s8 dbpath = db_get_dbpath();
     _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
     return check_file_exists((char *)dbfile.s);
 }
 
-void db_remove(s8 dbpath) {
+void db_remove() {
+    s8 dbpath = db_get_dbpath();
     _drop_(frees8) s8 dbfile = buildpath(dbpath, S("data.mdb"));
     rem((char *)dbfile.s);
 }

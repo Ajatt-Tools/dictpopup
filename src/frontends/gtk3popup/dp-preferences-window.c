@@ -1,5 +1,7 @@
 #include "dp-preferences-window.h"
 
+#include "dictpopup_create.h"
+#include "stdatomic.h"
 #include <ankiconnectc.h>
 #include <db.h>
 #include <jppron/jppron.h>
@@ -8,6 +10,11 @@ struct _DpPreferencesWindow {
     GtkWindow parent_instance;
 
     DpSettings *settings;
+
+    GtkWidget *dictionaries_path_chooser;
+    GtkWidget *dictpopup_create_button;
+    GThread *create_thread;
+    atomic_bool cancel_dictpopup_create;
 
     GtkWidget *nuke_whitespace_switch;
     GtkWidget *mecab_conversion_switch;
@@ -32,7 +39,7 @@ static GtkTargetEntry drag_entries[] = {{"GTK_LIST_BOX_ROW", GTK_TARGET_SAME_APP
 static void on_drag_data_received(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
                                   GtkSelectionData *selection_data, guint info, guint32 time,
                                   gpointer user_data);
-void dp_preferences_window_populate_dict_order(DpPreferencesWindow *self);
+void dp_preferences_window_update_dict_order(DpPreferencesWindow *self);
 void dp_preferences_window_save_dict_order(DpPreferencesWindow *self);
 static void populate_anki_notetypes(DpPreferencesWindow *self);
 static void on_notetype_changed(GtkComboBox *combo_box, gpointer user_data);
@@ -51,16 +58,86 @@ static void on_pronunciation_create_button_clicked(GtkButton *button, DpPreferen
     g_free(path);
 }
 
+static bool on_db_exist(void *voidarg) {
+    DpPreferencesWindow *pref_window = voidarg;
+    gboolean overwrite = FALSE;
+
+    GtkWidget *dialog = gtk_message_dialog_new(
+        GTK_WINDOW(pref_window), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+        GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+        "A database already exists. Do you want to overwrite it?");
+    gtk_window_set_title(GTK_WINDOW(dialog), "Overwrite Existing Database?");
+
+    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+
+    if (response == GTK_RESPONSE_YES) {
+        overwrite = TRUE;
+    }
+
+    gtk_widget_destroy(dialog);
+
+    return overwrite;
+}
+
+static void cancel_dictpopup_create(DpPreferencesWindow *self) {
+    atomic_store(&self->cancel_dictpopup_create, true);
+    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), "Generate Index");
+}
+
+static gboolean create_thread_finished(gpointer user_data) {
+    DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
+
+    self->create_thread = NULL;
+    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), "Generate Index");
+
+    dp_preferences_window_update_dict_order(self);
+
+    return G_SOURCE_REMOVE;
+}
+
+static gpointer dictpopup_create_thread_func(gpointer user_data) {
+    DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
+    char *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self->dictionaries_path_chooser));
+
+    if (path)
+        dictpopup_create(path, on_db_exist, self, &self->cancel_dictpopup_create);
+
+    g_free(path);
+
+    gdk_threads_add_idle(create_thread_finished, self);
+
+    return NULL;
+}
+
+static void start_dictpopup_create(DpPreferencesWindow *self) {
+    self->cancel_dictpopup_create = FALSE;
+    self->create_thread = g_thread_new("create_thread", dictpopup_create_thread_func, self);
+    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), "Stop");
+}
+
+static void on_dictpopup_create_button_clicked(GtkButton *button, DpPreferencesWindow *self) {
+    if (self->create_thread) {
+        cancel_dictpopup_create(self);
+    } else {
+        start_dictpopup_create(self);
+    }
+}
+
 static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
     if (event->keyval == GDK_KEY_Escape) {
         gtk_widget_destroy(widget);
         return TRUE;
     }
     return FALSE;
-}/* ----------------------------------------- */
+} /* ----------------------------------------- */
 
 static void dp_preferences_window_dispose(GObject *object) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(object);
+
+    if (self->create_thread) {
+        atomic_store(&self->cancel_dictpopup_create, true);
+        g_thread_join(self->create_thread);
+    }
 
     g_clear_object(&self->settings);
 
@@ -108,10 +185,10 @@ static void dp_preferences_window_constructed(GObject *object) {
                            "active", G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
     g_object_bind_property(self->settings, "pronounce-on-startup",
-                       self->pronounce_on_startup_switch, "active",
-                       G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+                           self->pronounce_on_startup_switch, "active",
+                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
-    dp_preferences_window_populate_dict_order(self);
+    dp_preferences_window_update_dict_order(self);
     populate_anki_notetypes(self);
     g_signal_connect(self->anki_notetype_combo, "changed", G_CALLBACK(on_notetype_changed), self);
     update_anki_fields(self);
@@ -135,6 +212,11 @@ static void dp_preferences_window_class_init(DpPreferencesWindowClass *klass) {
     gtk_widget_class_set_template_from_resource(
         widget_class, "/com/github/Ajatt-Tools/dictpopup/dp-preferences-window.ui");
 
+    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
+                                         dictionaries_path_chooser);
+    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
+                                         dictpopup_create_button);
+
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, nuke_whitespace_switch);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
                                          mecab_conversion_switch);
@@ -144,13 +226,16 @@ static void dp_preferences_window_class_init(DpPreferencesWindowClass *klass) {
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_notetype_combo);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, anki_fields_list);
 
-    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow, pronounce_on_startup_switch);
+    gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
+                                         pronounce_on_startup_switch);
     gtk_widget_class_bind_template_child(widget_class, DpPreferencesWindow,
                                          pronunciation_path_chooser);
 
+    /* CALLBACKS */
     gtk_widget_class_bind_template_callback(GTK_WIDGET_CLASS(klass),
                                             on_preferences_close_button_clicked);
     gtk_widget_class_bind_template_callback(widget_class, on_pronunciation_create_button_clicked);
+    gtk_widget_class_bind_template_callback(widget_class, on_dictpopup_create_button_clicked);
 }
 
 static void dp_preferences_window_init(DpPreferencesWindow *self) {
@@ -364,7 +449,7 @@ static void list_box_insert_no_db(GtkListBox *list_box) {
     gtk_list_box_insert(list_box, row, -1);
 }
 
-void dp_preferences_window_populate_dict_order(DpPreferencesWindow *self) {
+void dp_preferences_window_update_dict_order(DpPreferencesWindow *self) {
     gtk_container_foreach(GTK_CONTAINER(self->dict_order_listbox), (GtkCallback)destroy_widget,
                           NULL);
 

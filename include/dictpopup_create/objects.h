@@ -5,7 +5,7 @@
 #include "objects/freqentry.h"
 
 typedef struct {
-    void (*foreach_dictentry)(void *, dictentry);
+    void (*foreach_dictentry)(void *, Dictentry);
     void *userdata_de;
     void (*foreach_freqentry)(void *, freqentry);
     void *userdata_fe;

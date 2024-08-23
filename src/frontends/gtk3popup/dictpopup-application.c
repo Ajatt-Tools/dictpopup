@@ -36,6 +36,7 @@ static bool can_lookup(DpApplication *app) {
         return false;
     }
 
+    // TODO: Move?
     if (!db_check_exists(db_get_dbpath())) {
         set_database_not_found(app);
         return false;

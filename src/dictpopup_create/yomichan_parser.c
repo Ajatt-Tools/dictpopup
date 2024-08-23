@@ -391,7 +391,7 @@ static s8 _nonnull_ extract_dictname_from_zip(const char *zipfn, zip_t *zipfile)
     return dictname;
 }
 
-void parse_yomichan_dict(const char *zipfn, ParserCallbacks callbacks) {
+void parse_yomichan_dict(const char *zipfn, ParserCallbacks callbacks, atomic_bool *cancel_flag) {
     zip_t *zipfile = open_zip(zipfn);
     return_on(!zipfile);
 
@@ -403,7 +403,8 @@ void parse_yomichan_dict(const char *zipfn, ParserCallbacks callbacks) {
 
     struct zip_stat finfo;
     zip_stat_init(&finfo);
-    for (int i = 0; (zip_stat_index(zipfile, i, 0, &finfo)) == 0; i++) {
+    for (int i = 0; (zip_stat_index(zipfile, i, 0, &finfo)) == 0 && !atomic_load(cancel_flag);
+         i++) {
         s8 fn = fromcstr_((char *)finfo.name);
         if (startswith(fn, S("term_bank_"))) {
             _drop_(frees8) s8 buffer = unzip_file(zipfile, finfo.name);

@@ -114,6 +114,12 @@ set(DICTLOOKUP_SRCS
         #        ${DEINFLECTION_RULES_C} # Doesn't get generated if put in here
 )
 
+set(DICTPOPUP_CREATE_SRCS
+        src/dictpopup_create/dictpopup_create.c
+        src/dictpopup_create/objects.c
+        src/dictpopup_create/yomichan_parser.c
+)
+
 # ##############################################################################
 # Cppcheck
 # ##############################################################################
@@ -248,13 +254,14 @@ add_executable(dictpopup
         src/platformdep/file_operations.c
         src/platformdep/windowtitle.c
         src/objects/freqentry.c
+        src/objects/color.c
+        ${DICTPOPUP_CREATE_SRCS}
         ${JPPRON_SRCS}
         ${ANKICONNECTC_SRCS}
         ${DICTLOOKUP_SRCS}
         ${GRESOURCE_C}
         ${DEINFLECTION_RULES_C}
         ${COMPILED_SETTINGS_SCHEMA}
-        src/objects/color.c
 )
 target_compile_definitions(dictpopup PUBLIC NOTIFICATIONS CLIPBOARD GTK3)
 target_link_libraries(dictpopup PRIVATE
@@ -286,6 +293,7 @@ add_executable(dictpopup-config
         src/deinflector/kata2hira.c # Remove?
         src/utils/utf8.c # Remove?
         src/platformdep/audio.c # Remove?
+        ${DICTPOPUP_CREATE_SRCS}
         ${JPPRON_SRCS}
         ${ANKICONNECTC_SRCS}
         ${GRESOURCE_C}
@@ -295,6 +303,7 @@ target_link_libraries(dictpopup-config PRIVATE
         LMDB::LMDB
         PkgConfig::GTK3
         CURL::libcurl
+        libzip::zip
 )
 
 # ##############################################################################
