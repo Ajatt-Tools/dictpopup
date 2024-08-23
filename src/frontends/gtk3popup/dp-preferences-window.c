@@ -357,16 +357,28 @@ static void destroy_widget(GtkWidget *widget, void *data) {
     gtk_widget_destroy(widget);
 }
 
+static void list_box_insert_no_db(GtkListBox *list_box) {
+    GtkWidget *row = gtk_list_box_row_new();
+    GtkWidget *label = gtk_label_new("No database");
+    gtk_container_add(GTK_CONTAINER(row), label);
+    gtk_list_box_insert(list_box, row, -1);
+}
+
 void dp_preferences_window_populate_dict_order(DpPreferencesWindow *self) {
     gtk_container_foreach(GTK_CONTAINER(self->dict_order_listbox), (GtkCallback)destroy_widget,
                           NULL);
 
+    database_t *db = db_open(true);
+    if (!db) {
+        list_box_insert_no_db(GTK_LIST_BOX(self->dict_order_listbox));
+        return;
+    }
+
+    _drop_(s8_buf_free) s8Buf dict_names = db_get_dictnames(db);
+    db_close(db);
+
     const gchar *const *current_order = dp_settings_get_dict_sort_order(self->settings);
     assert(current_order);
-
-    database_t *db = db_open(true);
-    s8Buf dict_names = db_get_dictnames(db);
-    db_close(db);
 
     GHashTable *order_hash = g_hash_table_new(g_str_hash, g_str_equal);
     for (int i = 0; current_order[i] != NULL; i++) {
@@ -392,7 +404,6 @@ void dp_preferences_window_populate_dict_order(DpPreferencesWindow *self) {
     }
 
     g_hash_table_destroy(order_hash);
-    s8_buf_free(dict_names);
 }
 
 void dp_preferences_window_save_dict_order(DpPreferencesWindow *self) {
