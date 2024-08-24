@@ -270,6 +270,7 @@ target_link_libraries(dictpopup PRIVATE
         PkgConfig::GTK3
         PkgConfig::NOTIFY
         CURL::libcurl
+        libzip::zip
         -rdynamic
 )
 
