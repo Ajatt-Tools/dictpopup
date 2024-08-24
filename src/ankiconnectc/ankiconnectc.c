@@ -239,18 +239,21 @@ AnkiCollectionStatus ac_check_exists(char *deck, char *field, char *lookup, char
         return AC_ERROR;
     }
 
+    /* include only learning cards */
     int rc = check_exists_with_(false, false, deck, field, lookup, error);
     if (rc == 1)
         return AC_EXISTS;
     if (rc == -1)
         return AC_ERROR;
 
+    /* include new */
     rc = check_exists_with_(false, true, deck, field, lookup, error);
     if (rc == 1)
         return AC_EXISTS_NEW;
     if (rc == -1)
         return AC_ERROR;
 
+    /* include suspended */
     rc = check_exists_with_(true, false, deck, field, lookup, error);
     if (rc == 1)
         return AC_EXISTS_SUSPENDED;
