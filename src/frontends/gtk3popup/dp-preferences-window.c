@@ -498,6 +498,7 @@ void dp_preferences_window_update_dict_order(DpPreferencesWindow *self) {
     }
 
     g_hash_table_destroy(dict_names_table);
+    gtk_widget_show_all(GTK_WIDGET(self->dict_order_listbox));
 }
 
 static void dp_preferences_window_save_dict_order(DpPreferencesWindow *self) {
