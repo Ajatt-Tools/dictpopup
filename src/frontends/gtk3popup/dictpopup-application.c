@@ -213,7 +213,7 @@ _deallocator_(free_pronfile_buffer) Pronfile *dp_get_current_pronfiles(DpApplica
     g_mutex_lock(&self->dict_data_mutex);
     Pronfile *pronfiles = pm_get_current_pronfiles(&self->page_manager);
     for (size_t i = 0; i < buf_size(pronfiles); i++) {
-        buf_push(ret, pronfiles[i]);
+        buf_push(ret, pron_file_dup(pronfiles[i]));
     }
     g_mutex_unlock(&self->dict_data_mutex);
 

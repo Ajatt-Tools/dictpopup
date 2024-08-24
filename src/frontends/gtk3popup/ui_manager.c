@@ -236,17 +236,17 @@ void _nonnull_ ui_manager_set_error(UiManager *self, s8 message) {
     disable_all_buttons(self);
 }
 
-static void play_audio_for_pronfile(GtkMenuItem *menuitem, gpointer user_data) {
-    Pronfile *pronfile = (Pronfile *)user_data;
-    play_audio_async(pronfile->filepath);
+static void pronounce_menu_item_clicked(GtkMenuItem *menuitem, gpointer user_data) {
+    const char *filepath = g_object_get_data(G_OBJECT(menuitem), "filepath");
+    play_audio_async(fromcstr_((char*)filepath));
 }
 
-static char *create_label_for_pronfile(Pronfile pronfile) {
+static s8 create_label_for_pronfile(Pronfile pronfile) {
     s8 origin = pronfile.fileinfo.origin;
     s8 pitch_pattern = pronfile.fileinfo.pitch_pattern;
-    char *label = g_strdup_printf("%.*s%s%.*s", (int)pitch_pattern.len, (char *)pitch_pattern.s,
-                                  origin.len && pitch_pattern.len ? " - " : "", (int)origin.len,
-                                  (char *)origin.s);
+    s8 delimiter = fromcstr_(origin.len && pitch_pattern.len ? " - " : "");
+
+    s8 label = concat(pitch_pattern, delimiter, origin);
 
     return label;
 }
@@ -258,9 +258,13 @@ void show_pronunciation_button_right_click_menu(UiManager *self, Pronfile *pronf
     GtkWidget *menu = gtk_menu_new();
 
     for (size_t i = 0; i < buf_size(pronfiles); i++) {
-        char *label = create_label_for_pronfile(pronfiles[i]);
-        GtkWidget *menu_item = gtk_menu_item_new_with_label(label);
-        g_signal_connect(menu_item, "activate", G_CALLBACK(play_audio_for_pronfile), &pronfiles[i]);
+        _drop_(frees8) s8 label = create_label_for_pronfile(pronfiles[i]);
+        GtkWidget *menu_item = gtk_menu_item_new_with_label((char*)label.s);
+
+        char *filepath_copy = g_strdup((char *)pronfiles[i].filepath.s);
+        g_object_set_data_full(G_OBJECT(menu_item), "filepath", filepath_copy, g_free);
+
+        g_signal_connect(menu_item, "activate", G_CALLBACK(pronounce_menu_item_clicked), NULL);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
     }
 
