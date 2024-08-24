@@ -39,8 +39,8 @@ static GtkTargetEntry drag_entries[] = {{"GTK_LIST_BOX_ROW", GTK_TARGET_SAME_APP
 static void on_drag_data_received(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
                                   GtkSelectionData *selection_data, guint info, guint32 time,
                                   gpointer user_data);
-void dp_preferences_window_update_dict_order(DpPreferencesWindow *self);
-void dp_preferences_window_save_dict_order(DpPreferencesWindow *self);
+static void dp_preferences_window_update_dict_order(DpPreferencesWindow *self);
+static void dp_preferences_window_save_dict_order(DpPreferencesWindow *self);
 static void populate_anki_notetypes(DpPreferencesWindow *self);
 static void on_notetype_changed(GtkComboBox *combo_box, gpointer user_data);
 static void update_anki_fields(DpPreferencesWindow *self);
@@ -442,11 +442,19 @@ static void destroy_widget(GtkWidget *widget, void *data) {
     gtk_widget_destroy(widget);
 }
 
-static void list_box_insert_no_db(GtkListBox *list_box) {
+static void list_box_insert_msg(GtkListBox *list_box, const char* msg) {
     GtkWidget *row = gtk_list_box_row_new();
-    GtkWidget *label = gtk_label_new("No database");
+    GtkWidget *label = gtk_label_new(msg);
     gtk_container_add(GTK_CONTAINER(row), label);
     gtk_list_box_insert(list_box, row, -1);
+}
+
+static GHashTable *hash_table_from_s8_buffer(s8Buf buf) {
+    GHashTable *hash_table = g_hash_table_new(g_str_hash, g_str_equal);
+    for (size_t i = 0; i < s8_buf_size(buf); i++) {
+        g_hash_table_add(hash_table, (gpointer)buf[i].s);
+    }
+    return hash_table;
 }
 
 void dp_preferences_window_update_dict_order(DpPreferencesWindow *self) {
@@ -455,43 +463,44 @@ void dp_preferences_window_update_dict_order(DpPreferencesWindow *self) {
 
     database_t *db = db_open(true);
     if (!db) {
-        list_box_insert_no_db(GTK_LIST_BOX(self->dict_order_listbox));
+        list_box_insert_msg(GTK_LIST_BOX(self->dict_order_listbox), "No database found");
         return;
     }
 
     _drop_(s8_buf_free) s8Buf dict_names = db_get_dictnames(db);
     db_close(db);
-
-    const gchar *const *current_order = dp_settings_get_dict_sort_order(self->settings);
-    assert(current_order);
-
-    GHashTable *order_hash = g_hash_table_new(g_str_hash, g_str_equal);
-    for (int i = 0; current_order[i] != NULL; i++) {
-        g_hash_table_insert(order_hash, (void *)current_order[i], GINT_TO_POINTER(i));
+    if(s8_buf_size(dict_names) <= 0) {
+        list_box_insert_msg(GTK_LIST_BOX(self->dict_order_listbox), "No dictionaries found in database");
+        return;
     }
 
-    for (int i = 0; current_order[i] != NULL; i++) {
-        for (size_t j = 0; j < s8_buf_size(dict_names); j++) {
-            if (strcmp(current_order[i], (char *)dict_names[j].s) == 0) {
+    const gchar *const *current_order = dp_settings_get_dict_sort_order(self->settings);
+
+    GHashTable *dict_names_table = hash_table_from_s8_buffer(dict_names);
+
+    if (current_order) {
+        for (int i = 0; current_order[i] != NULL; i++) {
+            if (g_hash_table_contains(dict_names_table, current_order[i])) {
                 GtkWidget *row = create_dict_row(self, current_order[i]);
                 gtk_list_box_insert(GTK_LIST_BOX(self->dict_order_listbox), row, -1);
-                break;
+                g_hash_table_remove(dict_names_table, current_order[i]);
             }
         }
     }
 
-    // Add rows for any remaining dictionaries not in the current order
-    for (size_t i = 0; i < s8_buf_size(dict_names); i++) {
-        if (!g_hash_table_lookup(order_hash, (char *)dict_names[i].s)) {
-            GtkWidget *row = create_dict_row(self, (char *)dict_names[i].s);
-            gtk_list_box_insert(GTK_LIST_BOX(self->dict_order_listbox), row, -1);
-        }
+    GHashTableIter iter;
+    gpointer key;
+    g_hash_table_iter_init(&iter, dict_names_table);
+    while (g_hash_table_iter_next(&iter, &key, NULL)) {
+        const char *dict_name = (const char *)key;
+        GtkWidget *row = create_dict_row(self, dict_name);
+        gtk_list_box_insert(GTK_LIST_BOX(self->dict_order_listbox), row, -1);
     }
 
-    g_hash_table_destroy(order_hash);
+    g_hash_table_destroy(dict_names_table);
 }
 
-void dp_preferences_window_save_dict_order(DpPreferencesWindow *self) {
+static void dp_preferences_window_save_dict_order(DpPreferencesWindow *self) {
     GList *children = gtk_container_get_children(GTK_CONTAINER(self->dict_order_listbox));
     GPtrArray *new_order = g_ptr_array_new();
 
