@@ -59,6 +59,7 @@ find_program(CLANG_TIDY "clang-tidy")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_COMPILER gcc)
+add_definitions(-D_POSIX_C_SOURCE=200809L)
 
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
