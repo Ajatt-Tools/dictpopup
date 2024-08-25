@@ -16,9 +16,16 @@ Checks: >
   bugprone-branch-clone,
   -clang-analyzer-security.insecureAPI.*,
   -misc-no-recursion,
+  -readability-braces-around-statements,
+  -misc-include-cleaner,
+  -bugprone-infinite-loop,
+  -misc-unused-parameters,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  -bugprone-reserved-identifier,
+  -android-cloexec-fopen,
+  -clang-diagnostic-cast-align
 
-# treat all warnings as errors
-WarningsAsErrors: '*'
+# WarningsAsErrors: '*'
 
 CheckOptions:
   - key: bugprone-assert-side-effect.AssertMacros

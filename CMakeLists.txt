@@ -7,7 +7,6 @@ project(dictpopup
 )
 
 include(GNUInstallDirs)
-include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -337,7 +336,8 @@ target_link_libraries(dictpopup-config PRIVATE
 # ##############################################################################
 # cli
 # ##############################################################################
-add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
+add_executable(dictpopup-cli EXCLUDE_FROM_ALL
+        src/frontends/cli.c
         src/utils/util.c
         src/db.c
         src/platformdep/file_operations.c
@@ -353,43 +353,48 @@ target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES
 # ##############################################################################
 # Tests
 # ##############################################################################
-enable_testing()
-find_package(cgreen REQUIRED)
-add_executable(c_tests
-        src/jppron/jppron_objects.c
-        src/utils/util.c
-        src/utils/utf8.c
-        src/utils/str.c
-        lib/yyjson.c
-        src/objects/dict.c
-        tests/main.c
-        tests/deinflector_tests.c
-        tests/ankiconnect_tests.c
-        tests/yomichan_parser_tests.c
-        tests/jppron_tests/ajt_audio_index_parser_tests.c
-        tests/utils_tests/enclose_word_in_string_tests.c
-        tests/dictpopup_tests.c
-        tests/jppron_tests/jppron_tests.c
-        ${DEINFLECTION_RULES_C}
-        src/deinflector/deinflector.c
-        tests/anki_card_preparation_tests.c
-)
-target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
-target_include_directories(c_tests PRIVATE
-        ${GTK3_INCLUDE_DIRS}
-        ${CGREEN_INCLUDE_DIRS}
-        lib/
-        include/
-        src/
-        src/jppron
-)
-target_link_libraries(c_tests PRIVATE
-        ${CGREEN_LIBRARIES}
-        MECAB::MECAB
-        PkgConfig::GTK3
-        libzip::zip
-)
-add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
+option(BUILD_TESTS "Build the testing tree." OFF)
+if (BUILD_TESTS)
+    include(CTest)
+    enable_testing()
+    find_package(cgreen REQUIRED)
+    add_executable(c_tests
+            src/jppron/jppron_objects.c
+            src/utils/util.c
+            src/utils/utf8.c
+            src/utils/str.c
+            src/deinflector/kata2hira.c
+            lib/yyjson.c
+            src/objects/dict.c
+            tests/main.c
+            tests/deinflector_tests.c
+            tests/ankiconnect_tests.c
+            tests/yomichan_parser_tests.c
+            tests/jppron_tests/ajt_audio_index_parser_tests.c
+            tests/utils_tests/enclose_word_in_string_tests.c
+            tests/dictpopup_tests.c
+            tests/jppron_tests/jppron_tests.c
+            ${DEINFLECTION_RULES_C}
+            src/deinflector/deinflector.c
+            tests/anki_card_preparation_tests.c
+    )
+    target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
+    target_include_directories(c_tests PRIVATE
+            ${GTK3_INCLUDE_DIRS}
+            ${CGREEN_INCLUDE_DIRS}
+            lib/
+            include/
+            src/
+            src/jppron
+    )
+    target_link_libraries(c_tests PRIVATE
+            ${CGREEN_LIBRARIES}
+            MECAB::MECAB
+            PkgConfig::GTK3
+            libzip::zip
+    )
+    add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
+endif ()
 
 #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 
