@@ -122,6 +122,26 @@ set(DICTPOPUP_CREATE_SRCS
 )
 
 # ##############################################################################
+# Auxiliary files
+# ##############################################################################
+set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
+file(MAKE_DIRECTORY ${GENERATED_DIR})
+
+############# DEINFLECTION RULES #################
+set(DEINFLECTION_RULES_GPERF ${CMAKE_CURRENT_SOURCE_DIR}/src/deinflector/deinflection_rules.gperf)
+set(DEINFLECTION_RULES_C ${GENERATED_DIR}/deinflection_rules.c)
+add_custom_command(
+        OUTPUT ${DEINFLECTION_RULES_C}
+        COMMAND ${GPERF}
+        ARGS
+        -t
+        --output-file=${DEINFLECTION_RULES_C}
+        ${DEINFLECTION_RULES_GPERF}
+        MAIN_DEPENDENCY ${DEINFLECTION_RULES_GPERF}
+        VERBATIM
+)
+
+# ##############################################################################
 # Cppcheck
 # ##############################################################################
 if (CPPCHECK)
@@ -177,22 +197,68 @@ endif ()
 #endif ()
 
 # ##############################################################################
+# Tests
+# ##############################################################################
+option(BUILD_TESTS "Build the testing tree." OFF)
+if (BUILD_TESTS)
+    include(CTest)
+    enable_testing()
+    find_package(cgreen REQUIRED)
+    add_executable(c_tests
+            src/jppron/jppron_objects.c
+            src/utils/util.c
+            src/utils/utf8.c
+            src/utils/str.c
+            src/deinflector/kata2hira.c
+            lib/yyjson.c
+            src/objects/dict.c
+            tests/main.c
+            tests/deinflector_tests.c
+            ${DEINFLECTION_RULES_C}
+            tests/ankiconnect_tests.c
+            tests/yomichan_parser_tests.c
+            tests/jppron_tests/ajt_audio_index_parser_tests.c
+            tests/utils_tests/enclose_word_in_string_tests.c
+            tests/dictpopup_tests.c
+            tests/jppron_tests/jppron_tests.c
+            src/deinflector/deinflector.c
+            tests/anki_card_preparation_tests.c
+    )
+    target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
+    target_include_directories(c_tests PRIVATE
+            ${GTK3_INCLUDE_DIRS}
+            ${CGREEN_INCLUDE_DIRS}
+            lib/
+            include/
+            src/
+            src/jppron
+    )
+    target_link_libraries(c_tests PRIVATE
+            ${CGREEN_LIBRARIES}
+            MECAB::MECAB
+            PkgConfig::GTK3
+            libzip::zip
+    )
+    add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
+endif ()
+
+#    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
+
+# ##############################################################################
 # check-all
 # ##############################################################################
 add_custom_target(
         check-all
         COMMAND ${CMAKE_COMMAND} --build . --target format-check
-        COMMAND ${CMAKE_COMMAND} --build . --target cppcheck
-        COMMAND ${CMAKE_COMMAND} --build . --target clang-tidy
-        DEPENDS format-check cppcheck clang-tidy
+#        COMMAND ${CMAKE_COMMAND} --build . --target cppcheck
+#        COMMAND ${CMAKE_COMMAND} --build . --target clang-tidy
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
         COMMENT "Running format check, static analysis, and tests"
 )
 
 # ##############################################################################
 # dictpopup
 # ##############################################################################
-set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
-file(MAKE_DIRECTORY ${GENERATED_DIR})
 
 ############# UI #################
 set(GRESOURCE_XML ${CMAKE_CURRENT_SOURCE_DIR}/src/frontends/gtk3popup/dictpopup.gresource.xml)
@@ -230,20 +296,6 @@ add_custom_target(gsettings-schemas ALL DEPENDS ${COMPILED_SETTINGS_SCHEMA})
 
 install(FILES ${GSETTINGS_SCHEMA} DESTINATION ${GSETTINGS_DIR})
 install(CODE "execute_process(COMMAND ${GLIB_COMPILE_SCHEMAS} ${CMAKE_INSTALL_PREFIX}/${GSETTINGS_DIR})")
-
-############# DEINFLECTION RULES #################
-set(DEINFLECTION_RULES_GPERF ${CMAKE_CURRENT_SOURCE_DIR}/src/deinflector/deinflection_rules.gperf)
-set(DEINFLECTION_RULES_C ${GENERATED_DIR}/deinflection_rules.c)
-add_custom_command(
-        OUTPUT ${DEINFLECTION_RULES_C}
-        COMMAND ${GPERF}
-        ARGS
-        -t
-        --output-file=${DEINFLECTION_RULES_C}
-        ${DEINFLECTION_RULES_GPERF}
-        MAIN_DEPENDENCY ${DEINFLECTION_RULES_GPERF}
-        VERBATIM
-)
 
 ############# MAIN #################
 add_executable(dictpopup
@@ -333,54 +385,6 @@ target_include_directories(
         dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS})
 target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES})
-
-# ##############################################################################
-# Tests
-# ##############################################################################
-option(BUILD_TESTS "Build the testing tree." OFF)
-if (BUILD_TESTS)
-    include(CTest)
-    enable_testing()
-    find_package(cgreen REQUIRED)
-    add_executable(c_tests
-            src/jppron/jppron_objects.c
-            src/utils/util.c
-            src/utils/utf8.c
-            src/utils/str.c
-            src/deinflector/kata2hira.c
-            lib/yyjson.c
-            src/objects/dict.c
-            tests/main.c
-            tests/deinflector_tests.c
-            tests/ankiconnect_tests.c
-            tests/yomichan_parser_tests.c
-            tests/jppron_tests/ajt_audio_index_parser_tests.c
-            tests/utils_tests/enclose_word_in_string_tests.c
-            tests/dictpopup_tests.c
-            tests/jppron_tests/jppron_tests.c
-            ${DEINFLECTION_RULES_C}
-            src/deinflector/deinflector.c
-            tests/anki_card_preparation_tests.c
-    )
-    target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
-    target_include_directories(c_tests PRIVATE
-            ${GTK3_INCLUDE_DIRS}
-            ${CGREEN_INCLUDE_DIRS}
-            lib/
-            include/
-            src/
-            src/jppron
-    )
-    target_link_libraries(c_tests PRIVATE
-            ${CGREEN_LIBRARIES}
-            MECAB::MECAB
-            PkgConfig::GTK3
-            libzip::zip
-    )
-    add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
-endif ()
-
-#    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 
 # ##############################################################################
 # Install

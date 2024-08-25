@@ -43,10 +43,6 @@ void jdb_remove(s8 dbpath) {
     mock(dbpath.s);
 }
 
-void play_audio_sync(s8 filepath) {
-    mock(filepath.s);
-}
-
 TestSuite *jppron_tests(void) {
     TestSuite *suite = create_test_suite();
     return suite;

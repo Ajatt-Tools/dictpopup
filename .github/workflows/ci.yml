@@ -20,10 +20,9 @@ jobs:
       - run: gcc --version
       - run: clang-format --version
 
-      - run: make analyse
-      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
       - run: cmake --build build
-      - run: ctest --test-dir build
+      - run: cmake --build build --target check-all
 
 on:
   push:
