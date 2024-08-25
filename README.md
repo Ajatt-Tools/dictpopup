@@ -22,7 +22,7 @@ https://github.com/Ajatt-Tools/dictpopup/assets/50422430/a0a631eb-85dd-4644-9001
 
 ## Dependencies
 
-lmdb, mecab, gtk3, libx11, curl, libnotify, libzip\
+lmdb, mecab, gtk3, libx11, curl, libnotify, libzip, gperf\
 [AnkiConnect Anki addon](https://ankiweb.net/shared/info/2055492159) (for Anki support)\
 ffplay (optional, for pronunciation)
 
@@ -38,7 +38,7 @@ First make sure, that you have all necessary dependencies installed. On a Debian
 
 ```
 sudo apt-get install liblmdb-dev libmecab-dev libgtk-3-dev libx11-dev \
-     libcurl4-openssl-dev libnotify-dev libzip-dev zipcmp zipmerge ziptool
+     libcurl4-openssl-dev libnotify-dev libzip-dev zipcmp zipmerge ziptool gperf
 ```
 
 Then install with:
