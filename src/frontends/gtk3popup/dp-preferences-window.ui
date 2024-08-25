@@ -31,6 +31,7 @@
                     <property name="margin">5</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
+                      <attribute name="scale" value="1.2"/>
                     </attributes>
                   </object>
                 </child>
@@ -273,6 +274,7 @@
                     <property name="margin">6</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
+                      <attribute name="scale" value="1.2"/>
                     </attributes>
                   </object>
                 </child>
@@ -351,6 +353,18 @@
                     <property name="label">Pronunciation Settings</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
+                      <attribute name="scale" value="1.2"/>
+                    </attributes>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label">Options</property>
+                    <property name="xalign">0</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
                     </attributes>
                   </object>
                 </child>
@@ -360,6 +374,7 @@
                     <property name="can_focus">False</property>
                     <property name="orientation">horizontal</property>
                     <property name="spacing">6</property>
+                    <property name="margin_start">12</property>
                     <child>
                       <object class="GtkLabel">
                         <property name="visible">True</property>
@@ -383,11 +398,23 @@
                   </object>
                 </child>
                 <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label">Add Pronunciation Files</property>
+                    <property name="xalign">0</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                </child>
+                <child>
                   <object class="GtkBox">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="orientation">horizontal</property>
                     <property name="spacing">6</property>
+                    <property name="margin_start">12</property>
                     <child>
                       <object class="GtkFileChooserButton" id="pronunciation_path_chooser">
                         <property name="visible">True</property>
