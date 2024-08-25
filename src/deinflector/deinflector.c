@@ -1,6 +1,6 @@
 #include "deinflector.h"
-#include "deinflector/kata2hira.h"
 #include "deinflector/deinflection_rules.h"
+#include "deinflector/kata2hira.h"
 #include <mecab.h>
 #include <string.h>
 #include <utils/messages.h>

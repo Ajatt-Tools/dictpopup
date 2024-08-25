@@ -22,4 +22,4 @@ typedef struct {
 Pronfile pron_file_dup(Pronfile pronfile);
 void pron_file_free(Pronfile pronfile);
 
-#endif //JPPRON_OBJECTS_H
+#endif // JPPRON_OBJECTS_H

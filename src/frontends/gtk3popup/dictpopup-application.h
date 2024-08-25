@@ -4,8 +4,8 @@
 #include "dp-preferences-window.h"
 #include "dp-settings.h"
 #include "dp_page_manager.h"
-#include "ui_manager.h"
 #include "jppron/jppron.h"
+#include "ui_manager.h"
 
 #include <gtk/gtk.h>
 
@@ -31,8 +31,7 @@ void dp_play_current_pronunciation(DpApplication *self);
 
 s8 dp_get_lookup_str(DpApplication *self);
 Word dp_get_current_word(DpApplication *self);
-_deallocator_(free_pronfile_buffer)
-Pronfile *dp_get_current_pronfiles(DpApplication *self);
+_deallocator_(free_pronfile_buffer) Pronfile *dp_get_current_pronfiles(DpApplication *self);
 Dictentry dp_get_current_dictentry(DpApplication *self);
 
 void dp_swap_dict_lookup(DpApplication *app, DictLookup new_dict_lookup);

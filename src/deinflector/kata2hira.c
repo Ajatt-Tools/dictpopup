@@ -25,7 +25,7 @@ void kata2hira(s8 kata_in) {
                     h[i + 1] = h[i + 1] - 2;
                     h[i + 2] += 0x20;
                 }
-                }
+            }
         }
         i += utf8_chr_len(h + i);
     }

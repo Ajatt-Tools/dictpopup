@@ -2,10 +2,10 @@
 #define DATABASE_H
 
 #include "ajt_audio_index_parser.h"
+#include "jppron/jppron_database.h"
 #include "utils/util.h"
 #include <stdbool.h>
 #include <utils/str.h>
-#include "jppron/jppron_database.h"
 
 typedef struct _PronDatabase PronDatabase;
 

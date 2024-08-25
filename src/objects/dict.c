@@ -30,13 +30,18 @@ void dictentry_print(Dictentry de) {
 }
 
 Word dictentry_get_word(Dictentry de) {
-    return (Word) { .kanji = de.kanji, .reading = de.reading, };
+    return (Word){
+        .kanji = de.kanji,
+        .reading = de.reading,
+    };
 }
 
 Word dictentry_get_dup_word(Dictentry de) {
-    return (Word) { .kanji = s8dup(de.kanji), .reading = s8dup(de.reading), };
+    return (Word){
+        .kanji = s8dup(de.kanji),
+        .reading = s8dup(de.reading),
+    };
 }
-
 
 Dict newDict() {
     return (Dict){0};

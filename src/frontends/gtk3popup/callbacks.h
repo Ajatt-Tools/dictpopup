@@ -1,8 +1,8 @@
 #ifndef CALLBACKS_H
 #define CALLBACKS_H
 
-#include "gtk/gtk.h"
 #include "dictpopup-application.h"
+#include "gtk/gtk.h"
 
 #include "ankiconnectc.h"
 

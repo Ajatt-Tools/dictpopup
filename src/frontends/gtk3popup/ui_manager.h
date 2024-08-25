@@ -38,12 +38,12 @@ void _nonnull_ ui_manager_set_error(UiManager *self, s8 message);
 
 void show_pronunciation_button_right_click_menu(UiManager *self, Pronfile *pronfiles);
 
-void ui_manager_show_anki_button_right_click_menu(UiManager *self,
-                                                  void (*on_clipboard_definition)(GtkMenuItem *self, gpointer user_data),
-                                                  gpointer user_data);
+void ui_manager_show_anki_button_right_click_menu(
+    UiManager *self, void (*on_clipboard_definition)(GtkMenuItem *self, gpointer user_data),
+    gpointer user_data);
 
 void ui_manager_show_edit_lookup_dialog(UiManager *self, const char *current_lookup,
                                         void (*on_accept)(const char *new_lookup, void *user_data),
                                         void *user_data);
 
-#endif //UI_MANAGER_H
+#endif // UI_MANAGER_H

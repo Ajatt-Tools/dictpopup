@@ -5,4 +5,4 @@
 
 void kata2hira(s8 kata_in);
 
-#endif //KATA2HIRA_H
+#endif // KATA2HIRA_H

@@ -218,7 +218,9 @@ static s8 serialize_word(Word word) {
 void db_put_freq(database_t *db, freqentry fe) {
     die_on(db->readonly, "Cannot put frequency into db in readonly mode.");
 
-    _drop_(frees8) s8 key = serialize_word((Word){.kanji = fe.word, .reading = fe.reading}); // TODO: Use string builder?
+    _drop_(frees8) s8 key =
+        serialize_word((Word){.kanji = fe.word, .reading = fe.reading}); // TODO: Use string
+                                                                         // builder?
     MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
     MDB_val val_mdb = {.mv_data = &fe.frequency, .mv_size = sizeof(fe.frequency)};
 

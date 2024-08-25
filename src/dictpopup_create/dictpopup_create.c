@@ -30,10 +30,10 @@ static void create_db_dir_if_necessary(void) {
 }
 
 void _nonnull_ dictpopup_create(const char *dictionaries_path,
-                                bool (*should_overwrite_existing_db)(void *user_data), void *user_data,
-                                atomic_bool *cancel_flag) {
+                                bool (*should_overwrite_existing_db)(void *user_data),
+                                void *user_data, atomic_bool *cancel_flag) {
     if (db_check_exists()) {
-        if(!should_overwrite_existing_db(user_data))
+        if (!should_overwrite_existing_db(user_data))
             return;
 
         db_remove();
