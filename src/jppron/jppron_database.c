@@ -60,7 +60,7 @@ static PronDatabase *pron_db_open_readonly(s8 dbpath) {
 
 static PronDatabase *pron_db_open_read_write(s8 dbpath) {
     PronDatabase *db = new (PronDatabase, 1);
-    db->readonly = true;
+    db->readonly = false;
 
     MDB_CHECK(mdb_env_create(&db->env));
     mdb_env_set_maxdbs(db->env, 2);
