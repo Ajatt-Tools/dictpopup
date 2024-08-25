@@ -1,7 +1,8 @@
-
-#include "utils/str.h"
-
+#include <stdio.h>
 #include <string.h>
+
+#include "utils/buf.h"
+#include "utils/str.h"
 
 /* --------------- Start s8 utils -------------- */
 i32 u8compare(u8 *restrict a, u8 *restrict b, isize n) {

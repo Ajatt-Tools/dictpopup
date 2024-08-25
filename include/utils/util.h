@@ -25,9 +25,7 @@ typedef __PTRDIFF_TYPE__ isize;
 #endif
 #define _printf_(a, b) __attribute__((__format__(printf, a, b)))
 
-#define arrlen(x)                                                                                  \
-    (__builtin_choose_expr(!__builtin_types_compatible_p(typeof(x), typeof(&*(x))),                \
-                           sizeof(x) / sizeof((x)[0]), (void)0 /* decayed, compile error */))
+#define arrlen(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define assume(x)                                                                                  \
     do {                                                                                           \

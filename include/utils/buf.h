@@ -23,6 +23,9 @@
  *         printf("values[%zu] = %f\n", i, values[i]);
  *     buf_free(values);
  */
+#ifndef BUF_H
+#define BUF_H
+
 #include <stddef.h>
 #include <stdlib.h> // realloc
 
@@ -40,7 +43,7 @@ struct buf {
     char buffer[];
 };
 
-#define buf_ptr(v) ((struct buf *)((char *)(v) - offsetof(struct buf, buffer)))
+#define buf_ptr(v) ((struct buf *)((char *)(v)-offsetof(struct buf, buffer)))
 
 #define buf_free(v)                                                                                \
     do {                                                                                           \
@@ -101,3 +104,4 @@ fail:
     BUF_ABORT;
     return 0;
 }
+#endif // BUF_H
