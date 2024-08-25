@@ -56,9 +56,12 @@ find_program(CLANG_TIDY "clang-tidy")
 # ##############################################################################
 # General compilation
 # ##############################################################################
+## Cmake Variables
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_COMPILER gcc)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # enable clang tidy to use correct includes
+
 add_definitions(-D_POSIX_C_SOURCE=200809L)
 
 include_directories(
@@ -168,30 +171,10 @@ endif ()
 # ##############################################################################
 # Clang-tidy
 # ##############################################################################
-if (CLANG_TIDY)
-    set(CMAKE_C_CLANG_TIDY ${CLANG_TIDY} -checks=-*,readability-*,modernize-*)
-
-    file(GLOB_RECURSE ALL_SOURCE_FILES
-            ${CMAKE_SOURCE_DIR}/src/*.c
-            ${CMAKE_SOURCE_DIR}/src/*.h
-            ${CMAKE_SOURCE_DIR}/include/*.h
-    )
-
-    add_custom_target(
-            clang-tidy
-            COMMAND ${CLANG_TIDY}
-            ${ALL_SOURCE_FILES}
-            -p ${CMAKE_BINARY_DIR}
-            --use-color
-            --extra-arg=-Wno-unknown-warning-option
-            --
-            -I${CMAKE_SOURCE_DIR}/include
-            -I${CMAKE_SOURCE_DIR}/lib
-            ${CMAKE_C_FLAGS}
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            COMMENT "Running clang-tidy"
-    )
-endif ()
+#if (CLANG_TIDY)
+#    set(CMAKE_C_CLANG_TIDY ${CLANG_TIDY})
+#    set_source_files_properties(lib/yyjson.c lib/yyjson.h PROPERTIES SKIP_LINTING ON)
+#endif ()
 
 # ##############################################################################
 # check-all
