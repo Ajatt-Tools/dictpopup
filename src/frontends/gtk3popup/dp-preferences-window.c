@@ -421,7 +421,7 @@ static GtkWidget *create_dict_row(DpPreferencesWindow *win, const char *dict_nam
 
     GtkWidget *handle = gtk_event_box_new();
     GtkWidget *image =
-        gtk_image_new_from_icon_name("document-properties-symbolic", GTK_ICON_SIZE_SMALL_TOOLBAR);
+        gtk_image_new_from_icon_name("format-justify-fill", GTK_ICON_SIZE_SMALL_TOOLBAR);
     gtk_container_add(GTK_CONTAINER(handle), image);
     gtk_container_add(GTK_CONTAINER(box), handle);
 
