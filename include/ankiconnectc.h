@@ -41,6 +41,6 @@ void _nonnull_ ac_addNote(AnkiCard ac, char **error);
  */
 void ac_store_file(char *filename, char *path, char **error);
 
-void ac_retval_free(retval_s ret);
+// void ac_retval_free(retval_s ret);
 
 #endif

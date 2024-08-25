@@ -10,7 +10,9 @@
 
 #include <yyjson.h>
 
-void ac_retval_free(retval_s ret) {
+DEFINE_DROP_FUNC(yyjson_doc *, yyjson_doc_free)
+
+static void ac_retval_free(retval_s ret) {
     if (!ret.ok) {
         free(ret.data.string);
     }
@@ -95,60 +97,83 @@ static char **json_escape_str_array(int n, char **array) {
     return r;
 }
 
-/* ------ Callback functions ------ */
-static size_t search_checker(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    assert(userdata);
-    retval_s *ret = userdata;
-    s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
-
-    *ret = (retval_s){.data.boolean = !s8equals(resp, S("{\"result\": [], \"error\": null}")),
-                      .ok = true};
-
-    return size * nmemb;
+static void set_error(retval_s *ret, const char *msg) {
+    *ret = (retval_s){.data.string = msg ? strdup(msg) : strdup("Unknown error"), .ok = false};
 }
 
-static size_t check_add_response(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    retval_s *ret = userdata;
-    assert(ret);
-    s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
-
-    if (endswith(resp, S("\"error\": null}")))
-        *ret = (retval_s){.ok = true};
-    else {
-        char *err = (char *)s8dup(resp).s;
-        *ret = (retval_s){.data.string = err, .ok = false};
+static bool parse_error(yyjson_val *root, retval_s *ret) {
+    yyjson_val *error = yyjson_obj_get(root, "error");
+    bool has_error = !yyjson_is_null(error);
+    if (has_error) {
+        const char *error_str = yyjson_get_str(error);
+        set_error(ret, error_str);
+        return true;
     }
 
-    return size * nmemb;
+    return false;
+}
+
+/* ------ Callback functions ------ */
+static size_t check_error_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    assert(userdata);
+    retval_s *ret = userdata;
+
+    _drop_(yyjson_doc_free) yyjson_doc *doc = yyjson_read(ptr, nmemb, 0);
+    if (!doc) {
+        set_error(ret, "Failed to parse JSON response");
+        return nmemb;
+    }
+
+    yyjson_val *root = yyjson_doc_get_root(doc);
+
+    if (parse_error(root, ret))
+        return nmemb;
+
+    *ret = (retval_s){.ok = true};
+    return nmemb;
+}
+
+static size_t has_results_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    assert(userdata);
+    retval_s *ret = userdata;
+
+    _drop_(yyjson_doc_free) yyjson_doc *doc = yyjson_read(ptr, nmemb, 0);
+    if (!doc) {
+        set_error(ret, "Failed to parse JSON response");
+        return nmemb;
+    }
+
+    yyjson_val *root = yyjson_doc_get_root(doc);
+
+    if (parse_error(root, ret))
+        return nmemb;
+
+    yyjson_val *result = yyjson_obj_get(root, "result");
+    bool has_results = yyjson_arr_size(result) > 0;
+    *ret = (retval_s){.data.boolean = has_results, .ok = true};
+
+    return nmemb;
 }
 
 static size_t parse_result_array(char *ptr, size_t size, size_t nmemb, void *userdata) {
     retval_s *ret = userdata;
     assert(ret);
-    s8 resp = (s8){.s = (u8 *)ptr, .len = nmemb};
 
-    yyjson_doc *doc = yyjson_read((const char *)resp.s, resp.len, 0);
+    _drop_(yyjson_doc_free) yyjson_doc *doc = yyjson_read(ptr, nmemb, 0);
     if (!doc) {
-        ret->ok = false;
-        ret->data.string = strdup("Failed to parse JSON response");
-        return size * nmemb;
+        set_error(ret, "Failed to parse JSON response");
+        return nmemb;
     }
 
     yyjson_val *root = yyjson_doc_get_root(doc);
 
-    yyjson_val *error = yyjson_obj_get(root, "error");
-    if (!yyjson_is_null(error)) {
-        ret->ok = false;
-        const char *error_msg = yyjson_get_str(error);
-        ret->data.string = error_msg ? strdup(error_msg) : strdup("Unknown error occurred");
-        goto cleanup;
-    }
+    if (parse_error(root, ret))
+        return nmemb;
 
     yyjson_val *result = yyjson_obj_get(root, "result");
     if (!yyjson_is_arr(result)) {
-        ret->ok = false;
-        ret->data.string = strdup("Result is not an array");
-        goto cleanup;
+        set_error(ret, "Result is not an array");
+        return nmemb;
     }
 
     size_t array_size = yyjson_arr_size(result);
@@ -158,13 +183,12 @@ static size_t parse_result_array(char *ptr, size_t size, size_t nmemb, void *use
     yyjson_val *val;
     yyjson_arr_foreach(result, idx, max, val) {
         if (!yyjson_is_str(val)) {
-            ret->ok = false;
-            ret->data.string = strdup("Array element is not a string");
+            set_error(ret, "Array element is not a string");
             for (size_t j = 0; j < idx; j++) {
                 free(notetypes[j]);
             }
             free(notetypes);
-            goto cleanup;
+            return nmemb;
         }
         notetypes[idx] = strdup(yyjson_get_str(val));
     }
@@ -173,9 +197,7 @@ static size_t parse_result_array(char *ptr, size_t size, size_t nmemb, void *use
     ret->ok = true;
     ret->data.strv = notetypes;
 
-cleanup:
-    yyjson_doc_free(doc);
-    return size * nmemb;
+    return nmemb;
 }
 /* ------- End Callback functions ----------- */
 
@@ -195,7 +217,6 @@ bool ac_check_connection(void) {
     s8 req = S("{\"action\": \"version\", \"version\": 6}");
     retval_s ret = sendRequest(req, NULL);
 
-    // TODO: Switch to error parameter
     if (!ret.ok) {
         free(ret.data.string);
         return false;
@@ -213,10 +234,10 @@ static s8 form_search_req(bool include_suspended, bool include_new, char *deck, 
                   include_new ? S("") : S(" -is:new"), S("\" } }"));
 }
 
-static int check_exists_with_(bool include_suspended, bool include_new, char *deck, char *field,
-                              char *str, char **error) {
+static int check_exists_with(bool include_suspended, bool include_new, char *deck, char *field,
+                             char *str, char **error) {
     _drop_(frees8) s8 req = form_search_req(include_suspended, include_new, deck, field, str);
-    retval_s r = sendRequest(req, search_checker);
+    retval_s r = sendRequest(req, has_results_callback);
     if (!r.ok) {
         if (error)
             *error = r.data.string;
@@ -240,21 +261,21 @@ AnkiCollectionStatus ac_check_exists(char *deck, char *field, char *lookup, char
     }
 
     /* include only learning cards */
-    int rc = check_exists_with_(false, false, deck, field, lookup, error);
+    int rc = check_exists_with(false, false, deck, field, lookup, error);
     if (rc == 1)
         return AC_EXISTS;
     if (rc == -1)
         return AC_ERROR;
 
     /* include new */
-    rc = check_exists_with_(false, true, deck, field, lookup, error);
+    rc = check_exists_with(false, true, deck, field, lookup, error);
     if (rc == 1)
         return AC_EXISTS_NEW;
     if (rc == -1)
         return AC_ERROR;
 
     /* include suspended */
-    rc = check_exists_with_(true, false, deck, field, lookup, error);
+    rc = check_exists_with(true, false, deck, field, lookup, error);
     if (rc == 1)
         return AC_EXISTS_SUSPENDED;
     if (rc == -1)
@@ -273,7 +294,7 @@ static s8 form_gui_search_req(char *deck, char *field, char *entry) {
 void ac_gui_search(char *deck, char *field, char *entry, char **error) {
 
     _drop_(frees8) s8 req = form_gui_search_req(deck, field, entry);
-    retval_s r = sendRequest(req, NULL);
+    retval_s r = sendRequest(req, check_error_callback);
 
     if (!r.ok && error)
         *error = r.data.string;
@@ -331,7 +352,8 @@ static s8 form_store_file_req(char *filename, char *path) {
 void ac_store_file(char *filename, char *path, char **error) {
 
     _drop_(frees8) s8 req = form_store_file_req(filename, path);
-    retval_s r = sendRequest(req, NULL); // TODO: Check error response
+    retval_s r = sendRequest(req, check_error_callback);
+
     if (!r.ok && error)
         *error = r.data.string;
 }
@@ -417,7 +439,7 @@ void ac_addNote(AnkiCard ac, char **error) {
         return;
 
     _drop_(frees8) s8 req = form_addNote_req(ac);
-    retval_s r = sendRequest(req, check_add_response);
+    retval_s r = sendRequest(req, check_error_callback);
     if (!r.ok)
         *error = r.data.string;
 }
