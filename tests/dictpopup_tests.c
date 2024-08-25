@@ -35,13 +35,13 @@ AfterEach(DictPopup) {
 
 Ensure(DictPopup, looks_up_substrings_as_expected) {
     _drop_(frees8) s8 lookup = s8dup(S("世界からはいつの間にか風の音が、虫の鳴き声が消失していた"));
-    _drop_(db_close) database_t *db = db_open(S("dummy"), true);
+    _drop_(db_close) database_t *db = db_open(true);
 
     Dict dict = lookup_first_matching_prefix(&lookup, db);
 
     assert_that(dict_contains(dict, S("世界")));
 
-    dict_free(dict);
+    dict_free(dict, true);
 }
 
 Ensure(DictPopup, copies_default_database_if_no_database_exists) {

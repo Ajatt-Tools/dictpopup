@@ -1,4 +1,5 @@
 #include "deinflector.h"
+#include "deinflector/kata2hira.h"
 #include "utils/util.h"
 #include <cgreen/cgreen.h>
 
@@ -276,6 +277,16 @@ Ensure(Deinflector, deinflects_compound_verbs) {
               "書き始めなくて", "書き始められる", "書き始められない");
 }
 
+Ensure(Deinflector, correctly_converts_kanji_to_hira) {
+    s8 in1 = S("思いつく");
+    _drop_(frees8) s8 out1 = kanji2hira(in1);
+    assert_that((char*)out1.s, is_equal_to_string("おもいつく"));
+
+    s8 in2 = S("駆けこむ");
+    _drop_(frees8) s8 out2 = kanji2hira(in2);
+    assert_that((char*)out2.s, is_equal_to_string("かけこむ"));
+}
+
 TestSuite *deinflector_tests(void) {
     TestSuite *suite = create_test_suite();
     add_test_with_context(suite, Deinflector, converts_kata_to_hira);
@@ -310,5 +321,6 @@ TestSuite *deinflector_tests(void) {
     add_test_with_context(suite, Deinflector, deinflects_conditional_forms);
     add_test_with_context(suite, Deinflector, deinflects_adverb_forms);
     add_test_with_context(suite, Deinflector, deinflects_compound_verbs);
+    add_test_with_context(suite, Deinflector, correctly_converts_kanji_to_hira);
     return suite;
 }

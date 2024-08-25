@@ -11,7 +11,7 @@ BeforeEach(Jppron) {
 AfterEach(Jppron) {
 }
 
-PronDatabase *jppron_open_db(char *path, bool readonly) {
+PronDatabase *jppron_open_db(bool readonly) {
     return NULL;
 }
 
@@ -47,12 +47,7 @@ void play_audio_sync(s8 filepath) {
     mock(filepath.s);
 }
 
-Ensure(Jppron, excludes_trailing_o) {
-    assert(true);
-}
-
 TestSuite *jppron_tests(void) {
     TestSuite *suite = create_test_suite();
-    add_test_with_context(suite, Jppron, excludes_trailing_o);
     return suite;
 }
