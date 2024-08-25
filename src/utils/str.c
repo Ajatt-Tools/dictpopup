@@ -19,7 +19,7 @@ i32 u8compare(u8 *restrict a, u8 *restrict b, isize n) {
 s8 s8copy(s8 dst, s8 src) {
     assert(dst.len >= src.len && src.len >= 0);
 
-    if (src.s && dst.s) { // Passing null to memcpy is undefined behaviour ...
+    if (src.s) { // Passing null to memcpy is undefined behaviour ...
         memcpy(dst.s, src.s, src.len);
         dst.s += src.len;
         dst.len -= src.len;
