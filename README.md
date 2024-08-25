@@ -106,6 +106,14 @@ Furthermore, by right-clicking the + sign, you can also use the current clipboar
 - Play audio: <kbd>p</kbd>, <kbd>r</kbd>
 - Exit: <kbd>q</kbd>, <kbd>Esc</kbd>
 
+## Supported languages
+
+You can use any dictionary as long as at is in Yomichan format. However, currently there is only
+a deinflector available for Japanese.
+
+Yomichan dictinaries for other languages are for example available
+here: https://github.com/themoeway/kaikki-to-yomitan/releases.
+
 ## Contact
 
 If you are having trouble setting up the program, don't hesitate to open up
