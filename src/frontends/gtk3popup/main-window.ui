@@ -255,6 +255,15 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
+            <property name="text" translatable="yes">Settings</property>
+            <property name="action-name">app.open-settings</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkModelButton">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
             <property name="text" translatable="yes">Search in Massif</property>
             <property name="action-name">app.search-massif</property>
           </object>
@@ -266,15 +275,6 @@
             <property name="receives_default">True</property>
             <property name="text" translatable="yes">Edit Lookup</property>
             <property name="action-name">app.edit-lookup</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkModelButton">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">True</property>
-            <property name="text" translatable="yes">Settings</property>
-            <property name="action-name">app.open-settings</property>
           </object>
         </child>
       </object>
