@@ -207,10 +207,18 @@ static u32 *get_ids(const database_t *db, s8 word, size_t *num) {
     return ret;
 }
 
+static s8 serialize_word(Word word) {
+    if (s8equals(word.kanji, word.reading)) {
+        return concat(word.kanji, S("\0"));
+    }
+
+    return concat(word.kanji, S("\0"), word.reading);
+}
+
 void db_put_freq(database_t *db, freqentry fe) {
     die_on(db->readonly, "Cannot put frequency into db in readonly mode.");
 
-    s8 key = concat(fe.word, S("\0"), fe.reading);
+    _drop_(frees8) s8 key = serialize_word((Word){.kanji = fe.word, .reading = fe.reading}); // TODO: Use string builder?
     MDB_val key_mdb = {.mv_data = key.s, .mv_size = key.len};
     MDB_val val_mdb = {.mv_data = &fe.frequency, .mv_size = sizeof(fe.frequency)};
 
@@ -218,7 +226,7 @@ void db_put_freq(database_t *db, freqentry fe) {
 }
 
 static u32 db_get_freq(const database_t *db, s8 word, s8 reading) {
-    _drop_(frees8) s8 key = concat(word, S("\0"), reading);
+    _drop_(frees8) s8 key = serialize_word((Word){.kanji = word, .reading = reading});
     MDB_val key_m = (MDB_val){.mv_data = key.s, .mv_size = (size_t)key.len};
 
     MDB_val val_m = {0};
