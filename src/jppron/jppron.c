@@ -10,7 +10,6 @@
 #include "jppron/jppron_database.h"
 
 #include "deinflector/kata2hira.h"
-#include "platformdep/audio.h"
 #include "platformdep/file_operations.h"
 #include "utils/messages.h"
 #include "utils/util.h"
@@ -147,14 +146,32 @@ Pronfile *get_pronfiles_for(Word word) {
     return pronfiles;
 }
 
-void jppron_create_index(const char *audio_folders_path) {
-    _drop_(frees8) s8 dbpath = get_default_database_path();
-
-    if (audio_folders_path) {
-        msg("Indexing files..");
-        jppron_create_database(audio_folders_path, dbpath); // TODO: エラー処理
-        msg("Index completed.");
-    } else {
-        err("No path provided.");
+void jppron_create_index(const char *audio_folders_path, atomic_bool *cancel_flag) {
+    if (!audio_folders_path) {
+        dbg("No audio index path provided");
+        return;
     }
+
+    _drop_(frees8) s8 dbpth = get_default_database_path();
+
+    dbg("Indexing pronunciation files..");
+    jdb_remove(dbpth);
+    createdir(dbpth);
+
+    _drop_(jppron_close_db) PronDatabase *db = jppron_open_db(false);
+
+    _drop_(closedir) DIR *audio_dir = opendir(audio_folders_path);
+    err_ret_on(!audio_dir, "Failed to open audio directory '%s': %s", audio_folders_path,
+               strerror(errno));
+
+    struct dirent *entry;
+    while ((entry = readdir(audio_dir)) != NULL && !atomic_load(cancel_flag)) {
+        s8 fn = fromcstr_(entry->d_name);
+
+        if (s8equals(fn, S(".")) || s8equals(fn, S("..")))
+            continue;
+
+        process_audio_subdirectory(audio_folders_path, entry->d_name, db);
+    }
+    dbg("Done with pronunciation index.");
 }
