@@ -5,7 +5,7 @@ cards. The look of the popup will depend on your gtk3 settings.
 
 https://github.com/user-attachments/assets/a199f843-1be4-4b76-8ca1-f0d97aa96445
 
-https://github.com/Ajatt-Tools/dictpopup/assets/50422430/a0a631eb-85dd-4644-9001-10d2e1076ed4
+https://github.com/user-attachments/assets/6fb1c7de-891c-4253-a1cb-534a1ece0362
 
 ## List of features
 
