@@ -1,0 +1,39 @@
+.main-window button {
+    padding-top: 1px;
+    padding-bottom: 1px;
+    min-height: 20px;
+    min-width: 18px;
+}
+
+textview {
+    font-size: large;
+}
+
+/* Preferences window styles */
+.frame {
+    border: 1px solid alpha(@borders, 0.5);
+    border-radius: 5px;
+    background-color: alpha(@theme_base_color, 0.5);
+}
+
+.drag-icon {
+    background: white;
+    border: 1px solid black;
+}
+
+#dict_order_listbox row {
+    padding: 8px;
+    border-bottom: 1px solid alpha(@borders, 0.2);
+}
+
+#dict_order_listbox row:last-child {
+    border-bottom: none;
+}
+
+#dict_order_listbox row.sliding {
+    background-color: alpha(@theme_selected_bg_color, 0.1);
+}
+
+#dict_order_listbox row:hover {
+    background-color: alpha(@theme_selected_bg_color, 0.05);
+}

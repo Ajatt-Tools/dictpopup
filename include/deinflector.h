@@ -1,4 +1,6 @@
-#include "util.h"
+#include "utils/util.h"
+
+#include <utils/str.h>
 
 /*
  * @word: The japanese word to be deinflected
@@ -9,7 +11,7 @@
  * Returns: An s8* buffer (see buf.h) containing the deinflections.
  * The caller of the function takes ownership of the data, and is responsible for freeing it.
  */
-_deallocator_(frees8buffer) s8 *deinflect(s8 word);
+_deallocator_(s8_buf_free) s8Buf deinflect(s8 word);
 
 /*
  * Tries to give a hiragana conversion of @input using MeCab.
@@ -17,9 +19,3 @@ _deallocator_(frees8buffer) s8 *deinflect(s8 word);
  * Returns: A newly allocated string containing the conversion.
  */
 s8 kanji2hira(s8 input);
-
-/*
- * Converts all katakana characters in @kata_in into its hiragana counterparts
- * (inplace).
- */
-void kata2hira(s8 kata_in);

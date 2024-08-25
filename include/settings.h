@@ -1,13 +1,12 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
-#include "util.h"
+#include "utils/util.h"
 #include <stdbool.h>
-#include <stddef.h>
 
 typedef struct {
     struct {
-        char *dbpth;
-        bool sort;
+        char *dbDir;
+        bool sortDictEntries;
         char **dictSortOrder;
         bool nukeWhitespaceLookup;
         bool mecab;
@@ -38,12 +37,11 @@ typedef struct {
         bool onStart;
         char *dirPath;
     } pron;
-} settings;
+} Config;
 
-extern settings cfg;
+extern Config cfg;
 
 void print_settings(void);
 void read_user_settings(int fieldmapping_max);
-int parse_cmd_line_opts(int argc, char **argv);
 
 #endif /* SETTINGS_H */

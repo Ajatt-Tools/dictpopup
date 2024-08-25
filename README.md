@@ -5,26 +5,17 @@ cards. The look of the popup will depend on your gtk3 settings.
 
 https://github.com/GenjiFujimoto/dictpopup/assets/50422430/353e5573-e728-419a-a2b8-058c8ed6da04
 
-https://github.com/Ajatt-Tools/dictpopup/assets/50422430/61207a30-7838-4a30-a5b2-c4f6d6865821
-
-## Current state
-
-This is still very much a work in progress.
-**It only works on the X window manager** right now (i.e. Linux with X11) and the parser for the Yomichan dictionaries
-isn't fully implemented yet (for dictionaries with structured content).
-See `TODO.txt` for more.
+https://github.com/Ajatt-Tools/dictpopup/assets/50422430/a0a631eb-85dd-4644-9001-10d2e1076ed4
 
 ## List of features
 
 * Deinflect
-* Kanjify e.g. お前 -> 御前
 * Yomichan-style lookup, i.e. decrease length of lookup until there is a match
-* Sort dictionary entries by frequency (requires a frequency dictionary. I recommend CC100)
-* Fall back to a hiragana conversion (for words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
-* Play a pronunciation on lookup / button press (requires files see [Pronunciation](#pronunciation))
-* Add word with selected definition to Anki
-* Indicator showing if a word already exists in your Anki deck / collection. Orange if all existing cards are suspended, blue if new.
-  Anki browser search on press.
+* Sort dictionary entries by frequency (Requires a frequency dictionary. I recommend CC100)
+* Fall back to a hiragana conversion (For words written half in kanji / half in hiragana, e.g: かけ布団, 思いつく)
+* Play a pronunciations (requires files see [Pronunciation](#pronunciation))
+* Add the word to Anki using either the visible definition, the mouse selection or clipboard contents
+* Indicator showing if a word already exists in your Anki deck / collection.
 * Allow adding the window title to some Anki field (If you are adding from a book, this will e.g. most probably contain
   the book title)
 * Fast and memory efficient
@@ -55,40 +46,30 @@ Then install with:
 ```bash
 git clone "https://github.com/Ajatt-Tools/dictpopup.git"
 cd dictpopup
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-sudo cmake --build build --target install -j 2
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
+sudo cmake --build build --target install -j 3
 ```
 
 ### Windows
 
 The manual installation instructions above should also work for Windows under MSYS2, so someone
-experienced might get it to run. But note that the default config location is currently hard coded for Linux.
-I will provide an installer in the future.
+experienced might get it to run.
 
 ## Setup
 
-After the program installation you need to create a database where the dictionary entries are read from.
-This is done via `dictpopup-create` which creates the database from all Yomichan dictionaries in the current directory.
-Without arguments, it stores the database in the default location `~/.local/share/dictpopup` which is also the default
-search path.
+After the program installation you need to first create an index where the dictionary entries are read from.
+For this, open `dictpopup-config` (or `dictpopup` and then menu button > settings), then under 'Add dictionaries' in the
+'General' tab, choose the folder that contains all of your Yomichan dictionaries and click 'Generate Index'.
 
 You can also include a frequency dictionary in there, but only one (it will give an error if you add more, because I
 don't think that mixing makes sense).
-
-## Configuration
-
-Copy the example config `config.ini` of the repo to `~/.config/dictpopup/config.ini` and configure it according to your
-setup.
-The syntax follows the [Desktop Entry Specification](http://freedesktop.org/Standards/desktop-entry-spec).
-
-Be careful to not include trailing spaces after your variables (for now).
 
 ## Pronunciation
 
 To enable pronunciation, simply download some pronunciation indices from Ajatt-Tools (such
 as [NHK 2016](https://github.com/Ajatt-Tools/nhk_2016_pronunciations_index))
-and specify the path to the directory containing the downloaded folders in the config file. The expected folder
-structure looks as follows:
+and generate an index under 'Add Pronunciation Files' in the 'Pronunciation' tab of the settings window. The expected
+folder structure looks as follows:
 
 ```
  ├── ajt_japanese_audio
@@ -103,9 +84,8 @@ structure looks as follows:
  │   │   ├── index.json
 ```
 
-On the first run it will automatically create an index which might take up some space (up to 200M if you have many
-indices like I do).
-This will allow for a faster lookup.
+By right clicking the pronunciation button, you can open a menu with all the available pronunciations
+for the current kanji/reading pair.
 
 ## Usage
 
@@ -114,18 +94,16 @@ instead: `dictpopup WORD`.
 If something is not working as expected, you can add `DP_DEBUG=1` before the command or add the command line option `-c`
 to print the config on stdout.
 
-The "+" sign adds the currently shown definition to Anki after prompting you to copy a sentence.
+The "+" sign adds the currently shown definition to Anki after prompting you to copy a sentence (if enabled).
 If there is text selected in the popup window, it will be used instead as a definition.
-
-The green/red dot indicates whether the word is already present in your Anki collection.
-It displays an orange dot if there exist corresponding cards, but which are all suspended.
+Furthermore, by right-clicking the + sign, you can also use the current clipboard content as the definition instead.
 
 ## Keybindings
 
 - Next entry: <kbd>n</kbd>, <kbd>s</kbd>
 - Previous entry: <kbd>p</kbd>, <kbd>a</kbd>
 - Create an Anki card: <kbd>Ctrl</kbd>+ <kbd>s</kbd>
-- Play audio: <kbd>r</kbd>
+- Play audio: <kbd>p</kbd>, <kbd>r</kbd>
 - Exit: <kbd>q</kbd>, <kbd>Esc</kbd>
 
 ## Contact

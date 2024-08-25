@@ -40,14 +40,30 @@ SRCS = src/ankiconnectc.c \
 SRCS_JPPRON = src/jppron/jppron.c \
 	      src/jppron/database.c \
 	      src/jppron/ajt_audio_index_parser.c \
-	      src/yyjson.c
+	      src/utils/yyjson.c
+
+SRCS_DICTPOPUP = src/frontends/gtk3popup.c \
+        src/dictpopup.c \
+        src/db.c \
+        src/ankiconnectc.c \
+        src/deinflector.c \
+        src/settings.c \
+        src/utils/util.c \
+        src/utils/utf8.c \
+        src/platformdep/audio.c \
+        src/platformdep/notifications.c \
+        src/platformdep/clipboard.c \
+        src/platformdep/file_operations.c \
+        src/platformdep/windowtitle.c \
+	${SRC_JPPRON}
+
 
 FILES_CREATE = db.c util.c platformdep.c yomichan_parser.c yyjson.c
 FILES_H_CREATE = db.h util.h buf.h platformdep.h yyjson.h
 SRC_CREATE = $(addprefix $(SDIR)/,$(FILES_CREATE))  $(LMDB_FILES)
 SRC_H_CREATE = $(addprefix $(IDIR)/,$(FILES_H_CREATE))
 
-bins := dictpopup dictpopup-create
+bins := dictpopup
 
 all: $(bins)
 all: CFLAGS+=$(RELEASE_CFLAGS)
@@ -55,8 +71,8 @@ all: CFLAGS+=$(RELEASE_CFLAGS)
 debug: $(bins)
 debug: CFLAGS+=$(DEBUG_CFLAGS)
 
-dictpopup: $(SRCS) $(SRCS_JPPRON) $(SRC_H) $(SDIR)/frontends/gtk3popup.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SDIR)/frontends/gtk3popup.c $(SRCS) $(SRCS_JPPRON) $(LDLIBS) $(NOTIF_LIBS)
+dictpopup: $(SRCS_DICTPOPUP) $(SRCS_JPPRON) $(SRC_H)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(NOTIF_CFLAGS) -o $@ $(SRCS_DICTPOPUP) $(SRCS_JPPRON) $(LDLIBS) $(NOTIF_LIBS)
 
 dictpopup-create: $(SRC_CREATE) $(SRC_H_CREATE) $(SDIR)/dictpopup_create.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/dictpopup_create.c $(SRC_CREATE) $(LDLIBS)
@@ -65,7 +81,7 @@ cli: $(SRC) $(SRC_H) $(SDIR)/frontends/cli.c
 	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -o $@ $(SDIR)/frontends/cli.c $(SRCS) $(LDLIBS)
 
 deinflector: $(SRC) $(SRC_H) $(SDIR)/deinflector.c
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/util.c $(LDLIBS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(CPPFLAGS) -DDEINFLECTOR_MAIN -o $@ $(SDIR)/deinflector.c $(SDIR)/utils/util.c $(SDIR)/utils/utf8.c $(LDLIBS)
 
 release:
 	version=$$(git describe); prefix=dictpopup-$${version#v}; \
@@ -99,17 +115,17 @@ clean:
 	rm -f dictpopup dictpopup-create cli deinflector
 
 
-ALL_C_SOURCES := $(wildcard src/*.c)
-ALL_H_SOURCES := $(wildcard include/*.h)
+ALL_C_SOURCES := $(wildcard src/**.c)
+ALL_H_SOURCES := $(wildcard include/**.h)
 
 c_analyse_targets := $(ALL_C_SOURCES:%=%-analyse)
-c_analyse_targets := $(filter-out src/yyjson.c-analyse, $(c_analyse_targets))
+c_analyse_targets := $(filter-out src/utils/yyjson.c-analyse, $(c_analyse_targets))
 
 h_analyse_targets := $(ALL_H_SOURCES:%=%-analyse)
-h_analyse_targets := $(filter-out include/yyjson.h-analyse, $(h_analyse_targets))
+h_analyse_targets := $(filter-out include/utils/yyjson.h-analyse, $(h_analyse_targets))
 
 analyse: CFLAGS+=$(DEBUG_CFLAGS)
-analyse: $(c_analyse_targets) $(h_analyse_targets)
+analyse: $(c_analyse_targets)
 
 $(c_analyse_targets): %-analyse:
 	echo "$(c_analyse_targets)"
@@ -143,7 +159,8 @@ $(h_analyse_targets): %-analyse:
 		--suppress=missingIncludeSystem --suppress=unmatchedSuppression \
 		--suppress=unreadVariable --suppress=constParameterCallback \
 		--suppress=constVariablePointer --suppress=constParameterPointer \
-		--suppress=unusedFunction --suppress=*:include/yyjson.h \
+		--suppress=unusedFunction --suppress=*:include/utils/yyjson.h \
+		--check-level=exhaustive \
 		--max-ctu-depth=32 --error-exitcode=1
 	# clang-analyzer-unix.Malloc does not understand _drop_()
 	clang-tidy $< --quiet -checks=-clang-analyzer-unix.Malloc -- -std=gnu99 -I$(IDIR) $(shell pkg-config --cflags gtk+-3.0)

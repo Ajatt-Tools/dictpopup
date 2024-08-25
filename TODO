@@ -1,42 +1,59 @@
 ## dictpopup
-- Fix formating for JMDict (tags come after content)
-  - Just put content into separate variable and then concatenate at end
-- Fix formatting for Jitendex (Prettier lists)
-- Write a "Yomichan search"-like window application
-- Include a small default dictionary (.mdb file)
+
+High priority
+-------------
+- Add database version to metadata of database
+- Bring back kanjification
+
+- Add more tests
+
+- What happens when you open dictpopup-config and then dictpopup
+- What happens if some random folder was selected for pronunciation index?
+  -> Proper error message
+- Proper error handling for faulty Anki settings
+- Test what happens if you press some shortcuts in the error window (e.g. 'no database found')
 
 Mid priority
-- Right click on '+' button -> popup menu with: "add from clipboard", ...
-- Right click on audio button -> popup menu with "copy file to clipboard", ...
-- Implement the reading label as a text view to allow for editing -> initiate new search on Enter press
+------------
+- Fix trying too many deinflections
+  - e.g.: 
+    - に -> にる、ぬ、る
+    - 白ける -> 白い
+    - やった -> やつ
+- Add info of currently processing dictionary in preferences window when generating dictionary index
+- Remove duplication of full path in every jppron database entry
+  - Safe prefix to indices in metadata and concatenate at runtime
+- Check if sentence is mapped to some field and only prompt for it in that case
 - Group terms by reading, allow for switching between different readings
-- Implement a small window to manually enter a search string instead of selecting
-- Kanjify the word in the copied sentence according to the dictionary entry
-- Remove trailing spaces from user settings
-- Need some check when looking up a hiragana conversion to prevent things like 賢人会 -> 県人会
-- Don't show circle indicator if Anki is not running / on error
-- Show a blue circle if existing cards are all new
+- Implement a small window to manually enter a search string instead of selecting ?
+- Write a "Yomichan search"-like window application
+
+pron:
+- Allow specifying the order for pronunciations
 - Search for audio of inflected selected word (e.g. 下がらない) (optionally)
-- Switch to using GSettings
-- Write a gui config tool
-  - Select dictionaries
-  - Choose dictionary sort order
-  - build database
-  - change general config
 
 Low priority
+------------
+- Kanjify the word in the copied sentence according to the dictionary entry
+- (dictpopup_create) Cleanup database data on error case (lock.mdb)
+- Don't show frequency dicts in sort order
+- Need some check when looking up a hiragana conversion from mecab to prevent things like:
+  - 賢人会 -> 県人会
+  - 大正門 -> 大誓文
+  - 家名だ
+- Allow canceling context selection with Esc
+- Add tags to the Anki card, similiar to mpvacious
+- Better list and table formatting
+  - Text only is not enough for that. Would need to surround 
+    text with markers and then parse and format at run time
 - Support pictures
 - Fix "Error obtaining window name" on recursive lookup
   - The problem is, that dictpopup creates a "child window" (?) with id one more which does not have a name
   - This affects all programs which create a child without own title name
-- Handle "Anki not running" more gracefully
-  - Disable Anki support and reenable automatically if Anki starts
 - Allow configurable keybindings
 - Allow resizing the window and remember the size on close (write to config.ini)
 - Move all Japanese specific things into deinflector.c, choose more language agnostic function names in all other places
-- Adds tags to the Anki card, similiar to mpvacious
-- Allow canceling context selection with Esc
-- Allow changing AnkiConnect API address in config.ini
+- Allow changing AnkiConnect API address in config
 - Skip certain lines on definition add (without selection), e.g.:
   - しず か （しづ—） [1]【静か・▽閑か】
   -（形動）〔文〕ナリ
@@ -44,25 +61,9 @@ Low priority
   - Currently hard coded to 60 bytes
   - Only important for an auto scan implementation though
 
-## Known problems:
-- Can't pronounce 方方[かたがた]
-### Misc
-- If there is a dictionary entry for 恭しく even though 恭しい is present in the collection, then a red dot will be shown
-### Deinflection
-- やった gets deinflected to やつ
-  - This can be fixed by reading in the 4th string of a Yomichan term-bank entry, which is:
-    "String of space-separated rule identifiers for the definition which is used to validate deinflection.
-    An empty string should be used for words which aren't inflected."
-- に looks broken
-
-Mecab problems:
-- 大正門 pulls 大誓文
-- 家名だ
-
-freq:
-- いじらしい not present in all
 
 Possible ideas:
+- Allow adding audio files indexed by filename (for forvo)
 - Add some way to lookup example sentences
   - Maybe something like a menu button which opens a popup menu with: "settings", "lookup massif example sentences", ...
 - Implement a dbus service mode
@@ -81,10 +82,6 @@ Possible ideas:
   - Could use gtk_label_set_markup, but would need to switch to a label instead of a textview
 - Make dictionary numbers (①, ②, ...) clickable for adding to Anki
 - A (very small) optimization would be to sort the dictSortOrder string and then use binary search or sth in indexof()
-
-To check:
-- definflector.c assumes that constant strings given in the code are utf8 encoded. I don't know if this always has to be true (on Windows)
-
 
 
 Test results for storing compressed dictionary entries:
