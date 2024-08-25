@@ -176,8 +176,11 @@ FileInfo jdb_get_fileinfo(PronDatabase *db, s8 fullpath) {
 
 s8Buf jdb_get_files(PronDatabase *db, s8 word) {
     int rc;
+    s8 *ret = 0;
+
     MDB_CHECK(mdb_txn_begin(db->env, NULL, MDB_RDONLY, &db->txn));
-    MDB_CHECK(mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT, &db->db_headword_to_filepath));
+    if (mdb_dbi_open(db->txn, "dbi1", MDB_DUPSORT, &db->db_headword_to_filepath) != MDB_SUCCESS)
+        return ret;
 
     MDB_val key_m = (MDB_val){.mv_data = word.s, .mv_size = (size_t)word.len};
     MDB_val val_m = {0};
@@ -185,7 +188,6 @@ s8Buf jdb_get_files(PronDatabase *db, s8 word) {
     _drop_(mdb_cursor_close) MDB_cursor *cursor = 0;
     MDB_CHECK(mdb_cursor_open(db->txn, db->db_headword_to_filepath, &cursor));
 
-    s8 *ret = 0;
     bool first = true;
     while ((rc = mdb_cursor_get(cursor, &key_m, &val_m, first ? MDB_SET_KEY : MDB_NEXT_DUP)) == 0) {
         s8 val = s8dup((s8){.s = val_m.mv_data, .len = val_m.mv_size});
