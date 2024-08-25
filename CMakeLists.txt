@@ -11,9 +11,6 @@ include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Options
-option(BUILD_TESTS "Build tests" OFF)
-
 # Find packages
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
@@ -55,6 +52,7 @@ endif ()
 # ##############################################################################
 find_program(CLANG_FORMAT "clang-format")
 find_program(CPPCHECK cppcheck)
+find_program(CLANG_TIDY "clang-tidy")
 
 # ##############################################################################
 # General compilation
@@ -168,13 +166,42 @@ if (CLANG_FORMAT)
 endif ()
 
 # ##############################################################################
+# Clang-tidy
+# ##############################################################################
+if (CLANG_TIDY)
+    set(CMAKE_C_CLANG_TIDY ${CLANG_TIDY} -checks=-*,readability-*,modernize-*)
+
+    file(GLOB_RECURSE ALL_SOURCE_FILES
+            ${CMAKE_SOURCE_DIR}/src/*.c
+            ${CMAKE_SOURCE_DIR}/src/*.h
+            ${CMAKE_SOURCE_DIR}/include/*.h
+    )
+
+    add_custom_target(
+            clang-tidy
+            COMMAND ${CLANG_TIDY}
+            ${ALL_SOURCE_FILES}
+            -p ${CMAKE_BINARY_DIR}
+            --use-color
+            --extra-arg=-Wno-unknown-warning-option
+            --
+            -I${CMAKE_SOURCE_DIR}/include
+            -I${CMAKE_SOURCE_DIR}/lib
+            ${CMAKE_C_FLAGS}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Running clang-tidy"
+    )
+endif ()
+
+# ##############################################################################
 # check-all
 # ##############################################################################
 add_custom_target(
         check-all
         COMMAND ${CMAKE_COMMAND} --build . --target format-check
         COMMAND ${CMAKE_COMMAND} --build . --target cppcheck
-        DEPENDS format-check cppcheck
+        COMMAND ${CMAKE_COMMAND} --build . --target clang-tidy
+        DEPENDS format-check cppcheck clang-tidy
         COMMENT "Running format check, static analysis, and tests"
 )
 
@@ -308,61 +335,6 @@ target_link_libraries(dictpopup-config PRIVATE
 )
 
 # ##############################################################################
-# dictpopup-create
-# ##############################################################################
-add_executable(dictpopup-create
-        src/dictpopup_create/dictpopup_create.c
-        src/dictpopup_create/objects.c
-        src/utils/util.c
-        lib/yyjson.c
-        src/utils/str.c
-        src/db.c
-        src/dictpopup_create/yomichan_parser.c
-        src/platformdep/file_operations.c
-        src/objects/dict.c
-        src/objects/freqentry.c
-)
-target_link_libraries(dictpopup-create PRIVATE
-        PkgConfig::GTK3
-        libzip::zip
-        LMDB::LMDB
-)
-
-# ##############################################################################
-# dictpopup-window
-# ##############################################################################
-pkg_check_modules(GTK4 REQUIRED gtk4)
-add_executable(dictpopup-win EXCLUDE_FROM_ALL
-        src/frontends/gtk4window.c
-        src/db.c
-        src/utils/util.c
-        src/platformdep/windowtitle.c
-        src/platformdep/file_operations.c
-        src/platformdep/notifications.c
-        ${ANKICONNECTC_SRCS}
-        ${DEINFLECTOR_SRCS}
-        ${DICTLOOKUP_SRCS}
-)
-target_compile_definitions(dictpopup-win PUBLIC NOTIFICATIONS)
-target_include_directories(
-        dictpopup-win PRIVATE
-        ${GTK4_INCLUDE_DIRS}
-        ${NOTIFY_INCLUDE_DIRS}
-        ${CURL_INCLUDE_DIRS}
-)
-target_link_directories(dictpopup-win PRIVATE
-        ${GTK4_LIBRARY_DIRS}
-        ${NOTIFY_LIBRARY_DIRS}
-        ${CURL_LIBRARY_DIRS}
-)
-target_link_libraries(dictpopup-win PRIVATE
-        ${GTK4_LIBRARIES}
-        ${NOTIFY_LIBRARIES}
-        ${CURL_LIBRARIES}
-        ${DICTLOOKUP_SRCS}
-)
-
-# ##############################################################################
 # cli
 # ##############################################################################
 add_executable(dictpopup-cli EXCLUDE_FROM_ALL src/frontends/cli.c
@@ -381,47 +353,45 @@ target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES
 # ##############################################################################
 # Tests
 # ##############################################################################
-if (BUILD_TESTS)
-    enable_testing()
-    find_package(cgreen REQUIRED)
-    add_executable(c_tests
-            src/jppron/jppron_objects.c
-            src/utils/util.c
-            src/utils/utf8.c
-            src/utils/str.c
-            lib/yyjson.c
-            src/objects/dict.c
-            tests/main.c
-            tests/deinflector_tests.c
-            tests/ankiconnect_tests.c
-            tests/yomichan_parser_tests.c
-            tests/jppron_tests/ajt_audio_index_parser_tests.c
-            tests/utils_tests/enclose_word_in_string_tests.c
-            tests/dictpopup_tests.c
-            tests/jppron_tests/jppron_tests.c
-            ${DEINFLECTION_RULES_C}
-            src/deinflector/deinflector.c
-            tests/anki_card_preparation_tests.c
-    )
-    target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
-    target_include_directories(c_tests PRIVATE
-            ${GTK3_INCLUDE_DIRS}
-            ${CGREEN_INCLUDE_DIRS}
-            lib/
-            include/
-            src/
-            src/jppron
-    )
-    target_link_libraries(c_tests PRIVATE
-            ${CGREEN_LIBRARIES}
-            MECAB::MECAB
-            PkgConfig::GTK3
-            libzip::zip
-    )
-    add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
+enable_testing()
+find_package(cgreen REQUIRED)
+add_executable(c_tests
+        src/jppron/jppron_objects.c
+        src/utils/util.c
+        src/utils/utf8.c
+        src/utils/str.c
+        lib/yyjson.c
+        src/objects/dict.c
+        tests/main.c
+        tests/deinflector_tests.c
+        tests/ankiconnect_tests.c
+        tests/yomichan_parser_tests.c
+        tests/jppron_tests/ajt_audio_index_parser_tests.c
+        tests/utils_tests/enclose_word_in_string_tests.c
+        tests/dictpopup_tests.c
+        tests/jppron_tests/jppron_tests.c
+        ${DEINFLECTION_RULES_C}
+        src/deinflector/deinflector.c
+        tests/anki_card_preparation_tests.c
+)
+target_compile_definitions(c_tests PRIVATE UNIT_TEST CLIPBOARD)
+target_include_directories(c_tests PRIVATE
+        ${GTK3_INCLUDE_DIRS}
+        ${CGREEN_INCLUDE_DIRS}
+        lib/
+        include/
+        src/
+        src/jppron
+)
+target_link_libraries(c_tests PRIVATE
+        ${CGREEN_LIBRARIES}
+        MECAB::MECAB
+        PkgConfig::GTK3
+        libzip::zip
+)
+add_test(NAME run_c_tests COMMAND $<TARGET_FILE:c_tests>)
 
-    #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
-endif ()
+#    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 
 # ##############################################################################
 # Install
