@@ -158,7 +158,7 @@ static void set_no_lookup_string(DpApplication *app) {
 static void set_database_not_found(DpApplication *app) {
     s8 no_database_text =
         S("No database found. "
-          "You need to create one first with the command line application 'dictpopup-create'.");
+          "You must first create one in the preferences window.");
     ui_manager_set_error(&app->ui_manager, no_database_text);
 }
 
