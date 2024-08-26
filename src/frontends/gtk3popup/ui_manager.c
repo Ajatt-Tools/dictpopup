@@ -4,8 +4,6 @@
 #include "objects/color.h"
 #include "platformdep/audio.h"
 
-#include <utils/dp_profile.h>
-
 static gboolean on_refresh_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data);
 
 static void disable_button(GtkWidget *button) {

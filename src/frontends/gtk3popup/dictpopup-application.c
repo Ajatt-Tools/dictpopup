@@ -12,7 +12,6 @@
 #include <objects/dict.h>
 #include <platformdep/audio.h>
 #include <platformdep/clipboard.h>
-#include <utils/dp_profile.h>
 #include <utils/messages.h>
 
 G_DEFINE_TYPE(DpApplication, dp_application, GTK_TYPE_APPLICATION)
