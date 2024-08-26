@@ -45,27 +45,6 @@ static void process_audio_subdirectory(const char *audio_dir_path, char *subdir_
         dbg("Index file of folder '%s' not existing or not accessible", subdir_name);
 }
 
-static void jppron_create_database(const char *audio_dir_path, s8 dbpth) {
-    jdb_remove(dbpth);
-    createdir(dbpth);
-
-    _drop_(jppron_close_db) PronDatabase *db = jppron_open_db(false);
-
-    _drop_(closedir) DIR *audio_dir = opendir(audio_dir_path);
-    err_ret_on(!audio_dir, "Failed to open audio directory '%s': %s", audio_dir_path,
-               strerror(errno));
-
-    struct dirent *entry;
-    while ((entry = readdir(audio_dir)) != NULL) {
-        s8 fn = fromcstr_(entry->d_name);
-
-        if (s8equals(fn, S(".")) || s8equals(fn, S("..")))
-            continue;
-
-        process_audio_subdirectory(audio_dir_path, entry->d_name, db);
-    }
-}
-
 static s8 normalize_reading(s8 reading) {
     s8 r = s8dup(reading);
     kata2hira(r);

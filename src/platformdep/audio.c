@@ -4,16 +4,6 @@
 #include "utils/messages.h"
 #include <utils/str.h>
 
-void play_audio_sync(s8 filepath) {
-    _drop_(frees8) s8 cmd =
-        concat(S("ffplay -nodisp -nostats -hide_banner -autoexit '"), filepath, S("'"));
-
-    g_autoptr(GError) error = NULL;
-    g_spawn_command_line_sync((char *)cmd.s, NULL, NULL, NULL, &error);
-    if (error)
-        err("Failed to play file %s: %s", (char *)filepath.s, error->message);
-}
-
 static void child_watch_cb(GPid pid, gint status, gpointer user_data) {
     g_spawn_close_pid(pid);
 }
