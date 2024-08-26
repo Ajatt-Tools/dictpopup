@@ -38,7 +38,8 @@ First make sure, that you have all necessary dependencies installed. On a Debian
 
 ```
 sudo apt-get install liblmdb-dev libmecab-dev libgtk-3-dev libx11-dev \
-     libcurl4-openssl-dev libnotify-dev libzip-dev zipcmp zipmerge ziptool gperf
+     libcurl4-openssl-dev libnotify-dev libzip-dev zipcmp zipmerge ziptool \
+     gperf gettext
 ```
 
 Then install with:
