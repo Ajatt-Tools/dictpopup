@@ -150,7 +150,7 @@ set(LOCALEDIR ${CMAKE_INSTALL_FULL_LOCALEDIR})
 add_definitions(-DGETTEXT_PACKAGE="${GETTEXT_PACKAGE}")
 add_definitions(-DLOCALEDIR="${LOCALEDIR}")
 
-set(potfile "${CMAKE_SOURCE_DIR}/po/${GETTEXT_PACKAGE}.pot")
+set(potfile "${GENERATED_DIR}/${GETTEXT_PACKAGE}.pot")
 add_custom_command(
         OUTPUT ${potfile}
         COMMAND xgettext

@@ -4,6 +4,7 @@ High priority
 -------------
 - Add database version to metadata of database
 - Bring back kanjification
+- Allow changing font size
 
 - Add more tests
 

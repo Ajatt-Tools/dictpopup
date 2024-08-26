@@ -58,9 +58,25 @@ static void on_preferences_close_button_clicked(GtkButton *button, DpPreferences
     gtk_widget_destroy(GTK_WIDGET(self));
 }
 
+static void restore_generate_index_button(GtkWidget *button) {
+    gtk_button_set_label(GTK_BUTTON(button), _(generate_index_str));
+
+    GtkStyleContext *context = gtk_widget_get_style_context(button);
+    gtk_style_context_add_class(gtk_widget_get_style_context(button), "suggested-action");
+    gtk_style_context_remove_class(gtk_widget_get_style_context(button), "destructive-action");
+}
+
+static void change_to_stop_button(GtkWidget *button) {
+    gtk_button_set_label(GTK_BUTTON(button), _(stop_str));
+
+    GtkStyleContext *context = gtk_widget_get_style_context(button);
+    gtk_style_context_add_class(context, "destructive-action");
+    gtk_style_context_remove_class(context, "suggested-action");
+}
+
 static void cancel_pron_index_generation(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_pron_index_generate, true);
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(generate_index_str));
+    restore_generate_index_button(self->dictpopup_create_button);
 }
 
 static gboolean pron_index_generation_thread_finished(gpointer user_data) {
@@ -90,7 +106,7 @@ static void start_pron_index_generation(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_pron_index_generate, false);
     self->pron_index_generate_thread =
         g_thread_new("pron_index_generation_thread", pron_index_generation_thread_func, self);
-    gtk_button_set_label(GTK_BUTTON(self->pron_index_generate_button), _(stop_str));
+    change_to_stop_button(self->pron_index_generate_button);
 }
 
 static void on_pron_index_generate_button_clicked(GtkButton *button, DpPreferencesWindow *self) {
@@ -130,7 +146,7 @@ static bool overwrite_dictpopup_db_dialog(void *voidarg) {
 
 static void cancel_dictpopup_create(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_dictpopup_create, true);
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(generate_index_str));
+    restore_generate_index_button(self->dictpopup_create_button);
 }
 
 static gboolean dictpopup_create_thread_finished(gpointer user_data) {
@@ -162,7 +178,7 @@ static void start_dictpopup_create(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_dictpopup_create, false);
     self->dictpopup_create_thread =
         g_thread_new("create_thread", dictpopup_create_thread_func, self);
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(stop_str));
+    change_to_stop_button(self->dictpopup_create_button);
 }
 
 static void on_dictpopup_create_button_clicked(GtkButton *button, DpPreferencesWindow *self) {

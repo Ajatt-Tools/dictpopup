@@ -68,6 +68,7 @@ static GActionEntry app_entries[] = {
 };
 
 static void init_css(void) {
+    dbg("Initting CSS");
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_resource(provider, "/com/github/Ajatt-Tools/dictpopup/style.css");
     gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
