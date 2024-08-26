@@ -3,7 +3,7 @@
   <requires lib="gtk+" version="3.24"/>
   <template class="DpPreferencesWindow" parent="GtkWindow">
     <property name="can_focus">True</property>
-    <property name="title" translatable="yes">Preferences</property>
+    <property name="title" translatable="yes">Settings</property>
     <property name="default_width">800</property>
     <property name="default_height">700</property>
     <property name="type_hint">dialog</property>
@@ -27,7 +27,7 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label">General Settings</property>
+                    <property name="label" translatable="yes">General Settings</property>
                     <property name="margin">5</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
@@ -148,7 +148,7 @@
                                           <object class="GtkLabel">
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
-                                            <property name="label" translatable="yes">MeCab Conversion</property>
+                                            <property name="label" translatable="yes">Fallback to Hiragana Conversion</property>
                                             <property name="xalign">0</property>
                                           </object>
                                           <packing>
@@ -181,7 +181,7 @@
                                           <object class="GtkLabel">
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
-                                            <property name="label" translatable="yes">Substring Search</property>
+                                            <property name="label" translatable="yes">Search for Longest Prefix</property>
                                             <property name="xalign">0</property>
                                           </object>
                                           <packing>
@@ -270,7 +270,7 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label">Anki Settings</property>
+                    <property name="label" translatable="yes">Anki Settings</property>
                     <property name="margin">6</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
@@ -301,8 +301,13 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">Anki Note Type:</property>
+                                <property name="label" translatable="yes">Anki Note Type</property>
+                                <property name="xalign">0</property>
                               </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                              </packing>
                             </child>
                             <child>
                               <object class="GtkComboBoxText" id="anki_notetype_combo">
@@ -311,6 +316,10 @@
                               </object>
                             </child>
                           </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">False</property>
+                          </packing>
                         </child>
                         <child>
                           <object class="GtkFrame" id="anki_fields_frame">
@@ -350,7 +359,7 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label">Pronunciation Settings</property>
+                    <property name="label" translatable="yes">Pronunciation Settings</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
                       <attribute name="scale" value="1.2"/>
