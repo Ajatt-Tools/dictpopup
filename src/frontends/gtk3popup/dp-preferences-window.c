@@ -4,7 +4,11 @@
 #include "stdatomic.h"
 #include <ankiconnectc.h>
 #include <db.h>
+#include <glib/gi18n.h>
 #include <jppron/jppron.h>
+
+static const char* generate_index_str = N_("Generate Index");
+static const char* stop_str = N_("Stop");
 
 struct _DpPreferencesWindow {
     GtkWindow parent_instance;
@@ -56,14 +60,14 @@ static void on_preferences_close_button_clicked(GtkButton *button, DpPreferences
 
 static void cancel_pron_index_generation(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_pron_index_generate, true);
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), "Generate Index");
+    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(generate_index_str));
 }
 
 static gboolean pron_index_generation_thread_finished(gpointer user_data) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
 
     self->pron_index_generate_thread = NULL;
-    gtk_button_set_label(GTK_BUTTON(self->pron_index_generate_button), "Generate Index");
+    gtk_button_set_label(GTK_BUTTON(self->pron_index_generate_button), _(generate_index_str));
 
     return G_SOURCE_REMOVE;
 }
@@ -86,7 +90,7 @@ static void start_pron_index_generation(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_pron_index_generate, false);
     self->pron_index_generate_thread =
         g_thread_new("pron_index_generation_thread", pron_index_generation_thread_func, self);
-    gtk_button_set_label(GTK_BUTTON(self->pron_index_generate_button), "Stop");
+    gtk_button_set_label(GTK_BUTTON(self->pron_index_generate_button), _(stop_str));
 }
 
 static void on_pron_index_generate_button_clicked(GtkButton *button, DpPreferencesWindow *self) {
@@ -110,8 +114,8 @@ static bool overwrite_dictpopup_db_dialog(void *voidarg) {
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(pref_window), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
         GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-        "A database already exists. Do you want to overwrite it?");
-    gtk_window_set_title(GTK_WINDOW(dialog), "Overwrite Existing Database?");
+        _("A database already exists. Do you want to overwrite it?"));
+    gtk_window_set_title(GTK_WINDOW(dialog), _("Overwrite Existing Database?"));
 
     gint response = gtk_dialog_run(GTK_DIALOG(dialog));
 
@@ -126,14 +130,14 @@ static bool overwrite_dictpopup_db_dialog(void *voidarg) {
 
 static void cancel_dictpopup_create(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_dictpopup_create, true);
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), "Generate Index");
+    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(generate_index_str));
 }
 
 static gboolean dictpopup_create_thread_finished(gpointer user_data) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
 
     self->dictpopup_create_thread = NULL;
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), "Generate Index");
+    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(generate_index_str));
 
     dp_preferences_window_update_dict_order(self);
 
@@ -158,7 +162,7 @@ static void start_dictpopup_create(DpPreferencesWindow *self) {
     atomic_store(&self->cancel_dictpopup_create, false);
     self->dictpopup_create_thread =
         g_thread_new("create_thread", dictpopup_create_thread_func, self);
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), "Stop");
+    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(stop_str));
 }
 
 static void on_dictpopup_create_button_clicked(GtkButton *button, DpPreferencesWindow *self) {
@@ -516,7 +520,7 @@ void dp_preferences_window_update_dict_order(DpPreferencesWindow *self) {
 
     database_t *db = db_open(true);
     if (!db) {
-        list_box_insert_msg(GTK_LIST_BOX(self->dict_order_listbox), "No database found");
+        list_box_insert_msg(GTK_LIST_BOX(self->dict_order_listbox), _("No database found"));
         return;
     }
 
@@ -524,7 +528,7 @@ void dp_preferences_window_update_dict_order(DpPreferencesWindow *self) {
     db_close(db);
     if (s8_buf_size(dict_names) <= 0) {
         list_box_insert_msg(GTK_LIST_BOX(self->dict_order_listbox),
-                            "No dictionaries found in database");
+                            _("No dictionaries found in database"));
         return;
     }
 

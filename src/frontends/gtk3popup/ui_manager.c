@@ -3,6 +3,7 @@
 #include "callbacks.h"
 #include "objects/color.h"
 #include "platformdep/audio.h"
+#include <glib/gi18n.h>
 
 static gboolean on_refresh_exists_dot(GtkWidget *widget, cairo_t *cr, gpointer user_data);
 
@@ -299,12 +300,14 @@ void ui_manager_show_edit_lookup_dialog(UiManager *self, const char *current_loo
                                         void *user_data) {
     GtkWidget *dialog =
         gtk_dialog_new_with_buttons("Edit Lookup String", GTK_WINDOW(self->main_window),
-                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Cancel",
-                                    GTK_RESPONSE_CANCEL, "Apply", GTK_RESPONSE_ACCEPT, NULL);
+                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, _("_Cancel"),
+                                    GTK_RESPONSE_CANCEL, _("_OK"), GTK_RESPONSE_ACCEPT, NULL);
 
     GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
     GtkWidget *entry = gtk_entry_new();
     gtk_container_add(GTK_CONTAINER(content_area), entry);
+
+    gtk_entry_set_width_chars(GTK_ENTRY(entry), 50);
 
     gtk_entry_set_text(GTK_ENTRY(entry), current_lookup);
 
@@ -315,7 +318,7 @@ void ui_manager_show_edit_lookup_dialog(UiManager *self, const char *current_loo
     data->user_data = user_data;
 
     g_signal_connect(dialog, "response", G_CALLBACK(on_edit_lookup_dialog_response), data);
-    g_signal_connect(entry, "activate", G_CALLBACK(on_entry_activate), dialog);
+    // g_signal_connect(entry, "activate", G_CALLBACK(on_entry_activate), dialog);
 
     gtk_widget_show_all(dialog);
 }
@@ -326,7 +329,7 @@ void ui_manager_show_anki_button_right_click_menu(
     gpointer user_data) {
     GtkWidget *menu = gtk_menu_new();
 
-    GtkWidget *menu_item = gtk_menu_item_new_with_label("Add with clipboard content as definition");
+    GtkWidget *menu_item = gtk_menu_item_new_with_label(_("Add with clipboard content as definition"));
     g_signal_connect(menu_item, "activate", G_CALLBACK(on_clipboard_definition), user_data);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
 

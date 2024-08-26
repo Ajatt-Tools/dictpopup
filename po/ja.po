@@ -1,7 +1,113 @@
-##, c-format
-#msgid "No translation for %s was found."
-#msgstr "%s の翻訳が見つかりません。"
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2024 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#  <butterkeks@fedora.email>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: butterkeks@fedora.email.com\n"
+"POT-Creation-Date: 2024-08-26 08:55+0200\n"
+"PO-Revision-Date: 2024-08-26 07:20+0200\n"
+"Last-Translator:  <butterkeks@fedora.email>\n"
+"Language-Team: Japanese <translation-team-ja@lists.sourceforge.net>\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/dp-preferences-window.ui:6
-msgid "Preferences"
+#: src/frontends/gtk3popup/main-window.ui:54
+msgid "Add Current Entry To Anki"
+msgstr ""
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:304
+msgid "Anki Note Type"
+msgstr ""
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:273
+msgid "Anki Settings"
+msgstr "Anki設定"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:242
+msgid "Dictionary Sort Order"
+msgstr ""
+
+#: src/frontends/gtk3popup/main-window.ui:276
+msgid "Edit Lookup"
+msgstr "検索を編集"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:151
+msgid "Fallback to Hiragana Conversion"
+msgstr ""
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:30
+msgid "General Settings"
+msgstr "一般設定"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:83
+#: src/frontends/gtk3popup/dp-preferences-window.ui:442
+msgid "Generate Index"
+msgstr "インデックスを生成"
+
+#: src/frontends/gtk3popup/main-window.ui:77
+msgid ""
+"Indicator for the word/reading pair in your Anki collection\n"
+"Green: Exists\n"
+"Red: Does not exist\n"
+"Orange: Exists, but all instances are suspended\n"
+"Blue: Exists, but all instances are new"
+msgstr ""
+
+#: src/frontends/gtk3popup/main-window.ui:138
+msgid "Next Definition"
+msgstr "次の定義"
+
+#: src/frontends/gtk3popup/main-window.ui:219
+msgid "Open Menu"
+msgstr "メニューを開く"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:391
+msgid "Play Pronunciation on Startup"
+msgstr "起動時に発音を再生"
+
+#: src/frontends/gtk3popup/main-window.ui:33
+msgid "Previous Definition"
+msgstr "前の定義"
+
+#: src/frontends/gtk3popup/main-window.ui:116
+msgid "Pronounce Current Word"
+msgstr ""
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:362
+msgid "Pronunciation Settings"
+msgstr "発音設定"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:118
+msgid "Remove Whitespace"
+msgstr "空白を削除する"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:213
+msgid "Search Options"
+msgstr ""
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:184
+msgid "Search for Longest Prefix"
+msgstr ""
+
+#: src/frontends/gtk3popup/main-window.ui:267
+msgid "Search in Massif"
+msgstr "Massifで検索"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:431
+msgid "Select path to pronunciation directories"
+msgstr "発音ディレクトリへのパスを選択"
+
+#: src/frontends/gtk3popup/dp-preferences-window.ui:73
+msgid "Select the path to your Yomichan dictionaries"
+msgstr ""
+
+#: src/frontends/gtk3popup/main-window.ui:258
+#: src/frontends/gtk3popup/dp-preferences-window.ui:6
+msgid "Settings"
 msgstr "設定"

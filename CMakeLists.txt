@@ -37,7 +37,7 @@ if (NOT GPERF)
 endif ()
 
 ####### Optional dependencies
-find_package(X11)
+find_package(X11 REQUIRED)
 if (X11_FOUND)
     add_definitions(-DHAVE_X11)
     set(X11_LIBRARIES ${X11_LIBRARIES} ${X11_Xfixes_LIB})
@@ -140,6 +140,53 @@ add_custom_command(
         MAIN_DEPENDENCY ${DEINFLECTION_RULES_GPERF}
         VERBATIM
 )
+
+############# GETTEXT #################
+find_package(Gettext REQUIRED)
+
+set(GETTEXT_PACKAGE ${PROJECT_NAME})
+set(LOCALEDIR ${CMAKE_INSTALL_FULL_LOCALEDIR})
+
+add_definitions(-DGETTEXT_PACKAGE="${GETTEXT_PACKAGE}")
+add_definitions(-DLOCALEDIR="${LOCALEDIR}")
+
+set(potfile "${CMAKE_SOURCE_DIR}/po/${GETTEXT_PACKAGE}.pot")
+add_custom_command(
+        OUTPUT ${potfile}
+        COMMAND xgettext
+        --from-code=UTF-8
+        --add-comments
+        --keyword=_
+        --keyword=N_
+        --package-name=${GETTEXT_PACKAGE}
+        --package-version=${PROJECT_VERSION}
+        --copyright-holder="Ajatt-Tools"
+        --msgid-bugs-address="butterkeks@fedora.email.com"
+        --files-from=${CMAKE_SOURCE_DIR}/po/POTFILES.in
+        --output=${potfile}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Generating ${potfile}"
+        DEPENDS ${CMAKE_SOURCE_DIR}/po/POTFILES.in
+)
+add_custom_target(pot ALL DEPENDS ${potfile})
+
+
+file(GLOB PO_FILES ${CMAKE_SOURCE_DIR}/po/*.po)
+GETTEXT_CREATE_TRANSLATIONS(${potfile} ALL ${PO_FILES})
+
+foreach(PO_FILE ${PO_FILES})
+    get_filename_component(LANG ${PO_FILE} NAME_WE)
+    install(
+            FILES ${CMAKE_CURRENT_BINARY_DIR}/${LANG}.gmo
+            DESTINATION ${CMAKE_INSTALL_LOCALEDIR}/${LANG}/LC_MESSAGES/
+            RENAME ${GETTEXT_PACKAGE}.mo
+    )
+endforeach()
+
+message("
+Configuration:
+    X11 support enabled:        ${X11_FOUND}
+")
 
 # ##############################################################################
 # Cppcheck
@@ -291,11 +338,7 @@ add_custom_command(
         DEPENDS ${GSETTINGS_SCHEMA}
         COMMENT "Compiling GSettings schemas"
 )
-
 add_custom_target(gsettings-schemas ALL DEPENDS ${COMPILED_SETTINGS_SCHEMA})
-
-install(FILES ${GSETTINGS_SCHEMA} DESTINATION ${GSETTINGS_DIR})
-install(CODE "execute_process(COMMAND ${GLIB_COMPILE_SCHEMAS} ${CMAKE_INSTALL_PREFIX}/${GSETTINGS_DIR})")
 
 ############# MAIN #################
 add_executable(dictpopup
@@ -309,7 +352,6 @@ add_executable(dictpopup
         src/utils/util.c
         src/utils/utf8.c
         src/utils/str.c
-        src/utils/dp_profile.c
         src/platformdep/audio.c
         src/platformdep/notifications.c
         src/platformdep/clipboard.c
