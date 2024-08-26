@@ -91,9 +91,11 @@ static s8 add_bold_tags_around_word(s8 sent, s8 word) {
 
 static s8 create_furigana(s8 kanji, s8 reading) {
     return !kanji.len && !reading.len ? s8dup(S(""))
-           : !kanji.len               ? s8dup(reading)
-           : !reading.len             ? s8dup(kanji)
-                                      : concat(kanji, S("["), reading, S("]"));
+           // cppcheck-suppress knownConditionTrueFalse
+           : !kanji.len ? s8dup(reading)
+           // cppcheck-suppress knownConditionTrueFalse
+           : !reading.len ? s8dup(kanji)
+                          : concat(kanji, S("["), reading, S("]"));
 }
 
 // TODO: Improve maintainability?

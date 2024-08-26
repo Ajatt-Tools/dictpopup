@@ -1,14 +1,15 @@
+#include <glib/gi18n.h>
+#include <stdatomic.h>
+
+#include "ankiconnectc.h"
+#include "db.h"
+#include "dictpopup_create.h"
+#include "jppron/jppron.h"
+
 #include "dp-preferences-window.h"
 
-#include "dictpopup_create.h"
-#include "stdatomic.h"
-#include <ankiconnectc.h>
-#include <db.h>
-#include <glib/gi18n.h>
-#include <jppron/jppron.h>
-
-static const char* generate_index_str = N_("Generate Index");
-static const char* stop_str = N_("Stop");
+static const char *generate_index_str = N_("Generate Index");
+static const char *stop_str = N_("Stop");
 
 struct _DpPreferencesWindow {
     GtkWindow parent_instance;
@@ -62,8 +63,8 @@ static void restore_generate_index_button(GtkWidget *button) {
     gtk_button_set_label(GTK_BUTTON(button), _(generate_index_str));
 
     GtkStyleContext *context = gtk_widget_get_style_context(button);
-    gtk_style_context_add_class(gtk_widget_get_style_context(button), "suggested-action");
-    gtk_style_context_remove_class(gtk_widget_get_style_context(button), "destructive-action");
+    gtk_style_context_add_class(context, "suggested-action");
+    gtk_style_context_remove_class(context, "destructive-action");
 }
 
 static void change_to_stop_button(GtkWidget *button) {
@@ -542,7 +543,7 @@ void dp_preferences_window_update_dict_order(DpPreferencesWindow *self) {
 
     _drop_(s8_buf_free) s8Buf dict_names = db_get_dictnames(db);
     db_close(db);
-    if (s8_buf_size(dict_names) <= 0) {
+    if (s8_buf_size(dict_names) == 0) {
         list_box_insert_msg(GTK_LIST_BOX(self->dict_order_listbox),
                             _("No dictionaries found in database"));
         return;

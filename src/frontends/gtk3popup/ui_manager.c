@@ -140,7 +140,7 @@ static void refresh_current_word_with_entry(UiManager *self, Word word) {
     _drop_(frees8) s8 txt = {0};
     if (word.kanji.len && word.reading.len) {
         if (s8equals(word.kanji, word.reading))
-            txt = s8dup(word.reading.len ? word.reading : word.kanji);
+            txt = s8dup(word.reading.len > 0 ? word.reading : word.kanji);
         else
             txt = concat(word.reading, S("【"), word.kanji, S("】"));
     } else if (word.reading.len)
@@ -197,7 +197,7 @@ static void ui_queue_delayed_updates(UiManager *self, PageManager *pm) {
     gdk_threads_add_idle((GSourceFunc)process_delayed_updates, args);
 }
 
-static gboolean _ui_refresh_impl(gpointer data) {
+static gboolean _ui_refresh_quick(gpointer data) {
     struct ui_refresh_args_s *args = (struct ui_refresh_args_s *)data;
     UiManager *self = args->self;
     PageManager *pm = args->pm;
@@ -214,6 +214,7 @@ static gboolean _ui_refresh_impl(gpointer data) {
     refresh_left_right_buttons(self, num_pages);
     refresh_title_with_entry(self, de);
 
+    free(args);
     return G_SOURCE_REMOVE;
 }
 
@@ -222,7 +223,7 @@ static void ui_queue_quick_updates(UiManager *self, PageManager *pm) {
     args->self = self;
     args->pm = pm;
 
-    gdk_threads_add_idle_full(G_PRIORITY_HIGH, (GSourceFunc)_ui_refresh_impl, args, NULL);
+    gdk_threads_add_idle_full(G_PRIORITY_HIGH, (GSourceFunc)_ui_refresh_quick, args, NULL);
 }
 
 void _nonnull_ ui_refresh(UiManager *self, PageManager *pm) {
@@ -318,7 +319,7 @@ void ui_manager_show_edit_lookup_dialog(UiManager *self, const char *current_loo
     data->user_data = user_data;
 
     g_signal_connect(dialog, "response", G_CALLBACK(on_edit_lookup_dialog_response), data);
-    // g_signal_connect(entry, "activate", G_CALLBACK(on_entry_activate), dialog);
+    g_signal_connect(entry, "activate", G_CALLBACK(on_entry_activate), dialog);
 
     gtk_widget_show_all(dialog);
 }
@@ -329,7 +330,8 @@ void ui_manager_show_anki_button_right_click_menu(
     gpointer user_data) {
     GtkWidget *menu = gtk_menu_new();
 
-    GtkWidget *menu_item = gtk_menu_item_new_with_label(_("Add with clipboard content as definition"));
+    GtkWidget *menu_item =
+        gtk_menu_item_new_with_label(_("Add with clipboard content as definition"));
     g_signal_connect(menu_item, "activate", G_CALLBACK(on_clipboard_definition), user_data);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
 
