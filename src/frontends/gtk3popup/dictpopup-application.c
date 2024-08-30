@@ -93,6 +93,7 @@ static void init_accels(GApplication *app) {
     const char *const previous_definition_accels[] = {"a", NULL};
     const char *const pronounce_accels[] = {"p", "r", NULL};
     const char *const add_to_anki_accels[] = {"<Ctrl>s", NULL};
+    const char *const edit_lookup_accels[] = {"<Ctrl>e", NULL};
 
     gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.quit", close_window_accels);
     gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.next-definition",
@@ -102,6 +103,8 @@ static void init_accels(GApplication *app) {
     gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.pronounce", pronounce_accels);
     gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.add-to-anki",
                                           add_to_anki_accels);
+    gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.edit-lookup",
+                                          edit_lookup_accels);
 }
 
 static void dictpopup_startup(GApplication *app) {
