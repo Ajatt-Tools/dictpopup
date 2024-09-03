@@ -37,7 +37,7 @@ static void sentence_selected(GtkClipboard *clipboard, GdkEvent *event, gpointer
     }
 
     AnkiConfig anki_cfg = dp_settings_get_anki_settings(app->settings);
-    create_ankicard(app->initial_lookup_str, sentence, entry_to_add, anki_cfg);
+    create_ankicard(app->actual_lookup_str, sentence, entry_to_add, anki_cfg);
 
     // TODO: Cleanup
     free(anki_cfg.fieldmapping.field_content);
