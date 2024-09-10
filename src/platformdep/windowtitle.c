@@ -1,4 +1,4 @@
-#ifdef HAVEX11 // for window title
+#ifdef HAVE_X11 // for window title
     #include <X11/Xatom.h>
     #include <X11/Xlib.h>
 #endif
@@ -9,7 +9,7 @@
 #include <utils/str.h>
 
 s8 get_windowname(void) {
-#ifdef HAVEX11
+#ifdef HAVE_X11
     Display *dpy = XOpenDisplay(NULL);
     if (!dpy) {
         dbg("Can't open X display for retrieving the window title. Are you "
