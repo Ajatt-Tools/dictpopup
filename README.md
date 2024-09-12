@@ -65,6 +65,10 @@ For this, open `dictpopup-config` (or `dictpopup` and then menu button > setting
 You can also include a frequency dictionary in there, but only one (it will give an error if you add more, because I
 don't think that mixing makes sense).
 
+## Where to get dictionaries
+
+tba
+
 ## Pronunciation
 
 To enable pronunciation, simply download some pronunciation indices from Ajatt-Tools (such
@@ -114,6 +118,11 @@ a deinflector available for Japanese.
 
 Yomichan dictinaries for other languages are for example available
 here: https://github.com/themoeway/kaikki-to-yomitan/releases.
+
+## Browser extension
+If you want Yomichan-style lookup in a browser, i.e. lookup by shift-clicking the first character, then
+you can take a look at https://github.com/btrkeks/dictpopup_browser_ext.
+However, there isn't a proper release and it isn't thoroughly tested yet.
 
 ## Contact
 
