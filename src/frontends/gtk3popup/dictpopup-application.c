@@ -89,8 +89,8 @@ static void init_ui(DpApplication *self) {
 
 static void init_accels(GApplication *app) {
     const char *const close_window_accels[] = {"q", "Escape", NULL};
-    const char *const next_definition_accels[] = {"s", NULL};
-    const char *const previous_definition_accels[] = {"a", NULL};
+    const char *const next_definition_accels[] = {"s", "n", NULL};
+    const char *const previous_definition_accels[] = {"a", "p", NULL};
     const char *const pronounce_accels[] = {"p", "r", NULL};
     const char *const add_to_anki_accels[] = {"<Ctrl>s", NULL};
     const char *const edit_lookup_accels[] = {"<Ctrl>e", NULL};
