@@ -105,9 +105,10 @@ Furthermore, by right-clicking the + sign, you can also use the current clipboar
 
 ## Keybindings
 
+- Edit lookup: <kbd>Ctrl</kbd>+<kbd>e</kbd>
 - Next entry: <kbd>n</kbd>, <kbd>s</kbd>
 - Previous entry: <kbd>p</kbd>, <kbd>a</kbd>
-- Create an Anki card: <kbd>Ctrl</kbd>+ <kbd>s</kbd>
+- Create an Anki card: <kbd>Ctrl</kbd>+<kbd>s</kbd>
 - Play audio: <kbd>p</kbd>, <kbd>r</kbd>
 - Exit: <kbd>q</kbd>, <kbd>Esc</kbd>
 
