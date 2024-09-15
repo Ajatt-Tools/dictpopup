@@ -85,6 +85,7 @@ static gboolean pron_index_generation_thread_finished(gpointer user_data) {
 
     self->pron_index_generate_thread = NULL;
     gtk_button_set_label(GTK_BUTTON(self->pron_index_generate_button), _(generate_index_str));
+    restore_generate_index_button(self->pron_index_generate_button);
 
     return G_SOURCE_REMOVE;
 }
@@ -154,7 +155,7 @@ static gboolean dictpopup_create_thread_finished(gpointer user_data) {
     DpPreferencesWindow *self = DP_PREFERENCES_WINDOW(user_data);
 
     self->dictpopup_create_thread = NULL;
-    gtk_button_set_label(GTK_BUTTON(self->dictpopup_create_button), _(generate_index_str));
+    restore_generate_index_button(self->dictpopup_create_button);
 
     dp_preferences_window_update_dict_order(self);
 
