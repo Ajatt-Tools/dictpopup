@@ -12,6 +12,8 @@
 #define DB_ID_TO_DEFINITIONS "db2"
 #define DB_FREQUENCIES "db3"
 #define DB_METADATA "db4"
+#define FLUSH_THRESHOLD 10000
+static int write_count = 0;
 
 DEFINE_DROP_FUNC(MDB_cursor *, mdb_cursor_close)
 
@@ -110,6 +112,18 @@ database_t *db_open(bool readonly) {
     return readonly ? db_open_readonly() : db_open_read_write();
 }
 
+static void db_flush(database_t *db) {
+    if (!db || db->readonly) {
+        return;
+    }
+
+    int rc = mdb_txn_commit(db->txn);
+    if (rc != MDB_SUCCESS) {
+        dbg("Error committing transaction: %s", mdb_strerror(rc));
+    }
+    MDB_CHECK(mdb_txn_begin(db->env, NULL, 0, &db->txn));
+}
+
 void db_close(database_t *db) {
     if (!db)
         return;
@@ -168,6 +182,14 @@ static void add_key_with_id(database_t *db, s8 key, u32 id) {
     mdb_put(db->txn, db->db_words_to_id, &key_mdb, &id_mdb, MDB_NODUPDATA);
 }
 
+static void increase_write_count(database_t *db) {
+    write_count++;
+    if (write_count >= FLUSH_THRESHOLD) {
+        db_flush(db);
+        write_count = 0;
+    }
+}
+
 void db_put_dictent(database_t *db, Dictentry de) {
     die_on(db->readonly, "Cannot put dictentry into db in readonly mode.");
     if (!de.definition.len) {
@@ -184,6 +206,8 @@ void db_put_dictent(database_t *db, Dictentry de) {
     put_de_if_new(db, de);
     add_key_with_id(db, de.kanji, db->last_id);
     add_key_with_id(db, de.reading, db->last_id);
+
+    increase_write_count(db);
 }
 
 static u32 *get_ids(const database_t *db, s8 word, size_t *num) {
