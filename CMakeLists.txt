@@ -41,6 +41,7 @@ find_package(X11 REQUIRED)
 if (X11_FOUND)
     add_definitions(-DHAVE_X11)
     set(X11_LIBRARIES ${X11_LIBRARIES} ${X11_Xfixes_LIB})
+    message(STATUS "Building with X11 support")
 else ()
     set(X11_LIBRARIES "")
     message(STATUS "X11 not found, building without X11 support")
@@ -84,7 +85,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} \
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=address")
 #set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -pg -g -O0 -Wall")
 
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Ofast -flto -march=native -mtune=native -g -fno-omit-frame-pointer")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Ofast -flto -march=native -mtune=native -pg -fno-omit-frame-pointer")
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
@@ -183,11 +184,6 @@ foreach(PO_FILE ${PO_FILES})
     )
 endforeach()
 
-message("
-Configuration:
-    X11 support enabled:        ${X11_FOUND}
-")
-
 # ##############################################################################
 # Cppcheck
 # ##############################################################################
@@ -195,12 +191,13 @@ if (CPPCHECK)
     add_custom_target(
             cppcheck
             COMMAND ${CPPCHECK}
-            --library=gtk.cfg --library=libcurl.cfg
-            --enable=all --std=c11
-            --inconclusive
-            --quiet
-            --force
             -I ${CMAKE_SOURCE_DIR}/include
+            --library=gtk.cfg --library=libcurl.cfg
+            --std=c11 --quiet --force --enable=all --check-level=exhaustive
+            --inline-suppr
+            --suppress=constVariablePointer --suppress=constParameterPointer --suppress=constParameterCallback
+            --suppress=missingIncludeSystem
+            --suppress=*:lib/yyjson.h
             ${CMAKE_SOURCE_DIR}/src
     )
 endif ()
@@ -265,7 +262,6 @@ if (BUILD_TESTS)
             tests/ankiconnect_tests.c
             tests/yomichan_parser_tests.c
             tests/jppron_tests/ajt_audio_index_parser_tests.c
-            tests/utils_tests/enclose_word_in_string_tests.c
             tests/dictpopup_tests.c
             tests/jppron_tests/jppron_tests.c
             src/deinflector/deinflector.c
@@ -291,6 +287,13 @@ endif ()
 
 #    add_test(NAME run_shell_test COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/full_cycle_test.sh)
 
+
+#message("
+#Configuration:
+#    X11 support enabled:        ${X11_FOUND}
+#    Build tests:                ${BUILD_TESTS}
+#")
+
 # ##############################################################################
 # check-all
 # ##############################################################################
@@ -299,6 +302,7 @@ add_custom_target(
         COMMAND ${CMAKE_COMMAND} --build . --target format-check
 #        COMMAND ${CMAKE_COMMAND} --build . --target cppcheck
 #        COMMAND ${CMAKE_COMMAND} --build . --target clang-tidy
+        COMMAND ${CMAKE_COMMAND} --build . --target c_tests
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
         COMMENT "Running format check, static analysis, and tests"
 )
@@ -410,6 +414,9 @@ target_link_libraries(dictpopup-config PRIVATE
         CURL::libcurl
         libzip::zip
 )
+if (X11_FOUND)
+    target_link_libraries(dictpopup-config PRIVATE ${X11_LIBRARIES})
+endif ()
 
 # ##############################################################################
 # cli
@@ -427,6 +434,35 @@ target_include_directories(
         dictpopup-cli PRIVATE ${GTK3_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} include/)
 target_link_directories(dictpopup-cli PRIVATE ${GTK3_LIBRARY_DIRS})
 target_link_libraries(dictpopup-cli PRIVATE ${GTK3_LIBRARIES} ${NOTIFY_LIBRARIES})
+
+# ##############################################################################
+# dictpopup_create_db
+# ##############################################################################
+add_executable(dictpopup_create_db EXCLUDE_FROM_ALL
+        src/dictpopup_create/dictpopup_create.c
+        src/dictpopup_create/yomichan_parser.c
+        src/utils/util.c
+        src/utils/str.c
+        lib/yyjson.c
+        src/db.c
+        src/objects/dict.c
+        src/platformdep/file_operations.c
+        src/platformdep/clipboard.c
+        src/platformdep/windowtitle.c
+        ${ANKICONNECTC_SRCS}
+)
+target_compile_definitions(dictpopup_create_db PUBLIC DICTPOPUP_CREATE_MAIN)
+target_link_libraries(dictpopup_create_db PRIVATE
+        LMDB::LMDB
+        MECAB::MECAB
+        PkgConfig::GTK3
+        PkgConfig::NOTIFY
+        CURL::libcurl
+        libzip::zip
+)
+if (X11_FOUND)
+    target_link_libraries(dictpopup_create_db PRIVATE ${X11_LIBRARIES})
+endif ()
 
 # ##############################################################################
 # Install
