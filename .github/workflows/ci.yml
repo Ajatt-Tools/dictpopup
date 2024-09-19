@@ -13,13 +13,19 @@ jobs:
 
       - uses: awalsh128/cache-apt-pkgs-action@v1
         with:
-          packages: gcc-10 clang clang-format clang-tidy cppcheck liblmdb-dev libmecab-dev libgtk-3-dev \
+          packages: gcc-10 clang clang-tidy cppcheck liblmdb-dev libmecab-dev libgtk-3-dev \
             libx11-dev libcurl4-openssl-dev libnotify-dev libzip-dev zipcmp zipmerge ziptool libcgreen1-dev \
             gperf gettext
           version: 1.0
 
+      - name: Install LLVM and Clang 18
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 18
+          sudo apt-get install -y clang-format-18
+
       - run: gcc --version
-      - run: clang-format --version
 
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
       - run: cmake --build build

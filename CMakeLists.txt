@@ -50,7 +50,7 @@ endif ()
 # ##############################################################################
 # Dev Dependencies
 # ##############################################################################
-find_program(CLANG_FORMAT "clang-format")
+find_program(CLANG_FORMAT "clang-format-18")
 find_program(CPPCHECK cppcheck)
 find_program(CLANG_TIDY "clang-tidy")
 
