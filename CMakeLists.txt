@@ -148,6 +148,13 @@ find_package(Gettext REQUIRED)
 set(GETTEXT_PACKAGE ${PROJECT_NAME})
 set(LOCALEDIR ${CMAKE_INSTALL_FULL_LOCALEDIR})
 
+if(WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DWIN32_LEAN_AND_MEAN")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-all-symbols")
+else()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
+endif()
+
 add_definitions(-DGETTEXT_PACKAGE="${GETTEXT_PACKAGE}")
 add_definitions(-DLOCALEDIR="${LOCALEDIR}")
 
@@ -379,7 +386,6 @@ target_link_libraries(dictpopup PRIVATE
         PkgConfig::NOTIFY
         CURL::libcurl
         libzip::zip
-        -rdynamic
 )
 
 if (X11_FOUND)
