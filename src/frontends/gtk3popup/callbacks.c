@@ -138,8 +138,8 @@ struct DictLookupArgs {
     DictpopupConfig cfg;
 };
 
-static void *dict_lookup_thread(void *voidarg) {
-    struct DictLookupArgs *args = (struct DictLookupArgs *)voidarg;
+static void *dict_lookup_thread(gpointer data) {
+    struct DictLookupArgs *args = (struct DictLookupArgs *)data;
 
     s8 lookup = dp_get_lookup_str(args->app);
     DictLookup dict_lookup = dictionary_lookup(lookup, args->cfg);
@@ -150,7 +150,7 @@ static void *dict_lookup_thread(void *voidarg) {
         dp_swap_dict_lookup(args->app, dict_lookup);
     }
 
-    free(args);
+    g_free(args);
     return NULL;
 }
 
@@ -167,12 +167,12 @@ void dict_lookup_async(DpApplication *app) {
                 dp_settings_get_lookup_longest_matching_prefix(app->settings),
         }};
 
-    pthread_t thread_id;
-    if (pthread_create(&thread_id, NULL, dict_lookup_thread, args) != 0) {
-        dbg("Failed to create pronunciation thread");
-        free(args);
-    } else {
-        pthread_detach(thread_id);
+    GError *error = NULL;
+    GThread *thread = g_thread_try_new("dict_lookup_thread", dict_lookup_thread, args, &error);
+    if (thread == NULL) {
+        g_warning("Failed to create dictionary lookup thread: %s", error->message);
+        g_error_free(error);
+        g_free(args);
     }
 }
 /* --------------- END DICTIONARY LOOKUP --------------- */
